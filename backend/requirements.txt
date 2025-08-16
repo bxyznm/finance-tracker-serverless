@@ -1,0 +1,19 @@
+# Core dependencies
+boto3==1.34.131           # AWS SDK
+pydantic==2.8.2          # Data validation
+fastapi==0.112.0         # Fast API framework (para local dev)
+mangum==0.17.0           # ASGI adapter for AWS Lambda
+
+# Development dependencies
+pytest==8.3.2           # Testing framework
+pytest-cov==5.0.0       # Coverage reporting
+moto==5.0.10            # AWS services mocking
+black==24.4.2           # Code formatting
+flake8==7.1.0           # Linting
+mypy==1.11.1            # Type checking
+
+# Utilities
+python-dotenv==1.0.1    # Environment variables
+uuid==1.30              # UUID generation
+datetime                # Date/time handling
+json-logging==1.3.0     # Structured logging
