@@ -1,409 +1,230 @@
 """
-User management Lambda handler for Finance Tracker API.
-
-This module provides CRUD operations for user management:
-- POST /users: Create a new user
-- GET /users/{user_id}: Get user by ID
-- PUT /users/{user_id}: Update existing user
-- DELETE /users/{user_id}: Delete user
-
-All operations interact with DynamoDB and include proper error handling,
-input validation using Pydantic models, and structured JSON responses.
+Handlers para gestión de usuarios
+Implementa CRUD completo usando Single Table Design
 """
 
 import json
 import logging
-from typing import Dict, Any
-from uuid import uuid4
+import uuid
+from typing import Dict, Any, Optional
 from datetime import datetime
 
-import boto3
-from botocore.exceptions import ClientError
+# Importaciones locales
+from utils.responses import create_response, internal_server_error_response
+from utils.dynamodb_client import DynamoDBClient
+from models import User, UserCreate, UserUpdate, create_user_from_input
 
-from src.models.user import UserCreateRequest, UserResponse, UserUpdateRequest
-from src.utils.config import get_config
-from src.utils.responses import success_response, created_response, error_response, not_found_response
-
-# Configure logging
+# Configurar logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
+# Cliente DynamoDB
+db_client = DynamoDBClient()
 
-def get_dynamodb_table():
-    """Get DynamoDB users table with current configuration"""
-    config = get_config()
-    dynamodb = boto3.resource('dynamodb', region_name=config.aws_region)
-    return dynamodb.Table(config.users_table_name)
-
-
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
     """
-    Main Lambda handler for user operations.
-    
-    Routes HTTP requests to appropriate handlers based on HTTP method and path.
-    
-    Args:
-        event: AWS Lambda event containing HTTP request information
-        context: AWS Lambda context object
-        
-    Returns:
-        Dict containing HTTP response with status code, headers, and body
+    Handler principal para todas las operaciones de usuarios
     """
     try:
+        logger.info(f"Procesando evento: {event}")
+        
         http_method = event.get('httpMethod', '')
         path_parameters = event.get('pathParameters') or {}
-        user_id = path_parameters.get('user_id')
+        body = event.get('body', '{}')
         
-        logger.info(f"Processing {http_method} request for user operations")
-        
-        # Route to appropriate handler
-        if http_method == 'POST':
-            return create_user(event)
-        elif http_method == 'GET' and user_id:
-            return get_user(user_id)
-        elif http_method == 'PUT' and user_id:
-            return update_user(user_id, event)
-        elif http_method == 'DELETE' and user_id:
-            return delete_user(user_id)
+        # Parsear body si existe
+        if body and body != '{}':
+            try:
+                body_data = json.loads(body)
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing JSON body: {e}")
+                return create_response(400, {"error": "Invalid JSON in request body"})
         else:
-            return error_response(
-                message="Method not allowed or invalid path",
-                status_code=405
-            )
+            body_data = {}
+        
+        # Routing basado en método HTTP
+        if http_method == 'POST':
+            return create_user_handler(body_data)
+        elif http_method == 'GET':
+            user_id = path_parameters.get('user_id')
+            if user_id:
+                return get_user_handler(user_id)
+            else:
+                return get_user_summary_handler()
+        elif http_method == 'PUT':
+            user_id = path_parameters.get('user_id')
+            if not user_id:
+                return create_response(400, {"error": "user_id is required for PUT requests"})
+            return update_user_handler(user_id, body_data)
+        elif http_method == 'DELETE':
+            user_id = path_parameters.get('user_id')
+            if not user_id:
+                return create_response(400, {"error": "user_id is required for DELETE requests"})
+            return delete_user_handler(user_id)
+        else:
+            return create_response(405, {"error": f"Method {http_method} not allowed"})
             
     except Exception as e:
-        logger.error(f"Unhandled error in lambda_handler: {str(e)}")
-        return error_response(
-            message="Internal server error",
-            status_code=500
-        )
+        logger.error(f"Error en lambda_handler: {str(e)}", exc_info=True)
+        return internal_server_error_response("Error interno del servidor")
 
-
-def create_user(event: Dict[str, Any]) -> Dict[str, Any]:
+def create_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Create a new user in the system.
-    
-    Args:
-        event: Lambda event containing user data in body
-        
-    Returns:
-        Dict containing HTTP response with created user data or error
+    Crear un nuevo usuario
     """
     try:
-        # Parse and validate request body
-        body = event.get('body')
-        if not body:
-            return error_response(
-                message="Request body is required",
-                status_code=400
-            )
-            
-        if isinstance(body, str):
-            body = json.loads(body)
-        elif body is None:
-            body = {}
-            
-        # Validate using Pydantic model
-        user_request = UserCreateRequest(**body)
+        logger.info(f"Creando usuario con datos: {data}")
         
-        # Check if user with this email already exists
-        if _user_exists_by_email(user_request.email):
-            return error_response(
-                message="User with this email already exists",
-                status_code=409
-            )
+        # Validar datos usando Pydantic
+        user_create = UserCreate(**data)
         
-        # Generate unique user ID and timestamps
-        user_id = str(uuid4())
-        current_time = datetime.utcnow().isoformat()
+        # Verificar si el email ya existe
+        existing_user = db_client.get_user_by_email(user_create.email)
+        if existing_user:
+            return create_response(409, {
+                "error": "El email ya está registrado",
+                "email": user_create.email
+            })
         
-        # Prepare user data for DynamoDB
-        user_data = {
-            'user_id': user_id,
-            'first_name': user_request.first_name,
-            'last_name': user_request.last_name,
-            'email': user_request.email,
-            'phone_number': user_request.phone_number,
-            'birth_date': user_request.birth_date,
-            'created_at': current_time,
-            'updated_at': current_time,
-            'is_active': True
-        }
+        # Crear el usuario usando la función auxiliar
+        user_data = create_user_from_input(user_create)
+        created_user = db_client.create_user(user_data)
         
-        # Remove None values
-        user_data = {k: v for k, v in user_data.items() if v is not None}
+        # Convertir a modelo User para la respuesta
+        user_response = User.from_dynamodb_item(created_user)
         
-        # Save to DynamoDB
-        table = get_dynamodb_table()
-        table.put_item(Item=user_data)
+        logger.info(f"Usuario creado exitosamente: {user_response.user_id}")
+        return create_response(201, {
+            "message": "Usuario creado exitosamente",
+            "user": user_response.model_dump()
+        })
         
-        # Create response using UserResponse model
-        user_response = UserResponse(**user_data)
-        
-        logger.info(f"User created successfully: {user_id}")
-        
-        # Handle model serialization for both Pydantic v1 and v2
-        response_data = user_response.model_dump() if hasattr(user_response, 'model_dump') else user_response.dict()
-        
-        return created_response(
-            data=response_data,
-            message="User created successfully"
-        )
-        
-    except json.JSONDecodeError:
-        return error_response(
-            message="Invalid JSON in request body",
-            status_code=400
-        )
     except ValueError as e:
-        return error_response(
-            message=f"Validation error: {str(e)}",
-            status_code=400
-        )
-    except ClientError as e:
-        logger.error(f"DynamoDB error in create_user: {str(e)}")
-        return error_response(
-            message="Database error occurred",
-            status_code=500
-        )
+        logger.error(f"Error de validación: {str(e)}")
+        return create_response(400, {"error": str(e)})
     except Exception as e:
-        logger.error(f"Unexpected error in create_user: {str(e)}")
-        return error_response(
-            message="Internal server error",
-            status_code=500
-        )
+        logger.error(f"Error creando usuario: {str(e)}", exc_info=True)
+        return internal_server_error_response("Error interno del servidor")
 
-
-def get_user(user_id: str) -> Dict[str, Any]:
+def get_user_handler(user_id: str) -> Dict[str, Any]:
     """
-    Retrieve a user by their ID.
-    
-    Args:
-        user_id: Unique identifier for the user
-        
-    Returns:
-        Dict containing HTTP response with user data or error
+    Obtener un usuario por ID
     """
     try:
-        # Get user from DynamoDB
-        table = get_dynamodb_table()
-        response = table.get_item(
-            Key={'user_id': user_id}
-        )
+        logger.info(f"Obteniendo usuario: {user_id}")
         
-        if 'Item' not in response:
-            return not_found_response("User not found")
+        user = db_client.get_user_by_id(user_id)
+        if not user:
+            return create_response(404, {
+                "error": "Usuario no encontrado",
+                "user_id": user_id
+            })
         
-        user_data = response['Item']
+        # Respuesta sin contraseña
+        user_response = user.dict()
+        user_response.pop('password_hash', None)
         
-        # Convert to response model
-        user_response = UserResponse(**user_data)
+        return create_response(200, {"user": user_response})
         
-        logger.info(f"User retrieved successfully: {user_id}")
-        return success_response(
-            data=user_response.model_dump(),
-            message="User retrieved successfully"
-        )
-        
-    except ClientError as e:
-        logger.error(f"DynamoDB error in get_user: {str(e)}")
-        return error_response(
-            message="Database error occurred",
-            status_code=500
-        )
     except Exception as e:
-        logger.error(f"Unexpected error in get_user: {str(e)}")
-        return error_response(
-            message="Internal server error",
-            status_code=500
-        )
+        logger.error(f"Error obteniendo usuario {user_id}: {str(e)}", exc_info=True)
+        return internal_server_error_response("Error interno del servidor")
 
-
-def update_user(user_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
+def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Update an existing user's information.
-    
-    Args:
-        user_id: Unique identifier for the user
-        event: Lambda event containing updated user data in body
-        
-    Returns:
-        Dict containing HTTP response with updated user data or error
+    Actualizar un usuario existente
     """
     try:
-        # Parse and validate request body
-        body = event.get('body')
-        if not body:
-            return error_response(
-                message="Request body is required",
-                status_code=400
-            )
-            
-        if isinstance(body, str):
-            body = json.loads(body)
-        elif body is None:
-            body = {}
-            
-        # Validate using Pydantic model
-        update_request = UserUpdateRequest(**body)
+        logger.info(f"Actualizando usuario {user_id} con datos: {data}")
         
-        # Check if user exists
-        table = get_dynamodb_table()
-        existing_user = table.get_item(
-            Key={'user_id': user_id}
-        )
+        # Verificar si el usuario existe
+        existing_user = db_client.get_user_by_id(user_id)
+        if not existing_user:
+            return create_response(404, {
+                "error": "Usuario no encontrado",
+                "user_id": user_id
+            })
         
-        if 'Item' not in existing_user:
-            return not_found_response("User not found")
+        # Si se está actualizando el email, verificar que no exista
+        if 'email' in data and data['email'] != existing_user.email:
+            user_with_email = db_client.get_user_by_email(data['email'])
+            if user_with_email:
+                return create_response(409, {
+                    "error": "El email ya está registrado",
+                    "email": data['email']
+                })
         
-        user_data = existing_user['Item']
+        # Actualizar el usuario
+        user_update = UserUpdate(**data)
+        updated_user = db_client.update_user(user_id, user_update)
         
-        # Prepare update expression and values
-        update_expression = "SET updated_at = :updated_at"
-        expression_values = {
-            ':updated_at': datetime.utcnow().isoformat()
-        }
-        expression_names = {}
+        # Respuesta sin contraseña
+        user_response = updated_user.dict()
+        user_response.pop('password_hash', None)
         
-        # Add fields to update if they are provided
-        if update_request.first_name is not None:
-            update_expression += ", first_name = :first_name"
-            expression_values[':first_name'] = update_request.first_name
-            
-        if update_request.last_name is not None:
-            update_expression += ", last_name = :last_name"
-            expression_values[':last_name'] = update_request.last_name
-            
-        if update_request.phone_number is not None:
-            update_expression += ", phone_number = :phone_number"
-            expression_values[':phone_number'] = update_request.phone_number
-            
-        if update_request.birth_date is not None:
-            update_expression += ", birth_date = :birth_date"
-            expression_values[':birth_date'] = update_request.birth_date
+        logger.info(f"Usuario actualizado exitosamente: {user_id}")
+        return create_response(200, {
+            "message": "Usuario actualizado exitosamente",
+            "user": user_response
+        })
         
-        # Update user in DynamoDB
-        update_params = {
-            'Key': {'user_id': user_id},
-            'UpdateExpression': update_expression,
-            'ExpressionAttributeValues': expression_values,
-            'ReturnValues': 'ALL_NEW'
-        }
-        
-        if expression_names:
-            update_params['ExpressionAttributeNames'] = expression_names
-        
-        response = table.update_item(**update_params)
-        updated_user = response['Attributes']
-        
-        # Convert to response model
-        user_response = UserResponse(**updated_user)
-        
-        logger.info(f"User updated successfully: {user_id}")
-        return success_response(
-            data=user_response.model_dump(),
-            message="User updated successfully"
-        )
-        
-    except json.JSONDecodeError:
-        return error_response(
-            message="Invalid JSON in request body",
-            status_code=400
-        )
     except ValueError as e:
-        return error_response(
-            message=f"Validation error: {str(e)}",
-            status_code=400
-        )
-    except ClientError as e:
-        logger.error(f"DynamoDB error in update_user: {str(e)}")
-        return error_response(
-            message="Database error occurred",
-            status_code=500
-        )
+        logger.error(f"Error de validación: {str(e)}")
+        return create_response(400, {"error": str(e)})
     except Exception as e:
-        logger.error(f"Unexpected error in update_user: {str(e)}")
-        return error_response(
-            message="Internal server error",
-            status_code=500
-        )
+        logger.error(f"Error actualizando usuario {user_id}: {str(e)}", exc_info=True)
+        return internal_server_error_response("Error interno del servidor")
 
-
-def delete_user(user_id: str) -> Dict[str, Any]:
+def delete_user_handler(user_id: str) -> Dict[str, Any]:
     """
-    Delete a user from the system (soft delete by setting is_active to False).
-    
-    Args:
-        user_id: Unique identifier for the user to delete
-        
-    Returns:
-        Dict containing HTTP response confirming deletion or error
+    Eliminar un usuario
     """
     try:
-        # Check if user exists first
-        table = get_dynamodb_table()
-        existing_user = table.get_item(
-            Key={'user_id': user_id}
-        )
+        logger.info(f"Eliminando usuario: {user_id}")
         
-        if 'Item' not in existing_user:
-            return not_found_response("User not found")
+        # Verificar si el usuario existe
+        existing_user = db_client.get_user_by_id(user_id)
+        if not existing_user:
+            return create_response(404, {
+                "error": "Usuario no encontrado",
+                "user_id": user_id
+            })
         
-        # Soft delete by setting is_active to False
-        table.update_item(
-            Key={'user_id': user_id},
-            UpdateExpression='SET is_active = :is_active, updated_at = :updated_at',
-            ExpressionAttributeValues={
-                ':is_active': False,
-                ':updated_at': datetime.utcnow().isoformat()
-            }
-        )
+        # Eliminar el usuario (soft delete)
+        updated_at = datetime.now().isoformat()
+        db_client.delete_user(user_id, updated_at)
         
-        logger.info(f"User soft deleted successfully: {user_id}")
-        return success_response(
-            data={'user_id': user_id, 'is_active': False},
-            message="User deleted successfully"
-        )
+        logger.info(f"Usuario eliminado exitosamente: {user_id}")
+        return create_response(200, {
+            "message": "Usuario eliminado exitosamente",
+            "user_id": user_id
+        })
         
-    except ClientError as e:
-        logger.error(f"DynamoDB error in delete_user: {str(e)}")
-        return error_response(
-            message="Database error occurred",
-            status_code=500
-        )
     except Exception as e:
-        logger.error(f"Unexpected error in delete_user: {str(e)}")
-        return error_response(
-            message="Internal server error",
-            status_code=500
-        )
+        logger.error(f"Error eliminando usuario {user_id}: {str(e)}", exc_info=True)
+        return internal_server_error_response("Error interno del servidor")
 
-
-def _user_exists_by_email(email: str) -> bool:
+def get_user_summary_handler() -> Dict[str, Any]:
     """
-    Check if a user with the given email already exists.
-    Uses the EmailIndex GSI for efficient lookup.
-    
-    Args:
-        email: Email address to check
-        
-    Returns:
-        bool: True if user exists, False otherwise
+    Obtener resumen de usuarios (para testing/admin)
     """
     try:
-        table = get_dynamodb_table()
-        response = table.query(
-            IndexName='EmailIndex',
-            KeyConditionExpression='email = :email',
-            ExpressionAttributeValues={':email': email},
-            Select='COUNT'
-        )
+        logger.info("Obteniendo resumen de usuarios")
         
-        return response.get('Count', 0) > 0
+        # Por ahora retornamos un resumen simple
+        # En el futuro podríamos implementar paginación, filtros, etc.
         
-    except ClientError as e:
-        logger.error(f"DynamoDB error in _user_exists_by_email: {str(e)}")
-        return False
+        return create_response(200, {
+            "message": "Endpoint de usuarios activo",
+            "timestamp": datetime.utcnow().isoformat(),
+            "available_operations": [
+                "POST /users - Crear usuario",
+                "GET /users/{user_id} - Obtener usuario",
+                "PUT /users/{user_id} - Actualizar usuario",
+                "DELETE /users/{user_id} - Eliminar usuario"
+            ]
+        })
+        
     except Exception as e:
-        logger.error(f"Unexpected error in _user_exists_by_email: {str(e)}")
-        return False
+        logger.error(f"Error obteniendo resumen de usuarios: {str(e)}", exc_info=True)
+        return internal_server_error_response("Error interno del servidor")

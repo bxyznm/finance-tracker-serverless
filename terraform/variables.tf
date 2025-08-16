@@ -46,7 +46,7 @@ variable "enable_point_in_time_recovery" {
 variable "lambda_runtime" {
   description = "Runtime de Python para Lambda"
   type        = string
-  default     = "python3.11"
+  default     = "python3.12"
 }
 
 variable "lambda_memory_size" {
@@ -69,6 +69,12 @@ variable "lambda_timeout" {
     condition     = var.lambda_timeout >= 1 && var.lambda_timeout <= 900
     error_message = "Timeout debe estar entre 1 y 900 segundos."
   }
+}
+
+variable "lambda_zip_path" {
+  description = "Ruta al archivo ZIP del código Lambda"
+  type        = string
+  default     = "./lambda-deployment.zip"
 }
 
 # Variables para API Gateway

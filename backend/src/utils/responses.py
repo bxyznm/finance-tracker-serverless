@@ -184,39 +184,6 @@ def internal_server_error_response(
     return create_response(500, body)
 
 
-def error_response(message: str, status_code: int = 400) -> Dict[str, Any]:
-    """
-    Generic error response function.
-    
-    Args:
-        message: Error message
-        status_code: HTTP status code for the error
-        
-    Returns:
-        HTTP error response
-    """
-    return create_response(status_code, {
-        "success": False,
-        "message": message
-    })
-
-
-def not_found_response(message: str = "Resource not found") -> Dict[str, Any]:
-    """
-    Create a 404 not found response.
-    
-    Args:
-        message: Error message
-        
-    Returns:
-        HTTP 404 response
-    """
-    return create_response(404, {
-        "success": False,
-        "message": message
-    })
-
-
 def handle_cors_preflight() -> Dict[str, Any]:
     """
     Manejar solicitudes CORS preflight (OPTIONS).
