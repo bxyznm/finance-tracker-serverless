@@ -1,6 +1,6 @@
 """
-Configuración de la aplicación.
-Manejo centralizado de variables de entorno y configuraciones.
+Application configuration.
+Centralized management of environment variables and settings.
 """
 
 import os
@@ -8,66 +8,102 @@ from typing import Optional
 
 
 class Config:
-    """Configuración de la aplicación."""
+    """Application configuration."""
     
-    # Configuración básica
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "dev")
-    DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
-    VERSION: str = os.getenv("VERSION", "1.0.0")
+    @property
+    def environment(self) -> str:
+        return os.getenv("ENVIRONMENT", "dev")
     
-    # Configuración de AWS
-    AWS_REGION: str = os.getenv("APP_AWS_REGION", "mx-central-1")
+    @property
+    def debug(self) -> bool:
+        return os.getenv("DEBUG", "false").lower() == "true"
     
-    # Configuración de DynamoDB
-    DYNAMODB_TABLE_PREFIX: str = os.getenv("DYNAMODB_TABLE_PREFIX", "finance-tracker")
-    USERS_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-users"
-    ACCOUNTS_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-accounts"
-    TRANSACTIONS_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-transactions"
-    CATEGORIES_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-categories"
-    BUDGETS_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-budgets"
+    @property
+    def version(self) -> str:
+        return os.getenv("VERSION", "1.0.0")
     
-    # Configuración de autenticación
-    JWT_SECRET_KEY: Optional[str] = os.getenv("JWT_SECRET_KEY")
-    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
-    JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
+    @property
+    def aws_region(self) -> str:
+        # First try AWS_REGION (standard), then APP_AWS_REGION (custom), then default
+        return os.getenv("AWS_REGION") or os.getenv("APP_AWS_REGION", "mx-central-1")
     
-    # Configuración de CORS
-    ALLOWED_ORIGINS: list = os.getenv(
-        "ALLOWED_ORIGINS", 
-        "http://localhost:3000,http://localhost:8080"
-    ).split(",")
+    # DynamoDB configuration
+    @property
+    def users_table_name(self) -> str:
+        return os.getenv("USERS_TABLE", "finance-tracker-dev-users")
     
-    # Configuración de logging
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    @property
+    def accounts_table_name(self) -> str:
+        return os.getenv("ACCOUNTS_TABLE", "finance-tracker-dev-accounts")
     
-    # Configuración específica de México
-    DEFAULT_CURRENCY: str = "MXN"
-    DEFAULT_TIMEZONE: str = "America/Mexico_City"
-    DEFAULT_LOCALE: str = "es_MX"
+    @property
+    def transactions_table_name(self) -> str:
+        return os.getenv("TRANSACTIONS_TABLE", "finance-tracker-dev-transactions")
     
-    @classmethod
-    def is_production(cls) -> bool:
-        """Verificar si estamos en producción."""
-        return cls.ENVIRONMENT.lower() == "production"
+    @property
+    def categories_table_name(self) -> str:
+        return os.getenv("CATEGORIES_TABLE", "finance-tracker-dev-categories")
     
-    @classmethod
-    def is_development(cls) -> bool:
-        """Verificar si estamos en desarrollo."""
-        return cls.ENVIRONMENT.lower() in ["dev", "development"]
+    @property
+    def budgets_table_name(self) -> str:
+        return os.getenv("BUDGETS_TABLE", "finance-tracker-dev-budgets")
     
-    @classmethod
-    def get_table_name(cls, entity: str) -> str:
-        """
-        Obtener nombre de tabla para una entidad.
-        
-        Args:
-            entity: Nombre de la entidad (users, accounts, etc.)
-            
-        Returns:
-            Nombre completo de la tabla
-        """
-        return f"{cls.DYNAMODB_TABLE_PREFIX}-{entity}"
+    # Authentication configuration
+    @property
+    def jwt_secret_key(self) -> Optional[str]:
+        return os.getenv("JWT_SECRET_KEY")
+    
+    @property
+    def jwt_algorithm(self) -> str:
+        return os.getenv("JWT_ALGORITHM", "HS256")
+    
+    @property
+    def jwt_expiration_hours(self) -> int:
+        return int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
+    
+    # CORS configuration
+    @property
+    def allowed_origins(self) -> list:
+        return os.getenv(
+            "ALLOWED_ORIGINS", 
+            "http://localhost:3000,http://localhost:8080"
+        ).split(",")
+    
+    @property
+    def log_level(self) -> str:
+        return os.getenv("LOG_LEVEL", "INFO")
+    
+    # Mexico-specific configuration
+    @property
+    def default_currency(self) -> str:
+        return os.getenv("DEFAULT_CURRENCY", "MXN")
+    
+    @property
+    def default_timezone(self) -> str:
+        return os.getenv("DEFAULT_TIMEZONE", "America/Mexico_City")
+    
+    @property
+    def default_locale(self) -> str:
+        return os.getenv("DEFAULT_LOCALE", "es_MX")
+    
+    def is_production(self) -> bool:
+        """Check if we are in production."""
+        return self.environment.lower() == "production"
+    
+    def is_development(self) -> bool:
+        """Check if we are in development."""
+        return self.environment.lower() in ["dev", "development"]
 
 
-# Instancia global de configuración
+def get_config() -> Config:
+    """
+    Get application configuration instance.
+    
+    Returns:
+        Config instance with environment settings
+    """
+    return Config()
+
+
+# Global configuration instance
 config = Config()

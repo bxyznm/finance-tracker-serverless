@@ -36,10 +36,12 @@ confirm_destroy() {
     echo -e "${RED}⚠️  ADVERTENCIA: Esto eliminará TODOS los recursos de AWS${NC}"
     echo -e "${RED}   Esto incluye:${NC}"
     echo -e "${RED}   • Todas las tablas DynamoDB (SE PERDERÁN LOS DATOS)${NC}"
-    echo -e "${RED}   • Funciones Lambda${NC}"
-    echo -e "${RED}   • API Gateway${NC}"
+    echo -e "${RED}   • Funciones Lambda (health-check, users)${NC}"
+    echo -e "${RED}   • Lambda Layers con dependencias Python${NC}"
+    echo -e "${RED}   • API Gateway y sus configuraciones${NC}"
     echo -e "${RED}   • Logs de CloudWatch${NC}"
     echo -e "${RED}   • Roles y políticas IAM${NC}"
+    echo -e "${RED}   • Archivos ZIP locales de deployment${NC}"
     echo ""
     read -p "¿Estás seguro de que quieres continuar? (escribe 'DESTROY' para confirmar): " confirmation
     
@@ -126,7 +128,7 @@ verify_dynamodb() {
     fi
 }
 
-# Función para verificar Lambda
+# Función para verificar Lambda Functions y Layers
 verify_lambda() {
     echo -e "${BLUE}🔍 Verificando funciones Lambda...${NC}"
     
@@ -134,7 +136,6 @@ verify_lambda() {
     
     if [ -z "$functions" ]; then
         echo -e "${GREEN}✅ No se encontraron funciones Lambda${NC}"
-        return 0
     else
         echo -e "${RED}❌ Se encontraron funciones Lambda remanentes:${NC}"
         echo "$functions"
@@ -147,7 +148,41 @@ verify_lambda() {
                 aws lambda delete-function --function-name "$func" --region "$AWS_REGION" || echo -e "${RED}❌ Error eliminando $func${NC}"
             done
         fi
+    fi
+    
+    # Verificar Lambda Layers
+    echo -e "${BLUE}🔍 Verificando Lambda Layers...${NC}"
+    
+    local layers=$(aws lambda list-layers --region "$AWS_REGION" --query 'Layers[?starts_with(LayerName, `'${PROJECT_NAME}-${ENVIRONMENT}'`)].LayerName' --output text 2>/dev/null || echo "")
+    
+    if [ -z "$layers" ]; then
+        echo -e "${GREEN}✅ No se encontraron Lambda Layers${NC}"
+        if [ -z "$functions" ]; then
+            return 0
+        fi
+    else
+        echo -e "${RED}❌ Se encontraron Lambda Layers remanentes:${NC}"
+        echo "$layers"
+        
+        # Opción para eliminar manualmente
+        read -p "¿Quieres eliminar estos layers manualmente? (y/N): " delete_layers
+        if [[ $delete_layers =~ ^[Yy]$ ]]; then
+            for layer in $layers; do
+                echo -e "${YELLOW}🗑️  Obteniendo versiones del layer: $layer${NC}"
+                local versions=$(aws lambda list-layer-versions --layer-name "$layer" --region "$AWS_REGION" --query 'LayerVersions[].Version' --output text 2>/dev/null || echo "")
+                
+                for version in $versions; do
+                    echo -e "${YELLOW}🗑️  Eliminando layer version: $layer:$version${NC}"
+                    aws lambda delete-layer-version --layer-name "$layer" --version-number "$version" --region "$AWS_REGION" || echo -e "${RED}❌ Error eliminando $layer:$version${NC}"
+                done
+            done
+        fi
+    fi
+    
+    if [ -n "$functions" ] || [ -n "$layers" ]; then
         return 1
+    else
+        return 0
     fi
 }
 
@@ -180,23 +215,24 @@ verify_cloudwatch() {
 verify_api_gateway() {
     echo -e "${BLUE}🔍 Verificando APIs Gateway...${NC}"
     
-    local apis=$(aws apigateway get-rest-apis --region "$AWS_REGION" --query 'items[?contains(name, `'${PROJECT_NAME}'`)].{Name:name,Id:id}' --output text 2>/dev/null || echo "")
+    local api_info=$(aws apigateway get-rest-apis --region "$AWS_REGION" --query 'items[?contains(name, `'${PROJECT_NAME}'`)].{Name:name,Id:id}' --output text 2>/dev/null || echo "")
     
-    if [ -z "$apis" ]; then
+    if [ -z "$api_info" ]; then
         echo -e "${GREEN}✅ No se encontraron APIs Gateway${NC}"
         return 0
     else
         echo -e "${RED}❌ Se encontraron APIs Gateway remanentes:${NC}"
-        echo "$apis"
+        echo "$api_info"
         
         # Opción para eliminar manualmente
         read -p "¿Quieres eliminar estas APIs manualmente? (y/N): " delete_apis
         if [[ $delete_apis =~ ^[Yy]$ ]]; then
-            # Extraer IDs de las APIs
-            local api_ids=$(echo "$apis" | awk '{print $2}')
-            for api_id in $api_ids; do
-                echo -e "${YELLOW}🗑️  Eliminando API: $api_id${NC}"
-                aws apigateway delete-rest-api --rest-api-id "$api_id" --region "$AWS_REGION" || echo -e "${RED}❌ Error eliminando $api_id${NC}"
+            # Extraer IDs de las APIs (formato: Name<tab>ID)
+            echo "$api_info" | while IFS=$'\t' read -r name api_id; do
+                if [ -n "$api_id" ] && [ "$api_id" != "None" ]; then
+                    echo -e "${YELLOW}🗑️  Eliminando API '$name' con ID: $api_id${NC}"
+                    aws apigateway delete-rest-api --rest-api-id "$api_id" --region "$AWS_REGION" || echo -e "${RED}❌ Error eliminando $api_id${NC}"
+                fi
             done
         fi
         return 1
@@ -245,6 +281,25 @@ verify_terraform_state() {
     else
         echo -e "${GREEN}✅ No existe archivo de estado de Terraform${NC}"
     fi
+    
+    # Limpiar archivos ZIP locales
+    echo -e "${BLUE}🔍 Verificando archivos temporales locales...${NC}"
+    
+    local zip_files=$(find . -name "*.zip" -type f 2>/dev/null | grep -E "(lambda-deployment|lambda-layer)" || echo "")
+    
+    if [ -z "$zip_files" ]; then
+        echo -e "${GREEN}✅ No se encontraron archivos ZIP temporales${NC}"
+    else
+        echo -e "${YELLOW}📦 Se encontraron archivos ZIP temporales:${NC}"
+        echo "$zip_files"
+        
+        # Opción para eliminar archivos ZIP
+        read -p "¿Quieres eliminar estos archivos ZIP temporales? (y/N): " delete_zips
+        if [[ $delete_zips =~ ^[Yy]$ ]]; then
+            echo "$zip_files" | xargs rm -f
+            echo -e "${GREEN}✅ Archivos ZIP eliminados${NC}"
+        fi
+    fi
 }
 
 # Función principal de verificación
@@ -282,7 +337,15 @@ run_verification() {
         echo -e "${GREEN}==============================================================================${NC}"
         echo -e "${GREEN}✅ Todos los recursos han sido eliminados correctamente${NC}"
         echo -e "${GREEN}✅ No se encontraron recursos remanentes en AWS${NC}"
-        echo -e "${GREEN}✅ La infraestructura se ha destruido completamente${NC}"
+        echo -e "${GREEN}✅ La infraestructura Finance Tracker se ha destruido completamente${NC}"
+        echo ""
+        echo -e "${BLUE}📊 Recursos eliminados:${NC}"
+        echo -e "   • 5 tablas DynamoDB (users, accounts, transactions, categories, budgets)"
+        echo -e "   • 2 funciones Lambda (health-check, users)"
+        echo -e "   • 1 Lambda Layer con dependencias Python"
+        echo -e "   • 1 API Gateway con todos sus endpoints"
+        echo -e "   • Grupos de logs CloudWatch"
+        echo -e "   • Roles y políticas IAM"
         echo ""
         echo -e "${BLUE}💰 Costos: Ya no se están generando costos por estos recursos${NC}"
         echo ""
@@ -293,6 +356,7 @@ run_verification() {
         echo -e "${YELLOW}⚠️  Se encontraron algunos recursos remanentes${NC}"
         echo -e "${YELLOW}💡 Revisa la salida anterior para detalles específicos${NC}"
         echo -e "${YELLOW}💡 Puedes ejecutar comandos de limpieza manual si es necesario${NC}"
+        echo -e "${YELLOW}💡 Algunos recursos pueden tardar unos minutos en eliminarse completamente${NC}"
         echo ""
     fi
 }

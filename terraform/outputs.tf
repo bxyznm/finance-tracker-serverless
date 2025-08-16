@@ -45,6 +45,7 @@ output "lambda_function_names" {
   description = "Nombres de las funciones Lambda"
   value = {
     health_check = aws_lambda_function.health_check.function_name
+    users        = aws_lambda_function.users.function_name
   }
 }
 
@@ -52,6 +53,7 @@ output "lambda_function_arns" {
   description = "ARNs de las funciones Lambda"
   value = {
     health_check = aws_lambda_function.health_check.arn
+    users        = aws_lambda_function.users.arn
   }
 }
 
@@ -87,4 +89,15 @@ output "table_prefix" {
 output "curl_health_check" {
   description = "Comando curl para probar el health check"
   value       = "curl -X GET https://${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_gateway_stage_name}/health"
+}
+
+output "users_api_endpoints" {
+  description = "URLs de los endpoints de usuarios"
+  value = {
+    base_url    = "https://${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_gateway_stage_name}/users"
+    create_user = "curl -X POST https://${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_gateway_stage_name}/users"
+    get_user    = "curl -X GET https://${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_gateway_stage_name}/users/{user_id}"
+    update_user = "curl -X PUT https://${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_gateway_stage_name}/users/{user_id}"
+    delete_user = "curl -X DELETE https://${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com/${var.api_gateway_stage_name}/users/{user_id}"
+  }
 }
