@@ -21,7 +21,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           cd backend/
           mkdir -p release/layer
           mkdir -p release/code
