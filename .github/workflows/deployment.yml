@@ -1,11 +1,27 @@
 # Workflow para crear releases automatizados con los zips del layer de dependencias 
 # y el código de las funciones Lambda cada vez que se hace push a la rama 'development'
+# También se puede ejecutar manualmente desde la interfaz de GitHub
 name: Deployment
 
 on:
   push:
     branches:
       - development
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Tipo de release'
+        required: false
+        default: 'manual'
+        type: choice
+        options:
+        - manual
+        - hotfix
+        - patch
+      custom_tag:
+        description: 'Tag personalizado (opcional)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -29,7 +45,7 @@ jobs:
           mkdir -p release/layer
           mkdir -p release/code
           # Instalar dependencias de producción en el directorio layer
-          pip install -r requirements.txt -t release/layer
+          pip install -r requirements-prod.txt -t release/layer
 
       - name: Create ZIP files
         run: |
@@ -47,12 +63,14 @@ jobs:
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: deployment-${{ github.run_number }}-${{ github.sha }}
-          name: Finance Tracker Deployment ${{ github.run_number }}
+          tag_name: ${{ inputs.custom_tag || format('{0}-{1}', inputs.release_type || 'deployment', github.run_number) }}
+          name: Finance Tracker ${{ inputs.release_type && format('{0} {1}', inputs.release_type, github.run_number) || format('Deployment {0}', github.run_number) }}
           body: |
-            Deployment automático desde la rama development
+            ${{ github.event_name == 'workflow_dispatch' && 'Deployment manual' || 'Deployment automático desde la rama development' }}
+            - Tipo: ${{ inputs.release_type || 'automático' }}
             - Commit: ${{ github.sha }}
-            - Fecha: ${{ github.event.head_commit.timestamp }}
+            - Fecha: ${{ github.event.head_commit.timestamp || github.event.repository.pushed_at }}
+            - Branch: ${{ github.ref_name }}
             - Layer: Dependencias de producción optimizadas
             - Code: Código fuente de las funciones Lambda
           files: |
