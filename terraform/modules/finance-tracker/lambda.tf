@@ -8,7 +8,7 @@
 
 resource "aws_lambda_layer_version" "dependencies" {
   layer_name  = "${local.name_prefix}-dependencies"
-  description = "Dependencies layer for Finance Tracker - ${var.environment} (${data.github_release.finance_tracker.tag_name})"
+  description = "Dependencies layer for Finance Tracker - ${var.environment} (${data.github_release.finance_tracker.release_tag})"
 
   s3_bucket        = aws_s3_bucket.deployment_assets.bucket
   s3_key           = aws_s3_object.layer_zip.key
