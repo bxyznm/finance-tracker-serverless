@@ -134,7 +134,7 @@ class DynamoDBClient:
             expression_names = {}
             
             for field, value in update_data.items():
-                if field not in ['user_id', 'pk', 'sk', 'gsi1pk', 'gsi1sk', 'entity_type']:
+                if field not in ['user_id', 'pk', 'sk', 'gsi1_pk', 'gsi1_sk', 'entity_type']:
                     attr_name = f'#{field}'
                     attr_value = f':{field}'
                     update_expression += f'{attr_name} = {attr_value}, '

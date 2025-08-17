@@ -121,7 +121,7 @@ def get_user_handler(user_id: str) -> Dict[str, Any]:
             })
         
         # Respuesta sin contraseña
-        user_response = user.dict()
+        user_response = user.copy()
         user_response.pop('password_hash', None)
         
         return create_response(200, {"user": user_response})
@@ -146,7 +146,7 @@ def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
             })
         
         # Si se está actualizando el email, verificar que no exista
-        if 'email' in data and data['email'] != existing_user.email:
+        if 'email' in data and data['email'] != existing_user.get('email'):
             user_with_email = db_client.get_user_by_email(data['email'])
             if user_with_email:
                 return create_response(409, {
@@ -156,10 +156,10 @@ def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         
         # Actualizar el usuario
         user_update = UserUpdate(**data)
-        updated_user = db_client.update_user(user_id, user_update)
+        updated_user = db_client.update_user(user_id, user_update.model_dump())
         
         # Respuesta sin contraseña
-        user_response = updated_user.dict()
+        user_response = updated_user.copy()
         user_response.pop('password_hash', None)
         
         logger.info(f"Usuario actualizado exitosamente: {user_id}")
