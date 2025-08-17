@@ -1,6 +1,7 @@
 # Workflow para crear releases automatizados con los zips del layer de dependencias 
-# y el código de las funciones Lambda cada vez que se hace push a la rama 'development'
-# También se puede ejecutar manualmente desde la interfaz de GitHub
+# y el código de las funciones Lambda:
+# - Automáticamente: cuando se hace push a la rama 'development'
+# - Manualmente: desde cualquier rama usando workflow_dispatch
 name: Deployment
 
 on:
@@ -9,6 +10,10 @@ on:
       - development
   workflow_dispatch:
     inputs:
+      target_branch:
+        description: 'Rama desde la cual crear el deployment (se usa la rama actual por defecto)'
+        required: false
+        type: string
       release_type:
         description: 'Tipo de release'
         required: false
@@ -18,6 +23,7 @@ on:
         - manual
         - hotfix
         - patch
+        - feature
       custom_tag:
         description: 'Tag personalizado (opcional)'
         required: false
@@ -33,6 +39,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch || github.ref }}
+
+      - name: Show deployment info
+        run: |
+          echo "🚀 Información del Deployment:"
+          echo "   Rama: ${{ github.ref_name }}"
+          echo "   Commit: ${{ github.sha }}"
+          echo "   Tipo: ${{ inputs.release_type || 'automático' }}"
+          echo "   Ejecutado por: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "   ✅ Ejecución manual desde cualquier rama"
+          else
+            echo "   ⚡ Ejecución automática por push"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -63,16 +84,23 @@ jobs:
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.custom_tag || format('{0}-{1}', inputs.release_type || 'deployment', github.run_number) }}
-          name: Finance Tracker ${{ inputs.release_type && format('{0} {1}', inputs.release_type, github.run_number) || format('Deployment {0}', github.run_number) }}
+          tag_name: ${{ inputs.custom_tag || format('{0}-{1}-{2}', inputs.release_type || 'deployment', github.ref_name, github.run_number) }}
+          name: Finance Tracker ${{ inputs.release_type && format('{0} {1}', inputs.release_type, github.run_number) || format('Deployment {0}', github.run_number) }} (from ${{ github.ref_name }})
           body: |
-            ${{ github.event_name == 'workflow_dispatch' && 'Deployment manual' || 'Deployment automático desde la rama development' }}
-            - Tipo: ${{ inputs.release_type || 'automático' }}
-            - Commit: ${{ github.sha }}
-            - Fecha: ${{ github.event.head_commit.timestamp || github.event.repository.pushed_at }}
-            - Branch: ${{ github.ref_name }}
-            - Layer: Dependencias de producción optimizadas
-            - Code: Código fuente de las funciones Lambda
+            ${{ github.event_name == 'workflow_dispatch' && format('🚀 Deployment manual desde la rama **{0}**', github.ref_name) || '⚡ Deployment automático desde la rama **development**' }}
+            
+            **Detalles del deployment:**
+            - 🏷️ Tipo: `${{ inputs.release_type || 'automático' }}`
+            - 🌿 Rama: `${{ github.ref_name }}`
+            - 📝 Commit: `${{ github.sha }}`
+            - ⏰ Fecha: ${{ github.event.head_commit.timestamp || github.event.repository.pushed_at }}
+            - 👤 Ejecutado por: ${{ github.actor }}
+            
+            **Contenido:**
+            - 📦 **layer.zip**: Dependencias de producción optimizadas para AWS Lambda Layer
+            - 🔧 **code.zip**: Código fuente de las funciones Lambda
+            
+            ${{ github.event_name == 'workflow_dispatch' && '> ℹ️ Este deployment fue ejecutado manualmente y puede contener código experimental.' || '> ✅ Este deployment fue ejecutado automáticamente desde development.' }}
           files: |
             backend/release/layer.zip
             backend/release/code.zip
