@@ -146,7 +146,7 @@ def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
             })
         
         # Si se está actualizando el email, verificar que no exista
-        if 'email' in data and data['email'] != existing_user.email:
+        if 'email' in data and data['email'] != existing_user.get('email'):
             user_with_email = db_client.get_user_by_email(data['email'])
             if user_with_email:
                 return create_response(409, {
