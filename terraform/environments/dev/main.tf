@@ -3,7 +3,7 @@
 # =============================================================================
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = "1.12.2"
 
   #Backend para state remoto (opcional - se puede configurar después)
   backend "s3" {
