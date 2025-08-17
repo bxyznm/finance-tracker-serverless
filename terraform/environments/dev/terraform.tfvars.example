@@ -1,0 +1,75 @@
+# =============================================================================
+# Finance Tracker Serverless - Ejemplo de Variables para Desarrollo
+# Este archivo muestra las variables que se pueden configurar para el entorno dev
+# Copia este archivo como terraform.tfvars y modifica los valores según tus necesidades
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Variables Básicas (REQUERIDAS)
+# -----------------------------------------------------------------------------
+
+# Información de GitHub
+github_owner = "tu-usuario-github"         # Cambia por tu usuario de GitHub
+github_token = "ghp_tu_token_de_github"    # Token de GitHub con permisos de repo
+
+# Opcional: Tag específico del prerelease para usar
+# Si se deja vacío, usará el último prerelease disponible
+dev_release_tag = ""  # Por ejemplo: "v1.0.0-beta.1"
+
+# -----------------------------------------------------------------------------
+# Configuración del Proyecto (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+project_name = "finance-tracker"
+aws_region   = "us-east-1"
+
+# -----------------------------------------------------------------------------
+# Variables de Lambda (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+lambda_runtime = "python3.12"
+
+# Variables de entorno adicionales para las funciones Lambda
+lambda_environment_variables = {
+  DEBUG_MODE  = "true"
+  LOG_LEVEL   = "DEBUG"
+  ENVIRONMENT = "dev"
+  # Agrega aquí cualquier variable adicional que necesites
+}
+
+# -----------------------------------------------------------------------------
+# Configuración de CORS (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+# Métodos HTTP permitidos
+cors_allowed_methods = [
+  "GET",
+  "POST", 
+  "PUT",
+  "DELETE",
+  "OPTIONS"
+]
+
+# Headers permitidos (para desarrollo se incluyen los más comunes)
+cors_allowed_headers = [
+  "Content-Type",
+  "X-Amz-Date",
+  "Authorization",
+  "X-Api-Key",
+  "X-Amz-Security-Token",
+  "X-Amz-User-Agent"
+]
+
+# -----------------------------------------------------------------------------
+# Tags Comunes (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+common_tags = {
+  CreatedBy    = "terraform"
+  Environment  = "dev"
+  Purpose      = "development"
+  AutoDestroy  = "true"
+  Owner        = "tu-nombre"          # Cambia por tu nombre
+  Team         = "development"
+  CostCenter   = "engineering"
+}
