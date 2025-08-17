@@ -100,8 +100,8 @@ output "dynamodb_tables" {
 output "github_release_info" {
   description = "Información del release de GitHub utilizado"
   value = {
-    tag_name     = data.github_release.finance_tracker.tag_name
-    release_id   = data.github_release.finance_tracker.release_id
+    tag_name     = data.github_release.finance_tracker.release_tag
+    release_id   = data.github_release.finance_tracker.id
     created_at   = data.github_release.finance_tracker.created_at
     published_at = data.github_release.finance_tracker.published_at
     prerelease   = data.github_release.finance_tracker.prerelease

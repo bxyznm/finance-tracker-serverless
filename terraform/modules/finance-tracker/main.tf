@@ -38,7 +38,7 @@ locals {
     Project     = var.project_name
     Environment = var.environment
     ManagedBy   = "terraform"
-    Release     = data.github_release.finance_tracker.tag_name
+    Release     = data.github_release.finance_tracker.release_tag
   })
 
   # Nombre base para recursos
@@ -106,7 +106,7 @@ resource "aws_s3_bucket_public_access_block" "deployment_assets" {
 # Descargar layer.zip del release
 resource "null_resource" "download_layer" {
   triggers = {
-    release_tag = data.github_release.finance_tracker.tag_name
+    release_tag = data.github_release.finance_tracker.release_tag
     asset_url   = local.layer_asset_url
   }
 
@@ -122,7 +122,7 @@ resource "null_resource" "download_layer" {
 # Descargar code.zip del release
 resource "null_resource" "download_code" {
   triggers = {
-    release_tag = data.github_release.finance_tracker.tag_name
+    release_tag = data.github_release.finance_tracker.release_tag
     asset_url   = local.code_asset_url
   }
 
