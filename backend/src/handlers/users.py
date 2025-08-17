@@ -156,7 +156,7 @@ def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         
         # Actualizar el usuario
         user_update = UserUpdate(**data)
-        updated_user = db_client.update_user(user_id, user_update.dict())
+        updated_user = db_client.update_user(user_id, user_update.model_dump())
         
         # Respuesta sin contraseña
         user_response = updated_user.copy()
