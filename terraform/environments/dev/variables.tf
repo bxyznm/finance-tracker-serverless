@@ -88,6 +88,12 @@ variable "cors_allowed_headers" {
   ]
 }
 
+variable "cors_allowed_origins" {
+  description = "Lista de orígenes permitidos para CORS"
+  type        = list(string)
+  default     = ["*"]  # Para desarrollo, en producción usar dominios específicos
+}
+
 # -----------------------------------------------------------------------------
 # Variables de Tags
 # -----------------------------------------------------------------------------

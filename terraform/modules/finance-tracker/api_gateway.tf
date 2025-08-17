@@ -14,15 +14,6 @@ resource "aws_api_gateway_rest_api" "finance_tracker_api" {
     types = ["REGIONAL"]
   }
 
-  # Configuración de CORS a nivel de API
-  cors_configuration {
-    allow_credentials = false
-    allow_headers     = var.cors_allowed_headers
-    allow_methods     = var.cors_allowed_methods
-    allow_origins     = var.cors_allowed_origins
-    max_age           = 600
-  }
-
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-api"
     Type = "api-gateway"
@@ -314,12 +305,6 @@ resource "aws_api_gateway_stage" "finance_tracker_stage" {
   deployment_id = aws_api_gateway_deployment.finance_tracker_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
   stage_name    = var.environment
-
-  # Configuración de throttling
-  throttle_settings {
-    rate_limit  = var.api_gateway_throttling_rate_limit
-    burst_limit = var.api_gateway_throttling_burst_limit
-  }
 
   # Configuración de logging
   dynamic "access_log_settings" {

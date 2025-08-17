@@ -62,16 +62,8 @@ provider "github" {
 data "github_release" "latest_prerelease" {
   repository  = var.github_repository
   owner       = var.github_owner
-  retrieve_by = "tag"
+  retrieve_by = var.dev_release_tag != "" ? "tag" : "latest"
   release_tag = var.dev_release_tag != "" ? var.dev_release_tag : null
-
-  # Si no se especifica un tag, obtener el último prerelease
-  dynamic "retrieve_by" {
-    for_each = var.dev_release_tag == "" ? [1] : []
-    content {
-      retrieve_by = "latest"
-    }
-  }
 }
 
 # Obtener información del caller actual
@@ -170,7 +162,7 @@ output "dev_info" {
   description = "Información específica del entorno de desarrollo"
   value = {
     message           = "🚀 Entorno de desarrollo desplegado exitosamente"
-    prerelease_used   = data.github_release.latest_prerelease.tag_name
+    prerelease_used   = data.github_release.latest_prerelease.release_tag
     auto_destroy      = true
     cost_optimization = "Configurado para costos mínimos en desarrollo"
     debug_mode        = true
