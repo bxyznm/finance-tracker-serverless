@@ -31,7 +31,7 @@ on:
 
 permissions:
   contents: write
-  releases: write
+  actions: read
 
 jobs:
   build:
