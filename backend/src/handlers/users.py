@@ -159,7 +159,7 @@ def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         updated_user = db_client.update_user(user_id, user_update)
         
         # Respuesta sin contraseña
-        user_response = updated_user.dict()
+        user_response = updated_user.copy()
         user_response.pop('password_hash', None)
         
         logger.info(f"Usuario actualizado exitosamente: {user_id}")
