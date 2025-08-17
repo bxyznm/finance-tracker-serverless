@@ -29,7 +29,7 @@ jobs:
           mkdir -p release/layer
           mkdir -p release/code
           # Instalar dependencias de producción en el directorio layer
-          pip install -r requirements-prod.txt -t release/layer
+          pip install -r requirements.txt -t release/layer
 
       - name: Create ZIP files
         run: |
@@ -44,39 +44,21 @@ jobs:
           cd release/code
           zip -r ../code.zip .
 
-      - name: Create release with timestamp
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: deployment-${{ github.run_number }}-${{ github.sha }}
-          release_name: Finance Tracker Deployment ${{ github.run_number }}
+          name: Finance Tracker Deployment ${{ github.run_number }}
           body: |
             Deployment automático desde la rama development
             - Commit: ${{ github.sha }}
             - Fecha: ${{ github.event.head_commit.timestamp }}
             - Layer: Dependencias de producción optimizadas
             - Code: Código fuente de las funciones Lambda
+          files: |
+            backend/release/layer.zip
+            backend/release/code.zip
           draft: false
           prerelease: true
-
-      - name: Upload Layer ZIP
-        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: backend/release/layer.zip
-          asset_name: layer.zip
-          asset_content_type: application/zip
-
-      - name: Upload Code ZIP
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: backend/release/code.zip
-          asset_name: code.zip
-          asset_content_type: application/zip
