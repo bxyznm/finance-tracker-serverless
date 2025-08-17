@@ -1,33 +1,28 @@
 # Workflow para crear releases automatizados con los zips del layer de dependencias 
 # y el código de las funciones Lambda:
-# - Automáticamente: cuando se hace push a la rama 'development'
-# - Manualmente: desde cualquier rama usando workflow_dispatch
+# - Automáticamente: cuando se hace push a la rama 'main'
+# - Automáticamente: cuando se hace PR a la rama 'main'
+# - Manualmente: usando workflow_dispatch
 name: Deployment
 
 on:
   push:
     branches:
-      - development
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
-      target_branch:
-        description: 'Rama desde la cual crear el deployment (se usa la rama actual por defecto)'
+      environment:
+        description: 'Ambiente de deployment'
         required: false
-        type: string
-      release_type:
-        description: 'Tipo de release'
-        required: false
-        default: 'manual'
+        default: 'development'
         type: choice
         options:
-        - manual
-        - hotfix
-        - patch
-        - feature
-      custom_tag:
-        description: 'Tag personalizado (opcional)'
-        required: false
-        type: string
+        - development
+        - staging
+        - production
 
 permissions:
   contents: write
@@ -39,20 +34,38 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.target_branch || github.ref }}
 
       - name: Show deployment info
         run: |
           echo "🚀 Información del Deployment:"
           echo "   Rama: ${{ github.ref_name }}"
           echo "   Commit: ${{ github.sha }}"
-          echo "   Tipo: ${{ inputs.release_type || 'automático' }}"
+          echo "   Ambiente: ${{ inputs.environment || 'development' }}"
           echo "   Ejecutado por: ${{ github.event_name }}"
+          echo "   Actor: ${{ github.actor }}"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "   ✅ Ejecución manual desde cualquier rama"
+            echo "   ✅ Ejecución manual"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "   🔀 Ejecución automática por PR #${{ github.event.number }}"
           else
             echo "   ⚡ Ejecución automática por push"
+          fi
+
+      - name: Create deployment summary
+        run: |
+          echo "# 🚀 Finance Tracker Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Información del Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "| Variable | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Fecha** | \`$(date '+%Y-%m-%d %H:%M:%S UTC')\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Rama** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Ambiente** | \`${{ inputs.environment || 'development' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Ejecutado por** | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Evento** | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "| **PR** | [\`#${{ github.event.number }}\`](${{ github.event.pull_request.html_url }}) - ${{ github.event.pull_request.title }} |" >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Set up Python
@@ -66,7 +79,7 @@ jobs:
           mkdir -p release/layer
           mkdir -p release/code
           # Instalar dependencias de producción en el directorio layer
-          pip install -r requirements-prod.txt -t release/layer
+          pip install -r requirements.txt -t release/layer
 
       - name: Create ZIP files
         run: |
@@ -84,13 +97,13 @@ jobs:
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.custom_tag || format('{0}-{1}-{2}', inputs.release_type || 'deployment', github.ref_name, github.run_number) }}
-          name: Finance Tracker ${{ inputs.release_type && format('{0} {1}', inputs.release_type, github.run_number) || format('Deployment {0}', github.run_number) }} (from ${{ github.ref_name }})
+          tag_name: ${{ format('v{0}-{1}-{2}', inputs.environment || 'dev', github.ref_name, github.run_number) }}
+          name: Finance Tracker ${{ inputs.environment || 'Development' }} Release ${{ github.run_number }} (from ${{ github.ref_name }})
           body: |
-            ${{ github.event_name == 'workflow_dispatch' && format('🚀 Deployment manual desde la rama **{0}**', github.ref_name) || '⚡ Deployment automático desde la rama **development**' }}
+            ${{ github.event_name == 'workflow_dispatch' && format('🚀 Deployment manual al ambiente **{0}**', inputs.environment || 'development') || github.event_name == 'pull_request' && format('🔀 Deployment por PR #{0} al ambiente **development**', github.event.number) || '⚡ Deployment automático al ambiente **development**' }}
             
             **Detalles del deployment:**
-            - 🏷️ Tipo: `${{ inputs.release_type || 'automático' }}`
+            - 🏷️ Ambiente: `${{ inputs.environment || 'development' }}`
             - 🌿 Rama: `${{ github.ref_name }}`
             - 📝 Commit: `${{ github.sha }}`
             - ⏰ Fecha: ${{ github.event.head_commit.timestamp || github.event.repository.pushed_at }}
@@ -100,11 +113,27 @@ jobs:
             - 📦 **layer.zip**: Dependencias de producción optimizadas para AWS Lambda Layer
             - 🔧 **code.zip**: Código fuente de las funciones Lambda
             
-            ${{ github.event_name == 'workflow_dispatch' && '> ℹ️ Este deployment fue ejecutado manualmente y puede contener código experimental.' || '> ✅ Este deployment fue ejecutado automáticamente desde development.' }}
+            ${{ github.event_name == 'workflow_dispatch' && '> ℹ️ Este deployment fue ejecutado manualmente.' || github.event_name == 'pull_request' && '> 🔄 Este deployment fue ejecutado por un Pull Request.' || '> ✅ Este deployment fue ejecutado automáticamente desde main.' }}
           files: |
             backend/release/layer.zip
             backend/release/code.zip
           draft: false
-          prerelease: true
+          prerelease: ${{ github.event_name == 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update deployment summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Archivos Creados" >> $GITHUB_STEP_SUMMARY
+          echo "| Archivo | Tamaño | Fecha de Creación |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|-------------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **layer.zip** | \`$(du -h backend/release/layer.zip | cut -f1)\` | \`$(date '+%Y-%m-%d %H:%M:%S UTC')\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **code.zip** | \`$(du -h backend/release/code.zip | cut -f1)\` | \`$(date '+%Y-%m-%d %H:%M:%S UTC')\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Estado del Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependencias instaladas correctamente" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Archivos ZIP creados exitosamente" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Release publicado en GitHub" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag del Release:** \`${{ format('v{0}-{1}-{2}', inputs.environment || 'dev', github.ref_name, github.run_number) }}\`" >> $GITHUB_STEP_SUMMARY
