@@ -1,0 +1,111 @@
+# =============================================================================
+# Finance Tracker Serverless - Ejemplo de Variables para Producción
+# Este archivo muestra las variables que se pueden configurar para el entorno prod
+# Copia este archivo como terraform.tfvars y modifica los valores según tus necesidades
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Variables Básicas (REQUERIDAS)
+# -----------------------------------------------------------------------------
+
+# Información de GitHub
+github_owner = "tu-usuario-github"         # Cambia por tu usuario de GitHub
+github_token = "ghp_tu_token_de_github"    # Token de GitHub con permisos de repo
+
+# -----------------------------------------------------------------------------
+# Configuración del Proyecto (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+project_name = "finance-tracker"
+aws_region   = "us-east-1"
+
+# -----------------------------------------------------------------------------
+# Configuración de DynamoDB (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+# Usar capacidad provisionada si tienes tráfico predecible
+# PAY_PER_REQUEST es más flexible y económico para empezar
+use_provisioned_capacity = false
+
+# -----------------------------------------------------------------------------
+# Variables de Lambda (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+lambda_runtime     = "python3.12"
+lambda_memory_size = 512  # Más memoria para producción
+lambda_timeout     = 30   # Timeout adecuado para producción
+
+# Nivel de logging para producción (ERROR, WARN, INFO, DEBUG)
+log_level = "INFO"
+
+# Variables de entorno adicionales para las funciones Lambda
+lambda_environment_variables = {
+  ENVIRONMENT = "prod"
+  DEBUG_MODE  = "false"
+  # Agrega aquí cualquier variable adicional que necesites para producción
+}
+
+# -----------------------------------------------------------------------------
+# Configuración de API Gateway (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+# Límites de throttling para producción
+api_gateway_throttling_rate_limit  = 2000  # requests por segundo
+api_gateway_throttling_burst_limit = 5000  # burst limit
+
+api_gateway_log_level = "INFO"  # ERROR o INFO
+
+# -----------------------------------------------------------------------------
+# Configuración de CORS (IMPORTANTE PARA PRODUCCIÓN)
+# -----------------------------------------------------------------------------
+
+# IMPORTANTE: Cambia estos orígenes por los dominios reales de tu aplicación
+cors_allowed_origins = [
+  "https://finance-tracker.tudominio.com",  # Cambia por tu dominio real
+  "https://app.finance-tracker.com"         # Ejemplo de subdóminio de app
+]
+
+# Métodos HTTP permitidos
+cors_allowed_methods = [
+  "GET",
+  "POST", 
+  "PUT",
+  "DELETE",
+  "OPTIONS"
+]
+
+# Headers permitidos
+cors_allowed_headers = [
+  "Content-Type",
+  "X-Amz-Date",
+  "Authorization",
+  "X-Api-Key",
+  "X-Amz-Security-Token",
+  "X-Amz-User-Agent"
+]
+
+# -----------------------------------------------------------------------------
+# Configuración de Monitoring y Alertas (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+# ARN del tópico SNS para recibir alertas (opcional)
+# Si no tienes configurado SNS, deja esto vacío
+sns_alert_topic_arn = ""
+# Ejemplo: sns_alert_topic_arn = "arn:aws:sns:us-east-1:123456789012:finance-tracker-alerts"
+
+# -----------------------------------------------------------------------------
+# Tags Comunes (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+common_tags = {
+  CreatedBy     = "terraform"
+  Environment   = "prod"
+  Purpose       = "production"
+  Critical      = "true"
+  Monitoring    = "enabled"
+  Backup        = "enabled"
+  Owner         = "tu-nombre"          # Cambia por tu nombre
+  Team          = "engineering"
+  CostCenter    = "production"
+  Compliance    = "required"
+}

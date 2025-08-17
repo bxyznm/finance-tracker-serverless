@@ -1,126 +1,311 @@
-# Finance Tracker - Infraestructura Terraform
+# Finance Tracker Serverless - Terraform Infrastructure
 
-Este directorio contiene toda la infraestructura como código (IaC) usando Terraform para desplegar la aplicación Finance Tracker en AWS.
+Esta carpeta contiene toda la infraestructura como código (IaC) para el proyecto Finance Tracker Serverless, implementada siguiendo las mejores prácticas de Terraform.
 
-## 🏗️ ¿Qué se despliega?
+## 🏗️ Arquitectura
 
-### **DynamoDB Tables (Base de Datos NoSQL)**
-- `users` - Información de usuarios
-- `accounts` - Cuentas bancarias  
-- `transactions` - Transacciones financieras
-- `categories` - Categorías (sistema + personalizadas)
-- `budgets` - Presupuestos de usuarios
+La infraestructura está diseñada con una arquitectura modular que soporta múltiples entornos:
 
-### **Lambda Functions (Código Serverless)**
-- `health-check` - Endpoint para verificar estado de la API
-
-### **API Gateway (REST API)**
-- API REST que expone las funciones Lambda
-- CORS configurado para frontend
-- Logging y monitoreo habilitado
-
-### **IAM Roles (Seguridad)**
-- Permisos mínimos necesarios para Lambda
-- Acceso controlado a DynamoDB
-- Logging a CloudWatch
-
-### **CloudWatch (Monitoreo)**
-- Logs de Lambda functions
-- Logs de API Gateway  
-- Métricas y alarmas
-
-## 📋 Prerequisitos
-
-### **1. AWS CLI**
-```bash
-# Instalar AWS CLI
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-sudo ./aws/install
-
-# Configurar credenciales
-aws configure
+```
+terraform/
+├── modules/
+│   └── finance-tracker/          # Módulo reutilizable principal
+│       ├── main.tf               # Configuración principal y GitHub releases
+│       ├── variables.tf          # Variables del módulo
+│       ├── outputs.tf            # Outputs del módulo
+│       ├── dynamodb.tf           # Tablas DynamoDB
+│       ├── lambda.tf             # Funciones Lambda y Layer
+│       └── api_gateway.tf        # API Gateway y configuración
+├── environments/
+│   ├── dev/                      # Entorno de desarrollo
+│   │   ├── main.tf               # Configuración para desarrollo
+│   │   ├── variables.tf          # Variables específicas de dev
+│   │   ├── outputs.tf            # Outputs de desarrollo
+│   │   └── terraform.tfvars.example
+│   └── prod/                     # Entorno de producción
+│       ├── main.tf               # Configuración para producción
+│       ├── variables.tf          # Variables específicas de prod
+│       ├── outputs.tf            # Outputs de producción
+│       └── terraform.tfvars.example
+├── deploy-dev.sh                 # Script de deployment para desarrollo
+├── deploy-prod.sh                # Script de deployment para producción
+└── README.md                     # Este archivo
 ```
 
-### **2. Terraform**
-```bash
-# Instalar Terraform
-wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
-unzip terraform_1.6.0_linux_amd64.zip
-sudo mv terraform /usr/local/bin/
-```
+## � Recursos Creados
+
+### AWS Lambda
+- **5 Funciones Lambda**: health, users, transactions, categories, auth
+- **1 Lambda Layer**: Dependencias de Python compartidas
+- **IAM Role**: Con permisos específicos para DynamoDB
+- **CloudWatch Log Groups**: Para logging de cada función
+
+### Amazon DynamoDB
+- **users**: Tabla principal de usuarios con GSI por email
+- **transactions**: Transacciones con GSI por fecha y categoría
+- **categories**: Categorías con GSI por tipo
+- **Configuración**: Encriptación habilitada, Point-in-Time Recovery (prod)
 
 ### **3. Configurar región de México**
 ```bash
-# Configurar AWS CLI para usar la región mx-central-1
-aws configure set region mx-central-1
+### API Gateway
+- **REST API**: Con endpoints para todas las funciones
+- **Stage**: Configurado por entorno (dev/prod)
+- **CORS**: Configurado según el entorno
+- **Throttling**: Límites configurables por entorno
+- **Logging**: CloudWatch logs habilitados
+
+### S3 & GitHub Integration
+- **Bucket S3**: Para almacenar assets de deployment temporalmente
+- **GitHub Release Integration**: Lee automáticamente releases/prereleases
+- **Assets Download**: Descarga y despliega código automáticamente
+
+### Monitoring (Solo Producción)
+- **CloudWatch Alarms**: Para errores y duración de Lambda
+- **API Gateway Monitoring**: Alarmas para errores 5xx
+- **Log Retention**: Configurado según entorno
+
+## � Flujo de Deployment Automatizado
+
+### Entorno de Desarrollo (dev)
+1. **Trigger**: Pull Request a `main`
+2. **GitHub Actions**: Crea un **prerelease** con assets
+3. **Terraform**: Lee el prerelease y despliega en `dev`
+4. **Resultado**: Entorno de desarrollo actualizado automáticamente
+
+### Entorno de Producción (prod)
+1. **Trigger**: Push a `main` 
+2. **GitHub Actions**: Crea un **release** estable con assets
+3. **Terraform**: Lee el release y despliega en `prod`
+4. **Resultado**: Entorno de producción actualizado automáticamente
+
+## 📋 Prerrequisitos
+
+### Herramientas Requeridas
+- **Terraform** >= 1.5
+- **AWS CLI** configurado
+- **curl** para testing
+- **jq** (opcional, para JSON formatting)
+
+### Credenciales y Configuración
+- **AWS Credentials**: Configuradas con permisos suficientes
+- **GitHub Token**: Con permisos de lectura del repositorio
+- **terraform.tfvars**: Archivo con variables específicas del entorno
+
+## ⚙️ Configuración Inicial
+
+### 1. Clonar y Navegar
+```bash
+cd terraform/
 ```
 
-### **3. Permisos AWS necesarios**
-Tu usuario AWS necesita permisos para:
-- DynamoDB (crear/gestionar tablas)
-- Lambda (crear/gestionar funciones)  
-- API Gateway (crear/gestionar APIs)
-- IAM (crear/gestionar roles)
-- CloudWatch (crear/gestionar logs)
-
-## 🚀 Comandos de Deployment
-
-### **Inicializar Terraform**
+### 2. Configurar Entorno de Desarrollo
 ```bash
-cd terraform
-terraform init
+# Copiar archivo de ejemplo
+cp environments/dev/terraform.tfvars.example environments/dev/terraform.tfvars
+
+# Editar configuración
+vim environments/dev/terraform.tfvars
 ```
 
-### **Planear el deployment**
-```bash
-# Ver qué recursos se crearán
-terraform plan
+**Variables mínimas requeridas:**
+```hcl
+github_owner = "tu-usuario-github"
+github_token = "ghp_tu_token_de_github"
 ```
 
-### **Desplegar a DEV**
+### 3. Configurar Entorno de Producción
 ```bash
-# Desplegar usando terraform.tfvars
-terraform apply
+# Copiar archivo de ejemplo
+cp environments/prod/terraform.tfvars.example environments/prod/terraform.tfvars
 
-# O especificar entorno manualmente
-terraform apply -var="environment=dev"
+# Editar configuración (IMPORTANTE: configurar CORS correctamente)
+vim environments/prod/terraform.tfvars
 ```
 
-### **Desplegar a STAGING**
-```bash
-terraform apply -var="environment=staging" -var="enable_point_in_time_recovery=true"
+**Configuración crítica para producción:**
+```hcl
+github_owner = "tu-usuario-github"
+github_token = "ghp_tu_token_de_github"
+cors_allowed_origins = [
+  "https://tu-dominio-real.com",
+  "https://app.tu-dominio.com"
+]
 ```
 
-### **Desplegar a PRODUCTION**
+## � Comandos de Deployment
+
+### Desarrollo (dev)
 ```bash
-terraform apply -var="environment=production" \
-  -var="enable_point_in_time_recovery=true" \
-  -var="lambda_memory_size=512" \
-  -var="dynamodb_billing_mode=PROVISIONED"
+# Deployment completo
+./deploy-dev.sh
+
+# Solo ver el plan
+./deploy-dev.sh plan
+
+# Ver outputs
+./deploy-dev.sh outputs
+
+# Probar deployment
+./deploy-dev.sh test
+
+# Destruir recursos
+./deploy-dev.sh destroy
 ```
 
-## 📊 Outputs Importantes
-
-Después del deployment, Terraform mostrará:
-
+### Producción (prod)
 ```bash
-# URLs de la API
-api_gateway_url = "https://abc123.execute-api.mx-central-1.amazonaws.com/api"
-health_check_url = "https://abc123.execute-api.mx-central-1.amazonaws.com/api/health"
+# Deployment completo (con confirmaciones de seguridad)
+./deploy-prod.sh
 
-# Comando para probar
-curl_health_check = "curl -X GET https://abc123.execute-api.mx-central-1.amazonaws.com/api/health"
+# Solo ver el plan
+./deploy-prod.sh plan
 
-# Nombres de tablas DynamoDB
-dynamodb_table_names = {
-  accounts = "finance-tracker-dev-accounts"
-  budgets = "finance-tracker-dev-budgets" 
-  categories = "finance-tracker-dev-categories"
-  transactions = "finance-tracker-dev-transactions"
-  users = "finance-tracker-dev-users"
+# Ver outputs y estado
+./deploy-prod.sh status
+
+# Probar deployment
+./deploy-prod.sh test
+
+# Destruir recursos (CON MÚLTIPLES CONFIRMACIONES)
+./deploy-prod.sh destroy
+```
+
+## 🔍 Monitoring y Troubleshooting
+
+### Logs de Lambda
+```bash
+# Ver logs en tiempo real
+aws logs tail /aws/lambda/finance-tracker-dev-health --follow
+aws logs tail /aws/lambda/finance-tracker-prod-users --follow
+```
+
+### API Gateway Logs
+```bash
+# Ver logs de API Gateway
+aws logs tail /aws/apigateway/finance-tracker-dev --follow
+aws logs tail /aws/apigateway/finance-tracker-prod --follow
+```
+
+### Health Check
+```bash
+# Probar endpoint de salud
+curl https://[api-id].execute-api.us-east-1.amazonaws.com/dev/health
+curl https://[api-id].execute-api.us-east-1.amazonaws.com/prod/health
+```
+
+### CloudWatch Alarms (Producción)
+```bash
+# Ver estado de alarmas
+aws cloudwatch describe-alarms --region us-east-1
+```
+
+## 🏷️ Gestión de Tags y Costos
+
+### Tags Automáticos
+Todos los recursos incluyen tags automáticos:
+- `Environment`: dev/prod
+- `Project`: finance-tracker
+- `ManagedBy`: terraform
+- `Release`: tag del GitHub release utilizado
+
+### Optimización de Costos
+- **Development**: 
+  - DynamoDB: PAY_PER_REQUEST
+  - Lambda: 256MB RAM
+  - Logs: 7 días retención
+  - Point-in-Time Recovery: Deshabilitado
+  
+- **Production**:
+  - DynamoDB: PAY_PER_REQUEST (configurable a PROVISIONED)
+  - Lambda: 512MB RAM
+  - Logs: 30 días retención
+  - Point-in-Time Recovery: Habilitado
+
+## 🔐 Seguridad y Mejores Prácticas
+
+### Seguridad Implementada
+- ✅ IAM Roles con principio de menor privilegio
+- ✅ Encriptación en reposo para DynamoDB
+- ✅ VPC endpoints (si se configura)
+- ✅ CORS configurado específicamente
+- ✅ API throttling configurado
+- ✅ Logs de acceso habilitados
+
+### Estado Remoto (Recomendado para Producción)
+```hcl
+terraform {
+  backend "s3" {
+    bucket = "finance-tracker-terraform-state-prod"
+    key    = "environments/prod/terraform.tfstate"
+    region = "us-east-1"
+    encrypt = true
+    dynamodb_table = "finance-tracker-terraform-locks"
+  }
 }
 ```
+
+## 🚨 Troubleshooting Común
+
+### Error: GitHub Token
+```
+Error: GET https://api.github.com/repos/owner/repo/releases/latest: 401
+```
+**Solución**: Verificar que el `github_token` sea válido y tenga permisos de lectura.
+
+### Error: AWS Credentials
+```
+Error: error configuring Terraform AWS Provider: no valid credential sources found
+```
+**Solución**: Ejecutar `aws configure` o verificar variables de entorno AWS.
+
+### Error: Release Not Found
+```
+Error: could not find release
+```
+**Solución**: Asegurar que exista al menos un release/prerelease en GitHub.
+
+### Lambda Function Code Changes Not Applied
+**Causa**: El código no se actualiza automáticamente si no hay cambios en el hash.
+**Solución**: El sistema está diseñado para leer automáticamente nuevos releases de GitHub.
+
+## 📚 Recursos Adicionales
+
+### Documentación Oficial
+- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [AWS Lambda Documentation](https://docs.aws.amazon.com/lambda/)
+- [API Gateway Documentation](https://docs.aws.amazon.com/apigateway/)
+- [DynamoDB Documentation](https://docs.aws.amazon.com/dynamodb/)
+
+### Comandos Útiles
+```bash
+# Ver estado completo de Terraform
+terraform show
+
+# Formatear archivos Terraform
+terraform fmt -recursive
+
+# Validar configuración
+terraform validate
+
+# Ver dependencias
+terraform graph | dot -Tsvg > graph.svg
+```
+
+## 🤝 Contribución
+
+1. Todos los cambios deben probarse primero en `dev`
+2. Los cambios de infraestructura requieren revisión
+3. Seguir las convenciones de nombres establecidas
+4. Documentar cualquier variable nueva
+
+## 📞 Soporte
+
+Para problemas relacionados con la infraestructura:
+1. Revisar los logs de CloudWatch
+2. Verificar el estado de Terraform: `terraform show`
+3. Consultar este README
+4. Crear un issue en el repositorio
 
 ## 🧪 Probar el Deployment
 
