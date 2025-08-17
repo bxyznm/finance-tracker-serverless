@@ -247,7 +247,7 @@ output "prod_info" {
   description = "Información específica del entorno de producción"
   value = {
     message              = "🚀 Entorno de producción desplegado exitosamente"
-    release_used         = data.github_release.latest_release.tag_name
+    release_used         = data.github_release.latest_release.release_tag
     high_availability    = true
     monitoring_enabled   = true
     backup_enabled       = true
