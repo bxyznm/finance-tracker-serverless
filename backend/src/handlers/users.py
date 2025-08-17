@@ -121,7 +121,7 @@ def get_user_handler(user_id: str) -> Dict[str, Any]:
             })
         
         # Respuesta sin contraseña
-        user_response = user.dict()
+        user_response = user.copy()
         user_response.pop('password_hash', None)
         
         return create_response(200, {"user": user_response})
