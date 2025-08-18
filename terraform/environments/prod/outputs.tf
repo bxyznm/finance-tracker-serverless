@@ -40,9 +40,14 @@ output "lambda_layer_arn" {
 # Información de DynamoDB
 # -----------------------------------------------------------------------------
 
-output "dynamodb_tables" {
-  description = "Información de las tablas DynamoDB en producción"
-  value       = module.finance_tracker.dynamodb_tables
+output "dynamodb_main_table" {
+  description = "Información de la tabla principal DynamoDB (Single Table Design) en producción"
+  value       = module.finance_tracker.dynamodb_main_table
+}
+
+output "dynamodb_table_design" {
+  description = "Información del diseño de tabla utilizado en producción"
+  value       = module.finance_tracker.dynamodb_table_design
 }
 
 # -----------------------------------------------------------------------------
