@@ -236,7 +236,6 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/dev/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Terraform Apply
@@ -295,7 +294,6 @@ jobs:
             -backend-config="bucket=$BACKEND_BUCKET" \
             -backend-config="key=terraform-state/dev/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
           
           echo "✅ Terraform state migrated to S3 backend successfully"
@@ -388,7 +386,6 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/prod/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
           
           terraform destroy -auto-approve
@@ -476,7 +473,6 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/prod/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Migrate state to S3 (if needed)
@@ -639,7 +635,6 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/dev/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Terraform Destroy
@@ -755,7 +750,6 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/prod/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Production Destroy Confirmation

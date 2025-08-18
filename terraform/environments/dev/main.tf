@@ -14,9 +14,6 @@ terraform {
     
     # Configuración de seguridad
     encrypt = true
-    
-    # S3 State Locking (reemplaza DynamoDB - más simple y moderno)
-    # use_lockfile = true
   }
 
   required_providers {
