@@ -24,7 +24,6 @@ terraform {
 data "github_release" "finance_tracker" {
   repository  = var.github_repository
   owner       = var.github_owner
-  release_id = var.environment == "prod" ? null : var.dev_release_tag
   retrieve_by = var.environment == "prod" ? "latest" : "tag"
   release_tag = var.environment == "prod" ? null : var.dev_release_tag
 }
@@ -58,11 +57,20 @@ locals {
 }
 
 # -----------------------------------------------------------------------------
-# Random ID para nombres únicos
+# Random ID para nombres únicos (solo si no se provee sufijo personalizado)
 # -----------------------------------------------------------------------------
 
 resource "random_id" "bucket_suffix" {
+  count       = var.s3_bucket_suffix == null ? 1 : 0
   byte_length = 4
+}
+
+# -----------------------------------------------------------------------------
+# Locals para bucket name logic
+# -----------------------------------------------------------------------------
+
+locals {
+  bucket_suffix = var.s3_bucket_suffix != null ? var.s3_bucket_suffix : random_id.bucket_suffix[0].hex
 }
 
 # -----------------------------------------------------------------------------
@@ -70,7 +78,7 @@ resource "random_id" "bucket_suffix" {
 # -----------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "deployment_assets" {
-  bucket = "${local.name_prefix}-deployment-assets-${random_id.bucket_suffix.hex}"
+  bucket = "${local.name_prefix}-deployment-assets-${local.bucket_suffix}"
   tags   = local.common_tags
 }
 

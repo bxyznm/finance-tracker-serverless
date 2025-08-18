@@ -94,6 +94,19 @@ output "dynamodb_tables" {
 }
 
 # -----------------------------------------------------------------------------
+# S3 Bucket Outputs
+# -----------------------------------------------------------------------------
+
+output "s3_deployment_bucket" {
+  description = "Información del bucket S3 para despliegues"
+  value = {
+    name   = aws_s3_bucket.deployment_assets.bucket
+    arn    = aws_s3_bucket.deployment_assets.arn
+    suffix = local.bucket_suffix
+  }
+}
+
+# -----------------------------------------------------------------------------
 # GitHub Release Outputs
 # -----------------------------------------------------------------------------
 

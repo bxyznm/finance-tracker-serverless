@@ -160,6 +160,16 @@ variable "api_gateway_log_level" {
 }
 
 # -----------------------------------------------------------------------------
+# Variables de S3
+# -----------------------------------------------------------------------------
+
+variable "s3_bucket_suffix" {
+  description = "Sufijo personalizado para el bucket S3 de deployment assets (si no se provee, se genera automáticamente)"
+  type        = string
+  default     = null
+}
+
+# -----------------------------------------------------------------------------
 # Variables de Tags
 # -----------------------------------------------------------------------------
 

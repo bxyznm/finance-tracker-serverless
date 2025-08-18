@@ -62,3 +62,10 @@ cors_allowed_headers = [
 ]
 
 cors_allowed_origins = ["*"]  # Para desarrollo, en producción debes especificar dominios específicos
+
+# -----------------------------------------------------------------------------
+# S3 Configuration
+# -----------------------------------------------------------------------------
+
+# Sufijo personalizado para el bucket S3 (se configurará automáticamente desde CI/CD)
+# s3_bucket_suffix = "dev-persistent-suffix"

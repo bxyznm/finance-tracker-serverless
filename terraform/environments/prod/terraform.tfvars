@@ -83,3 +83,10 @@ common_tags = {
   Monitoring   = "enabled"
   Backup       = "enabled"
 }
+
+# -----------------------------------------------------------------------------
+# S3 Configuration
+# -----------------------------------------------------------------------------
+
+# Sufijo personalizado para el bucket S3 (se configurará automáticamente desde CI/CD)
+# s3_bucket_suffix = "prod-persistent-suffix"
