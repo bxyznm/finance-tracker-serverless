@@ -8,18 +8,20 @@
 
 # Información de GitHub
 github_owner = "bxyznm"                    # Usuario de GitHub del propietario del repo
-github_token = "PLACEHOLDER_TOKEN"        # Debes proporcionar tu token de GitHub real
+# El token se obtiene automáticamente del entorno de GitHub Actions
+# No necesita ser especificado aquí ya que se toma de GITHUB_TOKEN
+# github_token se configura automáticamente en el pipeline
 
 # Opcional: Tag específico del prerelease para usar
 # Si se deja vacío, usará el último prerelease disponible
-dev_release_tag = ""
+dev_release_tag = "vdev-main-23"  # Usar el tag más reciente que tiene los assets layer.zip y code.zip
 
 # -----------------------------------------------------------------------------
 # Configuración del Proyecto (OPCIONAL)
 # -----------------------------------------------------------------------------
 
 project_name = "finance-tracker"
-aws_region   = "us-east-1"
+aws_region   = "mx-central-1"
 
 # -----------------------------------------------------------------------------
 # Variables de Lambda (OPCIONAL) 
