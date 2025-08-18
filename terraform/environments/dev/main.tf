@@ -5,17 +5,11 @@
 terraform {
   required_version = ">= 1.5"
 
-  # Backend S3 para state remoto usando el mismo bucket de deployment assets
+  # Backend S3 se configurará dinámicamente via -backend-config
   backend "s3" {
-    # El bucket se configurará dinámicamente via -backend-config
-    # La región se configurará via -backend-config o AWS_DEFAULT_REGION/AWS_REGION env vars
-    key    = "terraform-state/dev/terraform.tfstate"
-    
-    # Configuración de seguridad
-    encrypt        = true
-    dynamodb_table = "terraform-state-lock-dev"
+    # Todas las configuraciones se proporcionarán via -backend-config
   }
-
+  
   required_providers {
     aws = {
       source  = "hashicorp/aws"
