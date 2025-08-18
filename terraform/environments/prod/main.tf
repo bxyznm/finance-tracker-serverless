@@ -8,8 +8,8 @@ terraform {
   # Backend S3 para state remoto usando el mismo bucket de deployment assets
   backend "s3" {
     # El bucket se configurará dinámicamente via -backend-config
-    # bucket = "finance-tracker-prod-deployment-assets-SUFFIX"
-    key    = "terraform-state/prod/terraform.tfstate"
+    bucket = "finance-tracker-serverless-tfstates"
+    key    = "prod/terraform.tfstate"
     region = "mx-central-1"
     
     # Configuración de seguridad
