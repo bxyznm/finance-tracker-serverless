@@ -3,7 +3,7 @@
 # =============================================================================
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.12"
 
   # Backend S3 para state remoto usando el mismo bucket de deployment assets
   backend "s3" {
