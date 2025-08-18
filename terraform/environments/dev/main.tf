@@ -5,12 +5,17 @@
 terraform {
   required_version = ">= 1.5"
 
-  #Backend para state remoto (opcional - se puede configurar después)
-  # backend "s3" {
-  #   bucket = "finance-tracker-serverless-terraform-state-dev"
-  #   key    = "environments/dev/terraform.tfstate"
-  #   region = "mx-central-1"
-  # }
+  # Backend S3 para state remoto usando el mismo bucket de deployment assets
+  backend "s3" {
+    # El bucket se configurará dinámicamente via -backend-config
+    # bucket = "finance-tracker-dev-deployment-assets-SUFFIX"
+    key    = "terraform-state/dev/terraform.tfstate"
+    region = "mx-central-1"
+    
+    # Configuración de seguridad
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock-dev"
+  }
 
   required_providers {
     aws = {
