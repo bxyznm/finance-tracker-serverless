@@ -39,7 +39,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
   id-token: write # Para OIDC con AWS
 
 env:
