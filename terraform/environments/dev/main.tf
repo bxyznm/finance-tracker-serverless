@@ -3,14 +3,14 @@
 # =============================================================================
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = "1.12.2"
 
-  # Backend para state remoto (opcional - se puede configurar después)
-  # backend "s3" {
-  #   bucket = "finance-tracker-terraform-state-dev"
-  #   key    = "environments/dev/terraform.tfstate"
-  #   region = "us-east-1"
-  # }
+  #Backend para state remoto (opcional - se puede configurar después)
+  backend "s3" {
+    bucket = "finance-tracker-serverless-terraform-state-dev"
+    key    = "environments/dev/terraform.tfstate"
+    region = "mx-central-1"
+  }
 
   required_providers {
     aws = {
@@ -42,7 +42,7 @@ provider "aws" {
   default_tags {
     tags = {
       Environment = "dev"
-      Project     = "finance-tracker"
+      Project     = "finance-tracker-serverless"
       ManagedBy   = "terraform"
       CreatedBy   = "dev-environment"
     }

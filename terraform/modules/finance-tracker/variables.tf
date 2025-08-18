@@ -9,7 +9,7 @@
 variable "project_name" {
   description = "Nombre del proyecto"
   type        = string
-  default     = "finance-tracker"
+  default     = "finance-tracker-serverless"
 
   validation {
     condition     = can(regex("^[a-z0-9-]+$", var.project_name))
@@ -30,7 +30,7 @@ variable "environment" {
 variable "aws_region" {
   description = "Región de AWS donde desplegar los recursos"
   type        = string
-  default     = "us-east-1"
+  default     = "mx-central-1"
 }
 
 # -----------------------------------------------------------------------------
@@ -40,11 +40,13 @@ variable "aws_region" {
 variable "github_owner" {
   description = "Owner del repositorio de GitHub"
   type        = string
+  default     = "bxyznm"
 }
 
 variable "github_repository" {
   description = "Nombre del repositorio de GitHub"
   type        = string
+  default     = "finance-tracker-serverless"
 }
 
 variable "dev_release_tag" {
@@ -110,7 +112,7 @@ variable "lambda_timeout" {
 variable "lambda_memory_size" {
   description = "Memoria asignada a las funciones Lambda en MB"
   type        = number
-  default     = 256
+  default     = 128
 
   validation {
     condition     = var.lambda_memory_size >= 128 && var.lambda_memory_size <= 10240
@@ -166,6 +168,7 @@ variable "common_tags" {
   type        = map(string)
   default = {
     CreatedBy = "terraform"
+    project_name = "finance-tracker-serverless"
   }
 }
 

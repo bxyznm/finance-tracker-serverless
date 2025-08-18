@@ -9,13 +9,13 @@
 variable "project_name" {
   description = "Nombre del proyecto"
   type        = string
-  default     = "finance-tracker"
+  default     = "finance-tracker-serverless"
 }
 
 variable "aws_region" {
   description = "Región de AWS donde desplegar los recursos"
   type        = string
-  default     = "us-east-1"
+  default     = "mx-central-1"
 }
 
 # -----------------------------------------------------------------------------
@@ -25,6 +25,7 @@ variable "aws_region" {
 variable "github_owner" {
   description = "Owner del repositorio de GitHub"
   type        = string
+  default     = "bxyznm"
 }
 
 variable "github_repository" {
@@ -42,7 +43,7 @@ variable "github_token" {
 variable "dev_release_tag" {
   description = "Tag específico del prerelease para desarrollo. Si está vacío, usa el último prerelease."
   type        = string
-  default     = ""
+  default     = "vdev"
 }
 
 # -----------------------------------------------------------------------------
