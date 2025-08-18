@@ -141,7 +141,7 @@ resource "aws_s3_object" "layer_zip" {
 
   bucket = aws_s3_bucket.deployment_assets.bucket
   key    = "releases/${data.github_release.finance_tracker.release_tag}/layer.zip"
-  source = "/tmp/layer-${var.environment}.zip"
+  source = "/tmp/layer.zip"
   etag   = filemd5("/tmp/layer-${var.environment}.zip")
   tags   = local.common_tags
 }
@@ -152,7 +152,7 @@ resource "aws_s3_object" "code_zip" {
 
   bucket = aws_s3_bucket.deployment_assets.bucket
   key    = "releases/${data.github_release.finance_tracker.release_tag}/code.zip"
-  source = "/tmp/code-${var.environment}.zip"
+  source = "/tmp/code.zip"
   etag   = filemd5("/tmp/code-${var.environment}.zip")
   tags   = local.common_tags
 }
