@@ -7,19 +7,19 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.80"  # Versión actualizada con soporte completo para mx-central-1
+      version = "~> 5.80" # Versión actualizada con soporte completo para mx-central-1
     }
     github = {
       source  = "integrations/github"
-      version = "~> 6.4"   # Versión más reciente y estable
+      version = "~> 6.4" # Versión más reciente y estable
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.6"   # Versión más reciente
+      version = "~> 3.6" # Versión más reciente
     }
     null = {
       source  = "hashicorp/null"
-      version = "~> 3.2"   # Versión más reciente
+      version = "~> 3.2" # Versión más reciente
     }
   }
 }
@@ -159,12 +159,12 @@ resource "aws_s3_object" "layer_zip" {
   bucket = aws_s3_bucket.deployment_assets.bucket
   key    = "releases/${data.github_release.finance_tracker.release_tag}/layer.zip"
   source = "/tmp/layer.zip"
-  
+
   # Use release tag as a trigger for updates instead of file hash
   metadata = {
     release_tag = data.github_release.finance_tracker.release_tag
   }
-  
+
   tags = local.common_tags
 }
 
@@ -175,11 +175,11 @@ resource "aws_s3_object" "code_zip" {
   bucket = aws_s3_bucket.deployment_assets.bucket
   key    = "releases/${data.github_release.finance_tracker.release_tag}/code.zip"
   source = "/tmp/code.zip"
-  
+
   # Use release tag as a trigger for updates instead of file hash
   metadata = {
     release_tag = data.github_release.finance_tracker.release_tag
   }
-  
+
   tags = local.common_tags
 }

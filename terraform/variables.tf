@@ -11,7 +11,7 @@ variable "environment" {
   description = "Entorno de despliegue (dev, staging, production)"
   type        = string
   default     = "dev"
-  
+
   validation {
     condition     = contains(["dev", "staging", "production"], var.environment)
     error_message = "Environment debe ser dev, staging, o production."
@@ -29,7 +29,7 @@ variable "dynamodb_billing_mode" {
   description = "Modo de facturación para DynamoDB"
   type        = string
   default     = "PAY_PER_REQUEST"
-  
+
   validation {
     condition     = contains(["PAY_PER_REQUEST", "PROVISIONED"], var.dynamodb_billing_mode)
     error_message = "billing_mode debe ser PAY_PER_REQUEST o PROVISIONED."
@@ -53,7 +53,7 @@ variable "lambda_memory_size" {
   description = "Memoria asignada a las funciones Lambda (MB)"
   type        = number
   default     = 256
-  
+
   validation {
     condition     = var.lambda_memory_size >= 128 && var.lambda_memory_size <= 10240
     error_message = "Memory size debe estar entre 128 y 10240 MB."
@@ -64,7 +64,7 @@ variable "lambda_timeout" {
   description = "Timeout de las funciones Lambda (segundos)"
   type        = number
   default     = 30
-  
+
   validation {
     condition     = var.lambda_timeout >= 1 && var.lambda_timeout <= 900
     error_message = "Timeout debe estar entre 1 y 900 segundos."

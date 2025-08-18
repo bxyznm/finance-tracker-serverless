@@ -1,205 +1,50 @@
-# DynamoDB Tables
-# Aquí definimos todas las tablas de la base de datos NoSQL
+# DynamoDB Single Table Design
+# Siguiendo el patrón Single Table Design para optimizar rendimiento y costos
 
-# Tabla de Usuarios
-resource "aws_dynamodb_table" "users" {
-  name           = "${local.table_prefix}-users"
-  billing_mode   = var.dynamodb_billing_mode
-  hash_key       = "user_id"
+# Tabla principal - Single Table Design
+resource "aws_dynamodb_table" "main" {
+  name         = "${local.table_prefix}-main"
+  billing_mode = var.dynamodb_billing_mode
+  hash_key     = "pk" # Partition Key
+  range_key    = "sk" # Sort Key
 
+  # Atributos principales
   attribute {
-    name = "user_id"
-    type = "S"  # String
+    name = "pk"
+    type = "S" # String - USER#{user_id}, ACCOUNT#{account_id}, etc.
   }
 
   attribute {
-    name = "email"
-    type = "S"
+    name = "sk"
+    type = "S" # String - METADATA, TRANSACTION#{timestamp}, etc.
   }
 
-  # Índice secundario global para buscar por email
+  attribute {
+    name = "gsi1_pk"
+    type = "S" # Para GSI1 - EMAIL#{email}, etc.
+  }
+
+  attribute {
+    name = "gsi1_sk"
+    type = "S" # Para GSI1 - USER#{user_id}, etc.
+  }
+
+  # Global Secondary Index 1 - Para consultas por email y otros patrones
   global_secondary_index {
-    name            = "EmailIndex"
-    hash_key        = "email"
+    name            = "GSI1"
+    hash_key        = "gsi1_pk"
+    range_key       = "gsi1_sk"
     projection_type = "ALL"
   }
 
+  # Configuración de respaldo
   point_in_time_recovery {
     enabled = var.enable_point_in_time_recovery
   }
 
   tags = merge(local.common_tags, {
-    Name = "Users Table"
-    Description = "Almacena información de usuarios registrados"
+    Name        = "Main Table"
+    Description = "Tabla principal usando Single Table Design para Finance Tracker"
   })
 }
 
-# Tabla de Cuentas Bancarias
-resource "aws_dynamodb_table" "accounts" {
-  name           = "${local.table_prefix}-accounts"
-  billing_mode   = var.dynamodb_billing_mode
-  hash_key       = "account_id"
-
-  attribute {
-    name = "account_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  # Índice para buscar cuentas por usuario
-  global_secondary_index {
-    name            = "UserAccountsIndex"
-    hash_key        = "user_id"
-    projection_type = "ALL"
-  }
-
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "Accounts Table"
-    Description = "Almacena cuentas bancarias de usuarios"
-  })
-}
-
-# Tabla de Transacciones
-resource "aws_dynamodb_table" "transactions" {
-  name           = "${local.table_prefix}-transactions"
-  billing_mode   = var.dynamodb_billing_mode
-  hash_key       = "transaction_id"
-
-  attribute {
-    name = "transaction_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "account_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "created_at"
-    type = "S"  # ISO timestamp string
-  }
-
-  # Índice para obtener transacciones por usuario
-  global_secondary_index {
-    name            = "UserTransactionsIndex"
-    hash_key        = "user_id"
-    range_key       = "created_at"
-    projection_type = "ALL"
-  }
-
-  # Índice para obtener transacciones por cuenta
-  global_secondary_index {
-    name            = "AccountTransactionsIndex"
-    hash_key        = "account_id"
-    range_key       = "created_at"
-    projection_type = "ALL"
-  }
-
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "Transactions Table"
-    Description = "Almacena todas las transacciones financieras"
-  })
-}
-
-# Tabla de Categorías
-resource "aws_dynamodb_table" "categories" {
-  name           = "${local.table_prefix}-categories"
-  billing_mode   = var.dynamodb_billing_mode
-  hash_key       = "category_id"
-
-  attribute {
-    name = "category_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "type"
-    type = "S"  # 'system' o 'custom'
-  }
-
-  # Índice para categorías del usuario
-  global_secondary_index {
-    name            = "UserCategoriesIndex"
-    hash_key        = "user_id"
-    range_key       = "type"
-    projection_type = "ALL"
-  }
-
-  # Índice para categorías del sistema
-  global_secondary_index {
-    name            = "SystemCategoriesIndex"
-    hash_key        = "type"
-    projection_type = "ALL"
-  }
-
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "Categories Table"
-    Description = "Almacena categorias de transacciones sistema y personalizadas"
-  })
-}
-
-# Tabla de Presupuestos
-resource "aws_dynamodb_table" "budgets" {
-  name           = "${local.table_prefix}-budgets"
-  billing_mode   = var.dynamodb_billing_mode
-  hash_key       = "budget_id"
-
-  attribute {
-    name = "budget_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "period_start"
-    type = "S"
-  }
-
-  # Índice para presupuestos por usuario
-  global_secondary_index {
-    name            = "UserBudgetsIndex"
-    hash_key        = "user_id"
-    range_key       = "period_start"
-    projection_type = "ALL"
-  }
-
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "Budgets Table"
-    Description = "Almacena presupuestos de usuarios"
-  })
-}

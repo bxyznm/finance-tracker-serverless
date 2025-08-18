@@ -72,25 +72,35 @@ output "lambda_execution_role_arn" {
 }
 
 # -----------------------------------------------------------------------------
-# DynamoDB Tables Outputs
+# DynamoDB Main Table Output - Single Table Design
 # -----------------------------------------------------------------------------
 
-output "dynamodb_tables" {
-  description = "Información de las tablas DynamoDB creadas"
+output "dynamodb_main_table" {
+  description = "Información de la tabla principal DynamoDB (Single Table Design)"
   value = {
-    users = {
-      name = aws_dynamodb_table.users.name
-      arn  = aws_dynamodb_table.users.arn
+    name = aws_dynamodb_table.main.name
+    arn  = aws_dynamodb_table.main.arn
+  }
+}
+
+output "dynamodb_table_design" {
+  description = "Información del diseño de tabla utilizado"
+  value = {
+    pattern = "Single Table Design"
+    entities = [
+      "users",
+      "accounts",
+      "transactions",
+      "categories",
+      "budgets"
+    ]
+    key_attributes = {
+      partition_key = "pk"
+      sort_key      = "sk"
+      gsi1_pk       = "gsi1_pk"
+      gsi1_sk       = "gsi1_sk"
     }
-    transactions = {
-      name = aws_dynamodb_table.transactions.name
-      arn  = aws_dynamodb_table.transactions.arn
-    }
-    categories = {
-      name = aws_dynamodb_table.categories.name
-      arn  = aws_dynamodb_table.categories.arn
-    }
-    # terraform_state_lock table no longer needed - using S3 native locking
+    indexes = ["GSI1"]
   }
 }
 

@@ -20,19 +20,18 @@ output "api_gateway_id" {
 # Información de DynamoDB
 output "dynamodb_table_name" {
   description = "Nombre de la tabla principal de DynamoDB (Single Table Design)"
-  value = aws_dynamodb_table.main.name
+  value       = aws_dynamodb_table.main.name
 }
 
 output "dynamodb_table_arn" {
   description = "ARN de la tabla principal de DynamoDB"
-  value = aws_dynamodb_table.main.arn
+  value       = aws_dynamodb_table.main.arn
 }
 
 output "dynamodb_gsi_names" {
   description = "Nombres de los Global Secondary Indexes"
   value = {
     gsi1 = "GSI1"
-    gsi2 = "GSI2"
   }
 }
 
@@ -42,18 +41,16 @@ output "table_design_info" {
     design_pattern = "Single Table Design"
     entities = [
       "users",
-      "accounts", 
+      "accounts",
       "transactions",
       "categories",
       "budgets"
     ]
     key_attributes = {
       partition_key = "pk"
-      sort_key = "sk"
-      gsi1_pk = "gsi1_pk"
-      gsi1_sk = "gsi1_sk"
-      gsi2_pk = "gsi2_pk"
-      gsi2_sk = "gsi2_sk"
+      sort_key      = "sk"
+      gsi1_pk       = "gsi1_pk"
+      gsi1_sk       = "gsi1_sk"
     }
   }
 }
@@ -63,7 +60,7 @@ output "lambda_function_names" {
   description = "Nombres de las funciones Lambda"
   value = {
     health_check = aws_lambda_function.health_check.function_name
-    users = aws_lambda_function.users.function_name
+    users        = aws_lambda_function.users.function_name
   }
 }
 
@@ -71,7 +68,7 @@ output "lambda_function_arns" {
   description = "ARNs de las funciones Lambda"
   value = {
     health_check = aws_lambda_function.health_check.arn
-    users = aws_lambda_function.users.arn
+    users        = aws_lambda_function.users.arn
   }
 }
 

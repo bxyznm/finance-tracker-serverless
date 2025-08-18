@@ -6,7 +6,7 @@ resource "null_resource" "create_lambda_package" {
   triggers = {
     # Re-crear cuando cambien los archivos fuente o requirements
     source_hash = sha256(join("", [
-      for f in fileset("${path.module}/../backend/src", "**/*.py") : 
+      for f in fileset("${path.module}/../backend/src", "**/*.py") :
       filesha256("${path.module}/../backend/src/${f}")
     ]))
     requirements_hash = filesha256("${path.module}/../backend/requirements.txt")
@@ -47,7 +47,7 @@ resource "null_resource" "create_lambda_package" {
       echo "✅ Lambda deployment ZIP y Layer creados exitosamente"
       ls -lh terraform/lambda-deployment.zip terraform/lambda-layer.zip
     EOT
-    
+
     working_dir = path.module
   }
 }
@@ -58,26 +58,26 @@ data "archive_file" "lambda_zip" {
   source_dir       = "${path.module}/../backend/src"
   output_path      = "${path.module}/lambda-deployment-backup.zip"
   output_file_mode = "0666"
-  
+
   depends_on = [null_resource.create_lambda_package]
 }
 
 # Lambda Layer con dependencias de Python
 resource "aws_lambda_layer_version" "python_dependencies" {
-  filename   = "${path.module}/lambda-layer.zip"
-  layer_name = "${local.project_name}-${var.environment}-python-deps"
+  filename         = "${path.module}/lambda-layer.zip"
+  layer_name       = "${local.project_name}-${var.environment}-python-deps"
   source_code_hash = filebase64sha256("${path.module}/lambda-layer.zip")
 
   compatible_runtimes = [var.lambda_runtime]
 
   description = "Python dependencies for finance tracker (boto3, pydantic, fastapi, mangum, python-dotenv)"
-  
+
   depends_on = [null_resource.create_lambda_package]
 }
 
 # Archivo ZIP con código fuente principal
 data "local_file" "lambda_zip_manual" {
-  filename = "${path.module}/lambda-deployment.zip"
+  filename   = "${path.module}/lambda-deployment.zip"
   depends_on = [null_resource.create_lambda_package]
 }
 
@@ -105,12 +105,12 @@ resource "aws_cloudwatch_log_group" "users_lambda_logs" {
 resource "aws_lambda_function" "health_check" {
   filename         = data.local_file.lambda_zip_manual.filename
   function_name    = "${local.project_name}-${var.environment}-health-check"
-  role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "handlers.health.lambda_handler"
+  role             = aws_iam_role.lambda_execution_role.arn
+  handler          = "handlers.health.lambda_handler"
   source_code_hash = filebase64sha256(data.local_file.lambda_zip_manual.filename)
-  
-  runtime = var.lambda_runtime
-  timeout = var.lambda_timeout
+
+  runtime     = var.lambda_runtime
+  timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
 
   # Usar el Lambda Layer con las dependencias
@@ -119,16 +119,16 @@ resource "aws_lambda_function" "health_check" {
   # Variables de entorno
   environment {
     variables = {
-      ENVIRONMENT                = var.environment
-      APP_AWS_REGION            = var.aws_region
-      DYNAMODB_TABLE            = aws_dynamodb_table.main.name
-      DYNAMODB_GSI1_NAME        = "GSI1"
-      DYNAMODB_GSI2_NAME        = "GSI2"
-      TABLE_DESIGN              = "single-table"
-      DEFAULT_CURRENCY          = var.default_currency
-      DEFAULT_TIMEZONE          = var.default_timezone
-      DEFAULT_LOCALE            = var.default_locale
-      LOG_LEVEL                 = var.environment == "production" ? "INFO" : "DEBUG"
+      ENVIRONMENT        = var.environment
+      APP_AWS_REGION     = var.aws_region
+      DYNAMODB_TABLE     = aws_dynamodb_table.main.name
+      DYNAMODB_GSI1_NAME = "GSI1"
+      DYNAMODB_GSI2_NAME = "GSI2"
+      TABLE_DESIGN       = "single-table"
+      DEFAULT_CURRENCY   = var.default_currency
+      DEFAULT_TIMEZONE   = var.default_timezone
+      DEFAULT_LOCALE     = var.default_locale
+      LOG_LEVEL          = var.environment == "production" ? "INFO" : "DEBUG"
     }
   }
 
@@ -139,7 +139,7 @@ resource "aws_lambda_function" "health_check" {
   ]
 
   tags = merge(local.common_tags, {
-    Name = "Health Check Lambda"
+    Name        = "Health Check Lambda"
     Description = "Función para verificar el estado de la API"
   })
 }
@@ -148,12 +148,12 @@ resource "aws_lambda_function" "health_check" {
 resource "aws_lambda_function" "users" {
   filename         = data.local_file.lambda_zip_manual.filename
   function_name    = "${local.project_name}-${var.environment}-users"
-  role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "handlers.users.lambda_handler"
+  role             = aws_iam_role.lambda_execution_role.arn
+  handler          = "handlers.users.lambda_handler"
   source_code_hash = filebase64sha256(data.local_file.lambda_zip_manual.filename)
-  
-  runtime = var.lambda_runtime
-  timeout = var.lambda_timeout
+
+  runtime     = var.lambda_runtime
+  timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
 
   # Usar el Lambda Layer con las dependencias
@@ -162,16 +162,16 @@ resource "aws_lambda_function" "users" {
   # Variables de entorno
   environment {
     variables = {
-      ENVIRONMENT                = var.environment
-      APP_AWS_REGION            = var.aws_region
-      DYNAMODB_TABLE            = aws_dynamodb_table.main.name
-      DYNAMODB_GSI1_NAME        = "GSI1"
-      DYNAMODB_GSI2_NAME        = "GSI2"
-      TABLE_DESIGN              = "single-table"
-      DEFAULT_CURRENCY          = var.default_currency
-      DEFAULT_TIMEZONE          = var.default_timezone
-      DEFAULT_LOCALE            = var.default_locale
-      LOG_LEVEL                 = var.environment == "production" ? "INFO" : "DEBUG"
+      ENVIRONMENT        = var.environment
+      APP_AWS_REGION     = var.aws_region
+      DYNAMODB_TABLE     = aws_dynamodb_table.main.name
+      DYNAMODB_GSI1_NAME = "GSI1"
+      DYNAMODB_GSI2_NAME = "GSI2"
+      TABLE_DESIGN       = "single-table"
+      DEFAULT_CURRENCY   = var.default_currency
+      DEFAULT_TIMEZONE   = var.default_timezone
+      DEFAULT_LOCALE     = var.default_locale
+      LOG_LEVEL          = var.environment == "production" ? "INFO" : "DEBUG"
     }
   }
 
@@ -182,7 +182,7 @@ resource "aws_lambda_function" "users" {
   ]
 
   tags = merge(local.common_tags, {
-    Name = "Users Lambda"
+    Name        = "Users Lambda"
     Description = "Función para gestión de usuarios"
   })
 }

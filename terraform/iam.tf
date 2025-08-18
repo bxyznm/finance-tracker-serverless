@@ -19,7 +19,7 @@ resource "aws_iam_role" "lambda_execution_role" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "Lambda Execution Role"
+    Name        = "Lambda Execution Role"
     Description = "Rol de ejecución para funciones Lambda"
   })
 }
@@ -51,17 +51,10 @@ resource "aws_iam_policy" "lambda_dynamodb_policy" {
           "dynamodb:BatchWriteItem"
         ]
         Resource = [
-          aws_dynamodb_table.users.arn,
-          aws_dynamodb_table.accounts.arn,
-          aws_dynamodb_table.transactions.arn,
-          aws_dynamodb_table.categories.arn,
-          aws_dynamodb_table.budgets.arn,
+          # Tabla principal con Single Table Design
+          aws_dynamodb_table.main.arn,
           # También incluir los índices GSI
-          "${aws_dynamodb_table.users.arn}/*",
-          "${aws_dynamodb_table.accounts.arn}/*",
-          "${aws_dynamodb_table.transactions.arn}/*",
-          "${aws_dynamodb_table.categories.arn}/*",
-          "${aws_dynamodb_table.budgets.arn}/*"
+          "${aws_dynamodb_table.main.arn}/*"
         ]
       }
     ]
@@ -126,7 +119,7 @@ resource "aws_iam_role" "api_gateway_cloudwatch_role" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "API Gateway CloudWatch Role"
+    Name        = "API Gateway CloudWatch Role"
     Description = "Rol para que API Gateway escriba logs"
   })
 }

@@ -12,7 +12,7 @@ resource "aws_api_gateway_rest_api" "main" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "Finance Tracker API"
+    Name        = "Finance Tracker API"
     Description = "API REST principal para la aplicación"
   })
 }
@@ -43,9 +43,9 @@ resource "aws_api_gateway_integration" "health_get_integration" {
   resource_id = aws_api_gateway_resource.health.id
   http_method = aws_api_gateway_method.health_get.http_method
 
-  integration_http_method = "POST"  # Lambda siempre usa POST
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.health_check.invoke_arn
+  integration_http_method = "POST" # Lambda siempre usa POST
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.health_check.invoke_arn
 }
 
 # Método OPTIONS para CORS preflight
@@ -155,17 +155,17 @@ resource "aws_api_gateway_stage" "main" {
       destination_arn = aws_cloudwatch_log_group.api_gateway_logs[0].arn
       format = jsonencode({
         requestId      = "$context.requestId"
-        ip            = "$context.identity.sourceIp"
-        caller        = "$context.identity.caller"
-        user          = "$context.identity.user"
-        requestTime   = "$context.requestTime"
-        httpMethod    = "$context.httpMethod"
-        resourcePath  = "$context.resourcePath"
-        status        = "$context.status"
-        protocol      = "$context.protocol"
+        ip             = "$context.identity.sourceIp"
+        caller         = "$context.identity.caller"
+        user           = "$context.identity.user"
+        requestTime    = "$context.requestTime"
+        httpMethod     = "$context.httpMethod"
+        resourcePath   = "$context.resourcePath"
+        status         = "$context.status"
+        protocol       = "$context.protocol"
         responseLength = "$context.responseLength"
-        error         = "$context.error.message"
-        errorType     = "$context.error.messageString"
+        error          = "$context.error.message"
+        errorType      = "$context.error.messageString"
       })
     }
   }
@@ -215,8 +215,8 @@ resource "aws_api_gateway_integration" "users_post_integration" {
   http_method = aws_api_gateway_method.users_post.http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.users.invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.users.invoke_arn
 }
 
 # Método GET /users/{user_id} (Obtener usuario)
@@ -238,8 +238,8 @@ resource "aws_api_gateway_integration" "users_get_integration" {
   http_method = aws_api_gateway_method.users_get.http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.users.invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.users.invoke_arn
 }
 
 # Método PUT /users/{user_id} (Actualizar usuario)
@@ -262,8 +262,8 @@ resource "aws_api_gateway_integration" "users_put_integration" {
   http_method = aws_api_gateway_method.users_put.http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.users.invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.users.invoke_arn
 }
 
 # Método DELETE /users/{user_id} (Eliminar usuario)
@@ -285,8 +285,8 @@ resource "aws_api_gateway_integration" "users_delete_integration" {
   http_method = aws_api_gateway_method.users_delete.http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.users.invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.users.invoke_arn
 }
 
 #===================================================================

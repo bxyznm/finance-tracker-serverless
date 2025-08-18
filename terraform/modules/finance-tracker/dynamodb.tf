@@ -1,72 +1,55 @@
 # =============================================================================
-# Finance Tracker Serverless - DynamoDB Resources
+# Finance Tracker Serverless - DynamoDB Single Table Design
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# DynamoDB Table para Users
+# DynamoDB Main Table - Single Table Design
 # -----------------------------------------------------------------------------
 
-resource "aws_dynamodb_table" "users" {
-  name         = "${local.name_prefix}-users"
+resource "aws_dynamodb_table" "main" {
+  name         = "${local.name_prefix}-main"
   billing_mode = var.dynamodb_billing_mode
-  hash_key     = "user_id"
+  hash_key     = "pk" # Partition Key
+  range_key    = "sk" # Sort Key
 
-  # Configuración para PAY_PER_REQUEST
-  dynamic "attribute" {
-    for_each = var.dynamodb_billing_mode == "PAY_PER_REQUEST" ? [1] : []
-    content {
-      name = "user_id"
-      type = "S"
-    }
+  # Atributos principales para Single Table Design
+  attribute {
+    name = "pk"
+    type = "S" # USER#{user_id}, ACCOUNT#{account_id}, TRANSACTION#{transaction_id}, etc.
   }
 
-  # Configuración para PROVISIONED
-  dynamic "attribute" {
-    for_each = var.dynamodb_billing_mode == "PROVISIONED" ? [1] : []
-    content {
-      name = "user_id"
-      type = "S"
-    }
+  attribute {
+    name = "sk"
+    type = "S" # METADATA, TRANSACTION#{timestamp}, ACCOUNT#{account_id}, etc.
   }
 
-  dynamic "attribute" {
-    for_each = var.dynamodb_billing_mode == "PROVISIONED" ? [1] : []
-    content {
-      name = "email"
-      type = "S"
-    }
+  attribute {
+    name = "gsi1_pk"
+    type = "S" # Para GSI1 - EMAIL#{email}, USER#{user_id}, etc.
+  }
+
+  attribute {
+    name = "gsi1_sk"
+    type = "S" # Para GSI1 - USER#{user_id}, ACCOUNT#{account_id}, etc.
   }
 
   # Capacidad solo para PROVISIONED
   read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
   write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
 
-  # GSI para buscar por email
-  dynamic "global_secondary_index" {
-    for_each = var.dynamodb_billing_mode == "PROVISIONED" ? [1] : [1]
-    content {
-      name     = "email-index"
-      hash_key = "email"
+  # Global Secondary Index 1 - Para consultas por email y otros patrones
+  global_secondary_index {
+    name            = "GSI1"
+    hash_key        = "gsi1_pk"
+    range_key       = "gsi1_sk"
+    projection_type = "ALL"
 
-      read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-      write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-      projection_type = "ALL"
-    }
+    # Capacidad solo para modo PROVISIONED
+    read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
+    write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
   }
 
-  # Configurar atributos para GSI
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "email"
-    type = "S"
-  }
-
-  # Point-in-Time Recovery
+  # Configuración de respaldo
   point_in_time_recovery {
     enabled = var.enable_point_in_time_recovery
   }
@@ -76,164 +59,12 @@ resource "aws_dynamodb_table" "users" {
     enabled = true
   }
 
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-users"
-    Type = "dynamodb-table"
+  tags = merge(var.common_tags, {
+    Name        = "${local.name_prefix}-main"
+    Description = "Tabla principal usando Single Table Design para Finance Tracker"
+    Component   = "database"
   })
 }
-
-# -----------------------------------------------------------------------------
-# DynamoDB Table para Transacciones
-# -----------------------------------------------------------------------------
-
-resource "aws_dynamodb_table" "transactions" {
-  name         = "${local.name_prefix}-transactions"
-  billing_mode = var.dynamodb_billing_mode
-  hash_key     = "user_id"
-  range_key    = "transaction_id"
-
-  # Atributos principales
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "transaction_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "created_at"
-    type = "S"
-  }
-
-  attribute {
-    name = "category"
-    type = "S"
-  }
-
-  # Capacidad solo para PROVISIONED
-  read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-  write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-  # GSI para buscar por fecha
-  global_secondary_index {
-    name      = "user-date-index"
-    hash_key  = "user_id"
-    range_key = "created_at"
-
-    read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-    write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-    projection_type = "ALL"
-  }
-
-  # GSI para buscar por categoría
-  global_secondary_index {
-    name      = "user-category-index"
-    hash_key  = "user_id"
-    range_key = "category"
-
-    read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-    write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-    projection_type = "ALL"
-  }
-
-  # Point-in-Time Recovery
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  # Server-side encryption
-  server_side_encryption {
-    enabled = true
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-transactions"
-    Type = "dynamodb-table"
-  })
-}
-
-# -----------------------------------------------------------------------------
-# DynamoDB Table para Categorías
-# -----------------------------------------------------------------------------
-
-resource "aws_dynamodb_table" "categories" {
-  name         = "${local.name_prefix}-categories"
-  billing_mode = var.dynamodb_billing_mode
-  hash_key     = "user_id"
-  range_key    = "category_id"
-
-  # Atributos principales
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "category_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "category_type"
-    type = "S"
-  }
-
-  # Capacidad solo para PROVISIONED
-  read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-  write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-  # GSI para buscar por tipo de categoría
-  global_secondary_index {
-    name      = "user-type-index"
-    hash_key  = "user_id"
-    range_key = "category_type"
-
-    read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-    write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-    projection_type = "ALL"
-  }
-
-  # Point-in-Time Recovery
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  # Server-side encryption
-  server_side_encryption {
-    enabled = true
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-categories"
-    Type = "dynamodb-table"
-  })
-}
-
-# -----------------------------------------------------------------------------
-# DynamoDB Table para Terraform State Locking - DEPRECATED
-# -----------------------------------------------------------------------------
-# NOTA: Tabla de locking no necesaria - ahora usamos S3 native locking 
-# con `use_lockfile = true` que es más simple y no requiere DynamoDB
-
-# resource "aws_dynamodb_table" "terraform_state_lock" {
-#   name         = "terraform-state-lock-${var.environment}"
-#   billing_mode = "PAY_PER_REQUEST"
-#   hash_key     = "LockID"
-# 
-#   attribute {
-#     name = "LockID"
-#     type = "S"
-#   }
-# 
-#   point_in_time_recovery {
-#     enabled = var.enable_point_in_time_recovery
-#   }
 # 
 #   server_side_encryption {
 #     enabled = true

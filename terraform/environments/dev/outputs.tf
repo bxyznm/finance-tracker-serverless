@@ -110,7 +110,7 @@ output "useful_commands" {
 
 output "dev_deployment_summary" {
   description = "Resumen del deployment de desarrollo"
-  value = <<-EOT
+  value       = <<-EOT
     🚀 Finance Tracker - Entorno de Desarrollo Desplegado
     
     📋 Información General:

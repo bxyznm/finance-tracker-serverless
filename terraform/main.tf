@@ -3,7 +3,7 @@
 
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -39,7 +39,7 @@ provider "aws" {
 locals {
   project_name = "finance-tracker"
   table_prefix = "${local.project_name}-${var.environment}"
-  
+
   common_tags = {
     Project     = local.project_name
     Environment = var.environment

@@ -7,7 +7,7 @@
 # -----------------------------------------------------------------------------
 
 # Información de GitHub
-github_owner = "bxyznm"                    # Usuario de GitHub del propietario del repo
+github_owner = "bxyznm" # Usuario de GitHub del propietario del repo
 
 # Token de GitHub: se puede configurar de 3 maneras (en orden de prioridad):
 # 1. Variable de entorno: export GITHUB_TOKEN="tu_token_aqui"
@@ -18,7 +18,7 @@ github_owner = "bxyznm"                    # Usuario de GitHub del propietario d
 
 # Opcional: Tag específico del prerelease para usar
 # Si se deja vacío, usará el último prerelease disponible
-dev_release_tag = "vdev-main-23"  # Usar el tag más reciente que tiene los assets layer.zip y code.zip
+dev_release_tag = "vdev-main-23" # Usar el tag más reciente que tiene los assets layer.zip y code.zip
 
 # -----------------------------------------------------------------------------
 # Configuración del Proyecto (OPCIONAL)
@@ -47,7 +47,7 @@ lambda_environment_variables = {
 cors_allowed_methods = [
   "GET",
   "POST",
-  "PUT", 
+  "PUT",
   "DELETE",
   "OPTIONS"
 ]
@@ -61,7 +61,7 @@ cors_allowed_headers = [
   "X-Amz-User-Agent"
 ]
 
-cors_allowed_origins = ["*"]  # Para desarrollo, en producción debes especificar dominios específicos
+cors_allowed_origins = ["*"] # Para desarrollo, en producción debes especificar dominios específicos
 
 # -----------------------------------------------------------------------------
 # S3 Configuration

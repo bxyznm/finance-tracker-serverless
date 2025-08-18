@@ -177,7 +177,7 @@ variable "common_tags" {
   description = "Tags comunes a aplicar a todos los recursos"
   type        = map(string)
   default = {
-    CreatedBy = "terraform"
+    CreatedBy    = "terraform"
     project_name = "finance-tracker-serverless"
   }
 }

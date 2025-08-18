@@ -11,7 +11,7 @@ terraform {
     # La región se configurará via -backend-config o AWS_DEFAULT_REGION/AWS_REGION env vars
     bucket = "finance-tracker-serverless-tfstates"
     key    = "terraform-state/prod/terraform.tfstate"
-    
+
     # Configuración de seguridad
     encrypt = true
   }
@@ -19,19 +19,19 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.80"  # Versión actualizada con soporte completo para mx-central-1
+      version = "~> 5.80" # Versión actualizada con soporte completo para mx-central-1
     }
     github = {
       source  = "integrations/github"
-      version = "~> 6.4"   # Versión más reciente y estable
+      version = "~> 6.4" # Versión más reciente y estable
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.6"   # Versión más reciente
+      version = "~> 3.6" # Versión más reciente
     }
     null = {
       source  = "hashicorp/null"
-      version = "~> 3.2"   # Versión más reciente
+      version = "~> 3.2" # Versión más reciente
     }
   }
 }
@@ -81,7 +81,7 @@ data "aws_region" "current" {}
 
 locals {
   environment = "prod"
-  
+
   # Tags específicos para producción
   prod_tags = {
     Environment = local.environment
@@ -91,26 +91,26 @@ locals {
     Backup      = "enabled"
     CostCenter  = "production"
   }
-  
+
   # Configuración específica para producción
   prod_config = {
     # DynamoDB con configuración robusta
-    dynamodb_billing_mode = var.use_provisioned_capacity ? "PROVISIONED" : "PAY_PER_REQUEST"
+    dynamodb_billing_mode   = var.use_provisioned_capacity ? "PROVISIONED" : "PAY_PER_REQUEST"
     dynamodb_read_capacity  = 10
     dynamodb_write_capacity = 10
-    
+
     # Lambda con más recursos para producción
     lambda_memory_size = var.lambda_memory_size
     lambda_timeout     = var.lambda_timeout
-    
+
     # API Gateway con límites de producción
     api_throttling_rate_limit  = var.api_gateway_throttling_rate_limit
     api_throttling_burst_limit = var.api_gateway_throttling_burst_limit
-    
+
     # Logs con retención más larga
     enable_api_gateway_logging = true
     api_gateway_log_level      = var.api_gateway_log_level
-    
+
     # CORS más restrictivo para producción
     cors_allowed_origins = var.cors_allowed_origins
   }
@@ -140,9 +140,9 @@ module "finance_tracker" {
   enable_point_in_time_recovery = true # Habilitado en prod para backups
 
   # Configuración de Lambda
-  lambda_runtime           = var.lambda_runtime
-  lambda_timeout           = local.prod_config.lambda_timeout
-  lambda_memory_size       = local.prod_config.lambda_memory_size
+  lambda_runtime     = var.lambda_runtime
+  lambda_timeout     = local.prod_config.lambda_timeout
+  lambda_memory_size = local.prod_config.lambda_memory_size
   lambda_environment_variables = merge(var.lambda_environment_variables, {
     # Variables específicas para producción
     DEBUG_MODE = "false"
@@ -249,12 +249,12 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
 output "prod_info" {
   description = "Información específica del entorno de producción"
   value = {
-    message              = "🚀 Entorno de producción desplegado exitosamente"
-    release_used         = data.github_release.latest_release.release_tag
-    high_availability    = true
-    monitoring_enabled   = true
-    backup_enabled       = true
-    security_hardened    = true
-    alarms_configured    = length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1
+    message            = "🚀 Entorno de producción desplegado exitosamente"
+    release_used       = data.github_release.latest_release.release_tag
+    high_availability  = true
+    monitoring_enabled = true
+    backup_enabled     = true
+    security_hardened  = true
+    alarms_configured  = length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1
   }
 }

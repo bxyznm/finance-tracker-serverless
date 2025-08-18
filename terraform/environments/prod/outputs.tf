@@ -61,11 +61,11 @@ output "github_release_info" {
 output "environment_info" {
   description = "Información general del entorno de producción"
   value = merge(module.finance_tracker.environment_info, {
-    environment_type = "production"
-    high_availability = true
+    environment_type   = "production"
+    high_availability  = true
     monitoring_enabled = true
-    backup_enabled = true
-    security_hardened = true
+    backup_enabled     = true
+    security_hardened  = true
   })
 }
 
@@ -124,8 +124,8 @@ output "monitoring_commands" {
       auth         = "aws logs tail /aws/lambda/${var.project_name}-prod-auth --follow"
     }
     view_api_logs = "aws logs tail /aws/apigateway/${var.project_name}-prod --follow"
-    check_alarms = "aws cloudwatch describe-alarms --alarm-names ${join(" ", [for alarm in aws_cloudwatch_metric_alarm.lambda_errors : alarm.alarm_name])}"
-    test_health = "curl -f ${module.finance_tracker.health_check_url} || echo 'Health check failed!'"
+    check_alarms  = "aws cloudwatch describe-alarms --alarm-names ${join(" ", [for alarm in aws_cloudwatch_metric_alarm.lambda_errors : alarm.alarm_name])}"
+    test_health   = "curl -f ${module.finance_tracker.health_check_url} || echo 'Health check failed!'"
   }
 }
 
@@ -149,7 +149,7 @@ output "documentation_urls" {
 
 output "prod_deployment_summary" {
   description = "Resumen del deployment de producción"
-  value = <<-EOT
+  value       = <<-EOT
     🚀 Finance Tracker - Entorno de Producción Desplegado
     
     📋 Información General:
@@ -196,11 +196,11 @@ output "prod_deployment_summary" {
 output "security_info" {
   description = "Información de configuración de seguridad"
   value = {
-    cors_origins_configured = length(var.cors_allowed_origins)
-    point_in_time_recovery  = "enabled"
-    encryption_at_rest     = "enabled"
-    lambda_execution_role  = module.finance_tracker.lambda_execution_role_arn
+    cors_origins_configured   = length(var.cors_allowed_origins)
+    point_in_time_recovery    = "enabled"
+    encryption_at_rest        = "enabled"
+    lambda_execution_role     = module.finance_tracker.lambda_execution_role_arn
     api_throttling_configured = true
-    monitoring_alarms = length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1
+    monitoring_alarms         = length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1
   }
 }

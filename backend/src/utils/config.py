@@ -18,13 +18,9 @@ class Config:
     # Configuración de AWS
     AWS_REGION: str = os.getenv("APP_AWS_REGION", "mx-central-1")
     
-    # Configuración de DynamoDB
+    # Configuración de DynamoDB - Single Table Design
     DYNAMODB_TABLE_PREFIX: str = os.getenv("DYNAMODB_TABLE_PREFIX", "finance-tracker")
-    USERS_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-users"
-    ACCOUNTS_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-accounts"
-    TRANSACTIONS_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-transactions"
-    CATEGORIES_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-categories"
-    BUDGETS_TABLE: str = f"{DYNAMODB_TABLE_PREFIX}-budgets"
+    DYNAMODB_TABLE: str = os.getenv("DYNAMODB_TABLE", f"{DYNAMODB_TABLE_PREFIX}-{ENVIRONMENT}-main")
     
     # Configuración de autenticación
     JWT_SECRET_KEY: Optional[str] = os.getenv("JWT_SECRET_KEY")
