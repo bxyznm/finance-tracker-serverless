@@ -15,7 +15,7 @@ variable "project_name" {
 variable "aws_region" {
   description = "Región de AWS donde desplegar los recursos"
   type        = string
-  default     = "us-east-1"
+  default     = "mx-central-1"
 }
 
 # -----------------------------------------------------------------------------
@@ -25,6 +25,7 @@ variable "aws_region" {
 variable "github_owner" {
   description = "Owner del repositorio de GitHub"
   type        = string
+  default = "bxyznm"
 }
 
 variable "github_repository" {
