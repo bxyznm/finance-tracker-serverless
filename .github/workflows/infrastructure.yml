@@ -53,7 +53,7 @@ permissions:
 
 env:
   AWS_REGION: mx-central-1
-  TERRAFORM_VERSION: "1.7.0"
+  TERRAFORM_VERSION: "1.12.2"
 
 jobs:
   # Job para determinar qué entorno desplegar y qué release usar
