@@ -113,7 +113,7 @@ resource "null_resource" "download_layer" {
   provisioner "local-exec" {
     command = <<-EOT
       curl -L -H "Accept: application/octet-stream" \
-           -o /tmp/layer-${var.environment}.zip \
+           -o /tmp/layer.zip \
            "${local.layer_asset_url}"
     EOT
   }
@@ -129,7 +129,7 @@ resource "null_resource" "download_code" {
   provisioner "local-exec" {
     command = <<-EOT
       curl -L -H "Accept: application/octet-stream" \
-           -o /tmp/code-${var.environment}.zip \
+           -o /tmp/code.zip \
            "${local.code_asset_url}"
     EOT
   }
