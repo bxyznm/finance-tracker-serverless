@@ -3,23 +3,23 @@
 # =============================================================================
 
 terraform {
-  required_version = ">= 1.12"
+  required_version = ">= 1.12.2"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.70"
+      version = "~> 5.80"  # Versión actualizada con soporte completo para mx-central-1
     }
     github = {
       source  = "integrations/github"
-      version = "~> 6.0"
+      version = "~> 6.4"   # Versión más reciente y estable
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.0"
+      version = "~> 3.6"   # Versión más reciente
     }
     null = {
       source  = "hashicorp/null"
-      version = "~> 3.0"
+      version = "~> 3.2"   # Versión más reciente
     }
   }
 }
