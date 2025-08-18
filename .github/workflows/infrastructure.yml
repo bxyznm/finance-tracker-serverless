@@ -28,12 +28,20 @@ on:
         options:
         - dev
         - prod
+      operation:
+        description: 'Operación a realizar'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+        - deploy
+        - destroy
       release_tag:
         description: 'Tag del release específico (opcional, usa el último si está vacío)'
         required: false
         type: string
       destroy_first:
-        description: 'Destruir infraestructura existente primero'
+        description: 'Destruir infraestructura existente primero (solo para deploy)'
         required: false
         default: false
         type: boolean
@@ -41,6 +49,7 @@ on:
 permissions:
   contents: write
   id-token: write # Para OIDC con AWS
+  actions: write  # Para crear/actualizar variables del repositorio
 
 env:
   AWS_REGION: mx-central-1
@@ -55,6 +64,8 @@ jobs:
       release_tag: ${{ steps.determine.outputs.release_tag }}
       release_type: ${{ steps.determine.outputs.release_type }}
       should_deploy: ${{ steps.determine.outputs.should_deploy }}
+      should_destroy: ${{ steps.determine.outputs.should_destroy }}
+      operation: ${{ steps.determine.outputs.operation }}
     steps:
       - name: Determine deployment parameters
         id: determine
@@ -64,9 +75,20 @@ jobs:
             echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
             echo "release_tag=${{ inputs.release_tag }}" >> $GITHUB_OUTPUT
             echo "release_type=manual" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "operation=${{ inputs.operation }}" >> $GITHUB_OUTPUT
+            
+            if [ "${{ inputs.operation }}" = "destroy" ]; then
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+              echo "should_destroy=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
+              echo "should_destroy=false" >> $GITHUB_OUTPUT
+            fi
           elif [ "${{ github.event_name }}" = "workflow_run" ]; then
             # Ejecución automática después del deployment workflow
+            echo "operation=deploy" >> $GITHUB_OUTPUT
+            echo "should_destroy=false" >> $GITHUB_OUTPUT
+            
             if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
               # Determinar entorno basado en el evento que triggereó el workflow anterior
               if [ "${{ github.event.workflow_run.event }}" = "pull_request" ]; then
@@ -87,6 +109,8 @@ jobs:
             fi
           else
             echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "should_destroy=false" >> $GITHUB_OUTPUT
+            echo "operation=none" >> $GITHUB_OUTPUT
           fi
 
   # Job de deployment para desarrollo
@@ -146,6 +170,14 @@ jobs:
             echo "Found existing bucket suffix: $BUCKET_SUFFIX"
             echo "bucket_suffix=$BUCKET_SUFFIX" >> $GITHUB_OUTPUT
             echo "bucket_exists=true" >> $GITHUB_OUTPUT
+          elif BUCKET_SUFFIX=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables/$BUCKET_VAR_NAME" \
+              | jq -r '.value // empty' 2>/dev/null) && [ -n "$BUCKET_SUFFIX" ]; then
+            echo "Found existing bucket suffix via API: $BUCKET_SUFFIX"
+            echo "bucket_suffix=$BUCKET_SUFFIX" >> $GITHUB_OUTPUT
+            echo "bucket_exists=true" >> $GITHUB_OUTPUT
           else
             echo "No existing bucket suffix found, will create new one"
             # Generar un sufijo único basado en timestamp y hash corto
@@ -166,13 +198,32 @@ jobs:
 
       - name: Save bucket suffix to repository variables
         if: steps.bucket_check.outputs.bucket_exists == 'false'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BUCKET_SUFFIX="${{ steps.bucket_check.outputs.bucket_suffix }}"
           echo "Saving bucket suffix as repository variable: $BUCKET_SUFFIX"
-          gh variable set DEV_S3_BUCKET_SUFFIX --body "$BUCKET_SUFFIX"
-          echo "✅ S3 bucket suffix saved as DEV_S3_BUCKET_SUFFIX"
+          
+          # Intentar con gh CLI primero
+          if gh variable set DEV_S3_BUCKET_SUFFIX --body "$BUCKET_SUFFIX"; then
+            echo "✅ S3 bucket suffix saved as DEV_S3_BUCKET_SUFFIX using gh CLI"
+          else
+            echo "⚠️ gh CLI failed, trying with curl..."
+            # Fallback con curl usando GitHub REST API
+            if curl -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+              -d "{\"name\":\"DEV_S3_BUCKET_SUFFIX\",\"value\":\"$BUCKET_SUFFIX\"}"; then
+              echo "✅ S3 bucket suffix saved as DEV_S3_BUCKET_SUFFIX using REST API"
+            else
+              echo "❌ Both methods failed. Will continue without saving - bucket will be recreated next time"
+              echo "⚠️ **Warning**: Could not save S3 bucket suffix. Next deployment will create a new bucket." >> $GITHUB_STEP_SUMMARY
+              echo "   Consider manually setting repository variable DEV_S3_BUCKET_SUFFIX = $BUCKET_SUFFIX" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
 
       - name: Save Terraform outputs
         working-directory: terraform/environments/dev
@@ -283,6 +334,14 @@ jobs:
             echo "Found existing bucket suffix: $BUCKET_SUFFIX"
             echo "bucket_suffix=$BUCKET_SUFFIX" >> $GITHUB_OUTPUT
             echo "bucket_exists=true" >> $GITHUB_OUTPUT
+          elif BUCKET_SUFFIX=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables/$BUCKET_VAR_NAME" \
+              | jq -r '.value // empty' 2>/dev/null) && [ -n "$BUCKET_SUFFIX" ]; then
+            echo "Found existing bucket suffix via API: $BUCKET_SUFFIX"
+            echo "bucket_suffix=$BUCKET_SUFFIX" >> $GITHUB_OUTPUT
+            echo "bucket_exists=true" >> $GITHUB_OUTPUT
           else
             echo "No existing bucket suffix found, will create new one"
             # Generar un sufijo único basado en timestamp y hash corto
@@ -303,13 +362,32 @@ jobs:
 
       - name: Save bucket suffix to repository variables
         if: steps.bucket_check_prod.outputs.bucket_exists == 'false'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BUCKET_SUFFIX="${{ steps.bucket_check_prod.outputs.bucket_suffix }}"
           echo "Saving bucket suffix as repository variable: $BUCKET_SUFFIX"
-          gh variable set PROD_S3_BUCKET_SUFFIX --body "$BUCKET_SUFFIX"
-          echo "✅ S3 bucket suffix saved as PROD_S3_BUCKET_SUFFIX"
+          
+          # Intentar con gh CLI primero
+          if gh variable set PROD_S3_BUCKET_SUFFIX --body "$BUCKET_SUFFIX"; then
+            echo "✅ S3 bucket suffix saved as PROD_S3_BUCKET_SUFFIX using gh CLI"
+          else
+            echo "⚠️ gh CLI failed, trying with curl..."
+            # Fallback con curl usando GitHub REST API
+            if curl -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+              -d "{\"name\":\"PROD_S3_BUCKET_SUFFIX\",\"value\":\"$BUCKET_SUFFIX\"}"; then
+              echo "✅ S3 bucket suffix saved as PROD_S3_BUCKET_SUFFIX using REST API"
+            else
+              echo "❌ Both methods failed. Will continue without saving - bucket will be recreated next time"
+              echo "⚠️ **Warning**: Could not save S3 bucket suffix. Next deployment will create a new bucket." >> $GITHUB_STEP_SUMMARY
+              echo "   Consider manually setting repository variable PROD_S3_BUCKET_SUFFIX = $BUCKET_SUFFIX" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
 
       - name: Save Terraform outputs
         working-directory: terraform/environments/prod
@@ -353,43 +431,300 @@ jobs:
           path: terraform/environments/prod/terraform-outputs.json
           retention-days: 90
 
+  # Job de destrucción para desarrollo
+  destroy-dev:
+    needs: determine-deployment
+    if: needs.determine-deployment.outputs.should_destroy == 'true' && needs.determine-deployment.outputs.environment == 'dev'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Show destroy info
+        run: |
+          echo "🗑️ Destrucción de Infraestructura - Desarrollo"
+          echo "=============================================="
+          echo "   Ambiente: dev"
+          echo "   Operación: destroy"
+          echo "   Trigger: ${{ github.event_name }}"
+          echo "   AWS Account: $(aws sts get-caller-identity --query Account --output text)"
+
+      - name: Get S3 bucket suffix for proper initialization
+        id: bucket_check_destroy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Intentar obtener la variable existente del bucket para dev
+          BUCKET_VAR_NAME="DEV_S3_BUCKET_SUFFIX"
+          
+          if BUCKET_SUFFIX=$(gh variable get $BUCKET_VAR_NAME 2>/dev/null); then
+            echo "Found existing bucket suffix: $BUCKET_SUFFIX"
+            echo "bucket_suffix=$BUCKET_SUFFIX" >> $GITHUB_OUTPUT
+            echo "bucket_exists=true" >> $GITHUB_OUTPUT
+          elif BUCKET_SUFFIX=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables/$BUCKET_VAR_NAME" \
+              | jq -r '.value // empty' 2>/dev/null) && [ -n "$BUCKET_SUFFIX" ]; then
+            echo "Found existing bucket suffix via API: $BUCKET_SUFFIX"
+            echo "bucket_suffix=$BUCKET_SUFFIX" >> $GITHUB_OUTPUT
+            echo "bucket_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No bucket suffix found - infrastructure may not exist or may be incomplete"
+            echo "bucket_suffix=" >> $GITHUB_OUTPUT
+            echo "bucket_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Terraform Init
+        working-directory: terraform/environments/dev
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: terraform/environments/dev
+        env:
+          TF_VAR_github_owner: ${{ github.repository_owner }}
+          TF_VAR_github_repository: ${{ github.event.repository.name }}
+          TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
+          TF_VAR_dev_release_tag: ${{ needs.determine-deployment.outputs.release_tag }}
+          TF_VAR_s3_bucket_suffix: ${{ steps.bucket_check_destroy.outputs.bucket_suffix }}
+        run: |
+          echo "🗑️ Destroying development infrastructure..."
+          terraform destroy -auto-approve
+          echo "✅ Development infrastructure destroyed successfully"
+
+      - name: Clean up repository variables
+        if: steps.bucket_check_destroy.outputs.bucket_exists == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🧹 Cleaning up repository variables..."
+          
+          # Intentar eliminar la variable del bucket
+          if gh variable delete DEV_S3_BUCKET_SUFFIX; then
+            echo "✅ Deleted DEV_S3_BUCKET_SUFFIX variable"
+          else
+            echo "⚠️ Could not delete DEV_S3_BUCKET_SUFFIX variable - you may need to delete it manually"
+          fi
+
+      - name: Destroy summary
+        run: |
+          echo "## 🗑️ Development Infrastructure Destroyed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Development environment** has been completely removed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Resources Destroyed:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Lambda functions and layers" >> $GITHUB_STEP_SUMMARY
+          echo "- API Gateway" >> $GITHUB_STEP_SUMMARY
+          echo "- DynamoDB tables" >> $GITHUB_STEP_SUMMARY
+          echo "- S3 bucket and objects" >> $GITHUB_STEP_SUMMARY
+          echo "- CloudWatch log groups" >> $GITHUB_STEP_SUMMARY
+          echo "- IAM roles and policies" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.bucket_check_destroy.outputs.bucket_exists }}" = "true" ]; then
+            echo "- Repository variables cleaned up" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Job de destrucción para producción
+  destroy-prod:
+    needs: determine-deployment
+    if: needs.determine-deployment.outputs.should_destroy == 'true' && needs.determine-deployment.outputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Show destroy info
+        run: |
+          echo "🚨 DESTRUCCIÓN DE PRODUCCIÓN"
+          echo "============================="
+          echo "   Ambiente: production"
+          echo "   Operación: destroy"
+          echo "   Trigger: ${{ github.event_name }}"
+          echo "   AWS Account: $(aws sts get-caller-identity --query Account --output text)"
+
+      - name: Get S3 bucket suffix for proper initialization
+        id: bucket_check_destroy_prod
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Intentar obtener la variable existente del bucket para prod
+          BUCKET_VAR_NAME="PROD_S3_BUCKET_SUFFIX"
+          
+          if BUCKET_SUFFIX=$(gh variable get $BUCKET_VAR_NAME 2>/dev/null); then
+            echo "Found existing bucket suffix: $BUCKET_SUFFIX"
+            echo "bucket_suffix=$BUCKET_SUFFIX" >> $GITHUB_OUTPUT
+            echo "bucket_exists=true" >> $GITHUB_OUTPUT
+          elif BUCKET_SUFFIX=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables/$BUCKET_VAR_NAME" \
+              | jq -r '.value // empty' 2>/dev/null) && [ -n "$BUCKET_SUFFIX" ]; then
+            echo "Found existing bucket suffix via API: $BUCKET_SUFFIX"
+            echo "bucket_suffix=$BUCKET_SUFFIX" >> $GITHUB_OUTPUT
+            echo "bucket_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No bucket suffix found - infrastructure may not exist or may be incomplete"
+            echo "bucket_suffix=" >> $GITHUB_OUTPUT
+            echo "bucket_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Terraform Init
+        working-directory: terraform/environments/prod
+        run: terraform init
+
+      - name: Production Destroy Confirmation
+        run: |
+          echo "⚠️⚠️⚠️ PRODUCTION DESTROY WARNING ⚠️⚠️⚠️"
+          echo "This will permanently delete ALL production resources:"
+          echo "- Customer data in DynamoDB tables"
+          echo "- Production API endpoints"
+          echo "- All monitoring and alerting"
+          echo "- Production S3 assets and backups"
+          echo ""
+          echo "Proceeding in 10 seconds..."
+          sleep 10
+
+      - name: Terraform Destroy
+        working-directory: terraform/environments/prod
+        env:
+          TF_VAR_github_owner: ${{ github.repository_owner }}
+          TF_VAR_github_repository: ${{ github.event.repository.name }}
+          TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
+          TF_VAR_cors_allowed_origins: '["https://finance-tracker.tudominio.com"]'
+          TF_VAR_s3_bucket_suffix: ${{ steps.bucket_check_destroy_prod.outputs.bucket_suffix }}
+        run: |
+          echo "🗑️ Destroying production infrastructure..."
+          terraform destroy -auto-approve
+          echo "✅ Production infrastructure destroyed successfully"
+
+      - name: Clean up repository variables
+        if: steps.bucket_check_destroy_prod.outputs.bucket_exists == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🧹 Cleaning up repository variables..."
+          
+          # Intentar eliminar la variable del bucket
+          if gh variable delete PROD_S3_BUCKET_SUFFIX; then
+            echo "✅ Deleted PROD_S3_BUCKET_SUFFIX variable"
+          else
+            echo "⚠️ Could not delete PROD_S3_BUCKET_SUFFIX variable - you may need to delete it manually"
+          fi
+
+      - name: Destroy summary
+        run: |
+          echo "## 🗑️ Production Infrastructure Destroyed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚨 **Production environment** has been completely removed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Resources Destroyed:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Lambda functions and layers" >> $GITHUB_STEP_SUMMARY
+          echo "- API Gateway" >> $GITHUB_STEP_SUMMARY
+          echo "- DynamoDB tables (with all data)" >> $GITHUB_STEP_SUMMARY
+          echo "- S3 bucket and objects" >> $GITHUB_STEP_SUMMARY
+          echo "- CloudWatch log groups and alarms" >> $GITHUB_STEP_SUMMARY
+          echo "- IAM roles and policies" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.bucket_check_destroy_prod.outputs.bucket_exists }}" = "true" ]; then
+            echo "- Repository variables cleaned up" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Note**: All production data has been permanently deleted."
+
   # Job de cleanup para deployments fallidos
   cleanup-on-failure:
-    needs: [determine-deployment, deploy-dev, deploy-prod]
-    if: always() && (needs.deploy-dev.result == 'failure' || needs.deploy-prod.result == 'failure')
+    needs: [determine-deployment, deploy-dev, deploy-prod, destroy-dev, destroy-prod]
+    if: always() && (needs.deploy-dev.result == 'failure' || needs.deploy-prod.result == 'failure' || needs.destroy-dev.result == 'failure' || needs.destroy-prod.result == 'failure')
     runs-on: ubuntu-latest
     steps:
-      - name: Notify deployment failure
+      - name: Notify operation failure
         run: |
-          echo "## ❌ Infrastructure Deployment Failed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The infrastructure deployment failed. Please check the logs and:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Verify AWS credentials and permissions" >> $GITHUB_STEP_SUMMARY
-          echo "2. Check if GitHub release exists and contains required assets" >> $GITHUB_STEP_SUMMARY
-          echo "3. Validate Terraform configuration" >> $GITHUB_STEP_SUMMARY
-          echo "4. Consider running manual cleanup if needed" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.determine-deployment.outputs.operation }}" = "destroy" ]; then
+            echo "## ❌ Infrastructure Destruction Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The infrastructure destruction failed. Please check the logs and:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Verify AWS credentials and permissions" >> $GITHUB_STEP_SUMMARY
+            echo "2. Check Terraform state consistency" >> $GITHUB_STEP_SUMMARY
+            echo "3. Consider running manual cleanup in AWS Console" >> $GITHUB_STEP_SUMMARY
+            echo "4. Verify repository variables are cleaned up" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Infrastructure Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The infrastructure deployment failed. Please check the logs and:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Verify AWS credentials and permissions" >> $GITHUB_STEP_SUMMARY
+            echo "2. Check if GitHub release exists and contains required assets" >> $GITHUB_STEP_SUMMARY
+            echo "3. Validate Terraform configuration" >> $GITHUB_STEP_SUMMARY
+            echo "4. Consider running manual cleanup if needed" >> $GITHUB_STEP_SUMMARY
+          fi
 
   # Job de notificación de éxito
   notify-success:
-    needs: [determine-deployment, deploy-dev, deploy-prod]
-    if: always() && (needs.deploy-dev.result == 'success' || needs.deploy-prod.result == 'success')
+    needs: [determine-deployment, deploy-dev, deploy-prod, destroy-dev, destroy-prod]
+    if: always() && (needs.deploy-dev.result == 'success' || needs.deploy-prod.result == 'success' || needs.destroy-dev.result == 'success' || needs.destroy-prod.result == 'success')
     runs-on: ubuntu-latest
     steps:
-      - name: Create deployment summary
+      - name: Create operation summary
         run: |
-          echo "## 🎉 Infrastructure Deployment Completed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ needs.deploy-dev.result }}" = "success" ]; then
-            echo "✅ **Development environment** deployed successfully" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.determine-deployment.outputs.operation }}" = "destroy" ]; then
+            echo "## 🗑️ Infrastructure Destruction Completed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "${{ needs.destroy-dev.result }}" = "success" ]; then
+              echo "✅ **Development environment** destroyed successfully" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [ "${{ needs.destroy-prod.result }}" = "success" ]; then
+              echo "🚨 **Production environment** destroyed successfully" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Resources Removed:**" >> $GITHUB_STEP_SUMMARY
+            echo "- All AWS infrastructure components" >> $GITHUB_STEP_SUMMARY
+            echo "- Repository variables cleaned up" >> $GITHUB_STEP_SUMMARY
+            echo "- Terraform state cleared" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Note**: All data has been permanently deleted. To redeploy, use the 'deploy' operation."
+          else
+            echo "## 🎉 Infrastructure Deployment Completed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "${{ needs.deploy-dev.result }}" = "success" ]; then
+              echo "✅ **Development environment** deployed successfully" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [ "${{ needs.deploy-prod.result }}" = "success" ]; then
+              echo "✅ **Production environment** deployed successfully" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Test the API endpoints" >> $GITHUB_STEP_SUMMARY
+            echo "- Monitor CloudWatch logs and metrics" >> $GITHUB_STEP_SUMMARY
+            echo "- Update frontend configuration with new API URLs if needed" >> $GITHUB_STEP_SUMMARY
           fi
-          
-          if [ "${{ needs.deploy-prod.result }}" = "success" ]; then
-            echo "✅ **Production environment** deployed successfully" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
-          echo "- Test the API endpoints" >> $GITHUB_STEP_SUMMARY
-          echo "- Monitor CloudWatch logs and metrics" >> $GITHUB_STEP_SUMMARY
-          echo "- Update frontend configuration with new API URLs if needed" >> $GITHUB_STEP_SUMMARY
