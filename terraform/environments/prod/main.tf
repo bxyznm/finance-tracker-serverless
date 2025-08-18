@@ -9,11 +9,14 @@ terraform {
   backend "s3" {
     # El bucket se configurará dinámicamente via -backend-config
     # La región se configurará via -backend-config o AWS_DEFAULT_REGION/AWS_REGION env vars
+    bucket = "finance-tracker-serverless-tfstates"
     key    = "terraform-state/prod/terraform.tfstate"
     
     # Configuración de seguridad
-    encrypt        = true
-    dynamodb_table = "terraform-state-lock-prod"
+    encrypt = true
+    
+    # S3 State Locking (reemplaza DynamoDB - más simple y moderno)
+    use_lockfile = true
   }
 
   required_providers {

@@ -236,7 +236,7 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/dev/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=terraform-state-lock-dev" \
+            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Terraform Apply
@@ -295,7 +295,7 @@ jobs:
             -backend-config="bucket=$BACKEND_BUCKET" \
             -backend-config="key=terraform-state/dev/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=terraform-state-lock-dev" \
+            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
           
           echo "✅ Terraform state migrated to S3 backend successfully"
@@ -388,7 +388,7 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/prod/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=terraform-state-lock-prod" \
+            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
           
           terraform destroy -auto-approve
@@ -433,7 +433,7 @@ jobs:
           TF_VAR_github_owner: ${{ github.repository_owner }}
           TF_VAR_github_repository: ${{ github.event.repository.name }}
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
-          TF_VAR_cors_allowed_origins: '["https://finance-tracker.tudominio.com"]' # TODO: Cambiar por dominio real
+          TF_VAR_cors_allowed_origins: '["*"]' # TODO: Cambiar por dominio real
         run: terraform plan -out=tfplan
 
       - name: Check for existing S3 bucket suffix
@@ -476,7 +476,7 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/prod/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=terraform-state-lock-prod" \
+            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Migrate state to S3 (if needed)
@@ -496,7 +496,7 @@ jobs:
           TF_VAR_github_owner: ${{ github.repository_owner }}
           TF_VAR_github_repository: ${{ github.event.repository.name }}
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
-          TF_VAR_cors_allowed_origins: '["https://finance-tracker.tudominio.com"]' # TODO: Cambiar por dominio real
+          TF_VAR_cors_allowed_origins: '["*"]' # TODO: Cambiar por dominio real
           TF_VAR_s3_bucket_suffix: ${{ steps.bucket_check_prod.outputs.bucket_suffix }}
         run: terraform apply tfplan
 
@@ -639,7 +639,7 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/dev/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=terraform-state-lock-dev" \
+            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Terraform Destroy
@@ -755,7 +755,7 @@ jobs:
             -backend-config="bucket=$BUCKET_NAME" \
             -backend-config="key=terraform-state/prod/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=terraform-state-lock-prod" \
+            -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Production Destroy Confirmation

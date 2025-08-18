@@ -216,31 +216,33 @@ resource "aws_dynamodb_table" "categories" {
 }
 
 # -----------------------------------------------------------------------------
-# DynamoDB Table para Terraform State Locking
+# DynamoDB Table para Terraform State Locking - DEPRECATED
 # -----------------------------------------------------------------------------
+# NOTA: Tabla de locking no necesaria - ahora usamos S3 native locking 
+# con `use_lockfile = true` que es más simple y no requiere DynamoDB
 
-resource "aws_dynamodb_table" "terraform_state_lock" {
-  name         = "terraform-state-lock-${var.environment}"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  server_side_encryption {
-    enabled = true
-  }
-
-  tags = merge(local.common_tags, {
-    Name        = "terraform-state-lock-${var.environment}"
-    Type        = "dynamodb-table"
-    Purpose     = "terraform-state-locking"
-    Description = "Table for Terraform state locking"
-  })
-}
+# resource "aws_dynamodb_table" "terraform_state_lock" {
+#   name         = "terraform-state-lock-${var.environment}"
+#   billing_mode = "PAY_PER_REQUEST"
+#   hash_key     = "LockID"
+# 
+#   attribute {
+#     name = "LockID"
+#     type = "S"
+#   }
+# 
+#   point_in_time_recovery {
+#     enabled = var.enable_point_in_time_recovery
+#   }
+# 
+#   server_side_encryption {
+#     enabled = true
+#   }
+# 
+#   tags = merge(local.common_tags, {
+#     Name        = "terraform-state-lock-${var.environment}"
+#     Type        = "dynamodb-table"
+#     Purpose     = "terraform-state-locking"
+#     Description = "Table for Terraform state locking"
+#   })
+# }

@@ -90,10 +90,7 @@ output "dynamodb_tables" {
       name = aws_dynamodb_table.categories.name
       arn  = aws_dynamodb_table.categories.arn
     }
-    terraform_state_lock = {
-      name = aws_dynamodb_table.terraform_state_lock.name
-      arn  = aws_dynamodb_table.terraform_state_lock.arn
-    }
+    # terraform_state_lock table no longer needed - using S3 native locking
   }
 }
 
