@@ -8,7 +8,10 @@
 
 # Información de GitHub
 github_owner = "bxyznm"                    # Usuario de GitHub del propietario del repo
-github_token = "PLACEHOLDER_TOKEN"        # Debes proporcionar tu token de GitHub real
+
+# Token de GitHub: En producción se usa automáticamente desde el environment de CI/CD
+# En CI/CD se configura automáticamente desde secrets.GITHUB_TOKEN o variables de entorno
+# Para uso local, descomenta y agrega tu token: github_token = "ghp_tu_token_aqui"
 
 # -----------------------------------------------------------------------------
 # Configuración del Proyecto (OPCIONAL)

@@ -51,7 +51,8 @@ provider "aws" {
 
 provider "github" {
   owner = var.github_owner
-  token = var.github_token
+  token = var.github_token != "" ? var.github_token : null
+  # Si github_token está vacío, el provider intentará usar la variable de entorno GITHUB_TOKEN
 }
 
 # -----------------------------------------------------------------------------

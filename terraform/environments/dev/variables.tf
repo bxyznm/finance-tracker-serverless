@@ -35,9 +35,10 @@ variable "github_repository" {
 }
 
 variable "github_token" {
-  description = "Token de GitHub para acceder a la API"
+  description = "Token de GitHub para acceder a la API. Si no se proporciona, intentará usar la variable de entorno GITHUB_TOKEN"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "dev_release_tag" {

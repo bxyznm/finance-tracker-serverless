@@ -8,9 +8,13 @@
 
 # Información de GitHub
 github_owner = "bxyznm"                    # Usuario de GitHub del propietario del repo
-# El token se obtiene automáticamente del entorno de GitHub Actions
-# No necesita ser especificado aquí ya que se toma de GITHUB_TOKEN
-# github_token se configura automáticamente en el pipeline
+
+# Token de GitHub: se puede configurar de 3 maneras (en orden de prioridad):
+# 1. Variable de entorno: export GITHUB_TOKEN="tu_token_aqui"
+# 2. Descomentar la línea siguiente: github_token = "tu_token_aqui"  
+# 3. En CI/CD se configura automáticamente desde secrets.GITHUB_TOKEN
+
+# github_token = "ghp_tu_token_personal_aqui"  # Descomenta y agrega tu token si no usas variables de entorno
 
 # Opcional: Tag específico del prerelease para usar
 # Si se deja vacío, usará el último prerelease disponible
