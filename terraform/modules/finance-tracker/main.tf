@@ -142,8 +142,13 @@ resource "aws_s3_object" "layer_zip" {
   bucket = aws_s3_bucket.deployment_assets.bucket
   key    = "releases/${data.github_release.finance_tracker.release_tag}/layer.zip"
   source = "/tmp/layer.zip"
-  etag   = filemd5("/tmp/layer.zip")
-  tags   = local.common_tags
+  
+  # Use release tag as a trigger for updates instead of file hash
+  metadata = {
+    release_tag = data.github_release.finance_tracker.release_tag
+  }
+  
+  tags = local.common_tags
 }
 
 # Subir code a S3
@@ -153,6 +158,11 @@ resource "aws_s3_object" "code_zip" {
   bucket = aws_s3_bucket.deployment_assets.bucket
   key    = "releases/${data.github_release.finance_tracker.release_tag}/code.zip"
   source = "/tmp/code.zip"
-  etag   = filemd5("/tmp/code.zip")
-  tags   = local.common_tags
+  
+  # Use release tag as a trigger for updates instead of file hash
+  metadata = {
+    release_tag = data.github_release.finance_tracker.release_tag
+  }
+  
+  tags = local.common_tags
 }
