@@ -144,13 +144,50 @@ jobs:
           echo "   Trigger: ${{ github.event_name }}"
           echo "   AWS Account: $(aws sts get-caller-identity --query Account --output text)"
 
-      - name: Terraform Init (skip backend for first run)
+      - name: Get S3 bucket for backend configuration
+        id: backend_bucket
+        run: |
+          # Using fixed bucket for terraform state
+          BACKEND_BUCKET="finance-tracker-serverless-tfstates"
+          echo "backend_bucket=$BACKEND_BUCKET" >> $GITHUB_OUTPUT
+          echo "Backend bucket: $BACKEND_BUCKET"
+
+      - name: Ensure S3 bucket exists for terraform state
+        run: |
+          BUCKET_NAME="finance-tracker-serverless-tfstates"
+          
+          # Check if bucket exists
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "✅ S3 bucket $BUCKET_NAME already exists"
+          else
+            echo "📦 Creating S3 bucket $BUCKET_NAME for terraform state"
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ env.AWS_REGION }} \
+              --create-bucket-configuration LocationConstraint=${{ env.AWS_REGION }}
+            
+            # Enable versioning
+            aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" \
+              --versioning-configuration Status=Enabled
+            
+            # Enable server-side encryption
+            aws s3api put-bucket-encryption --bucket "$BUCKET_NAME" \
+              --server-side-encryption-configuration '{
+                "Rules": [{
+                  "ApplyServerSideEncryptionByDefault": {
+                    "SSEAlgorithm": "AES256"
+                  },
+                  "BucketKeyEnabled": false
+                }]
+              }'
+            
+            echo "✅ S3 bucket $BUCKET_NAME created and configured"
+          fi
+
+      - name: Terraform Init
         working-directory: terraform/environments/dev
         run: |
-          # En el primer despliegue, saltamos el backend S3 porque aún no existe
-          terraform init -upgrade -backend=false
+          terraform init -upgrade
 
-      - name: Terraform Plan (local backend)
+      - name: Terraform Plan
         working-directory: terraform/environments/dev
         env:
           TF_VAR_github_owner: ${{ github.repository_owner }}
@@ -188,7 +225,21 @@ jobs:
             echo "bucket_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Terraform Apply (local backend)
+      - name: Configure S3 backend for development
+        working-directory: terraform/environments/dev
+        run: |
+          BUCKET_NAME="finance-tracker-serverless-tfstates"
+          echo "Configuring S3 backend with bucket: $BUCKET_NAME"
+          
+          # Reinitialize with S3 backend configuration
+          terraform init -reconfigure \
+            -backend-config="bucket=$BUCKET_NAME" \
+            -backend-config="key=terraform-state/dev/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock-dev" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Apply
         working-directory: terraform/environments/dev
         env:
           TF_VAR_github_owner: ${{ github.repository_owner }}
@@ -228,22 +279,23 @@ jobs:
           fi
 
       - name: Migrate state to S3 backend
+        if: steps.bucket_check.outputs.bucket_exists == 'false'
         working-directory: terraform/environments/dev
         run: |
-          BUCKET_SUFFIX="${{ steps.bucket_check.outputs.bucket_suffix }}"
-          BACKEND_BUCKET="finance-tracker-serverless-$BUCKET_SUFFIX"
+          # If this was the first deployment with local backend, migrate to S3
+          BACKEND_BUCKET="finance-tracker-serverless-tfstates"
           
           echo "🔄 Migrating Terraform state to S3 backend: $BACKEND_BUCKET"
           
           # First, make sure the DynamoDB table is available for locking
-          echo "Waiting for DynamoDB table to be ready..."
-          sleep 15
+          sleep 10
           
           # Reconfigure backend to use S3 with all configurations
           terraform init -force-copy \
             -backend-config="bucket=$BACKEND_BUCKET" \
             -backend-config="key=terraform-state/dev/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock-dev" \
             -backend-config="encrypt=true"
           
           echo "✅ Terraform state migrated to S3 backend successfully"
@@ -329,31 +381,53 @@ jobs:
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get existing bucket suffix for backend configuration
-          BUCKET_VAR_NAME="PROD_S3_BUCKET_SUFFIX"
+          BUCKET_NAME="finance-tracker-serverless-tfstates"
           
-          if BUCKET_SUFFIX=$(gh variable get $BUCKET_VAR_NAME 2>/dev/null); then
-            echo "Found existing bucket suffix: $BUCKET_SUFFIX"
-            BUCKET_NAME="finance-tracker-serverless-$BUCKET_SUFFIX"
-            
-            # Initialize with S3 backend
-            terraform init -reconfigure \
-              -backend-config="bucket=$BUCKET_NAME" \
-              -backend-config="key=terraform-state/prod/terraform.tfstate" \
-              -backend-config="region=${{ env.AWS_REGION }}" \
-              -backend-config="encrypt=true"
-          else
-            echo "No bucket suffix found, using local backend for destroy"
-            terraform init
-          fi
+          # Initialize with S3 backend
+          terraform init -reconfigure \
+            -backend-config="bucket=$BUCKET_NAME" \
+            -backend-config="key=terraform-state/prod/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock-prod" \
+            -backend-config="encrypt=true"
           
           terraform destroy -auto-approve
 
-      - name: Terraform Init (skip backend for first run)
+      - name: Terraform Init (local backend)
         working-directory: terraform/environments/prod
-        run: terraform init -backend=false
+        run: terraform init
 
-      - name: Terraform Plan (local backend)
+      - name: Ensure S3 bucket exists for terraform state
+        run: |
+          BUCKET_NAME="finance-tracker-serverless-tfstates"
+          
+          # Check if bucket exists
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "✅ S3 bucket $BUCKET_NAME already exists"
+          else
+            echo "📦 Creating S3 bucket $BUCKET_NAME for terraform state"
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ env.AWS_REGION }} \
+              --create-bucket-configuration LocationConstraint=${{ env.AWS_REGION }}
+            
+            # Enable versioning
+            aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" \
+              --versioning-configuration Status=Enabled
+            
+            # Enable server-side encryption
+            aws s3api put-bucket-encryption --bucket "$BUCKET_NAME" \
+              --server-side-encryption-configuration '{
+                "Rules": [{
+                  "ApplyServerSideEncryptionByDefault": {
+                    "SSEAlgorithm": "AES256"
+                  },
+                  "BucketKeyEnabled": false
+                }]
+              }'
+            
+            echo "✅ S3 bucket $BUCKET_NAME created and configured"
+          fi
+
+      - name: Terraform Plan
         working-directory: terraform/environments/prod
         env:
           TF_VAR_github_owner: ${{ github.repository_owner }}
@@ -391,7 +465,32 @@ jobs:
             echo "bucket_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Terraform Apply (local backend)
+      - name: Configure S3 backend for production
+        working-directory: terraform/environments/prod
+        run: |
+          BUCKET_NAME="finance-tracker-serverless-tfstates"
+          echo "Configuring S3 backend with bucket: $BUCKET_NAME"
+          
+          # Reinitialize with S3 backend configuration
+          terraform init -reconfigure \
+            -backend-config="bucket=$BUCKET_NAME" \
+            -backend-config="key=terraform-state/prod/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock-prod" \
+            -backend-config="encrypt=true"
+
+      - name: Migrate state to S3 (if needed)
+        working-directory: terraform/environments/prod
+        run: |
+          # Check if local state exists and has resources
+          if [ -f "terraform.tfstate" ] && [ -s "terraform.tfstate" ] && [ "$(cat terraform.tfstate | jq '.resources | length')" != "0" ]; then
+            echo "Local state file found with resources. State will be automatically migrated to S3."
+            echo "This is normal for first deployment with S3 backend."
+          else
+            echo "No local state with resources found. Starting fresh with S3 backend."
+          fi
+
+      - name: Terraform Apply
         working-directory: terraform/environments/prod
         env:
           TF_VAR_github_owner: ${{ github.repository_owner }}
@@ -429,27 +528,6 @@ jobs:
               echo "   Consider manually setting repository variable PROD_S3_BUCKET_SUFFIX = $BUCKET_SUFFIX" >> $GITHUB_STEP_SUMMARY
             fi
           fi
-
-      - name: Migrate state to S3 backend
-        working-directory: terraform/environments/prod
-        run: |
-          BUCKET_SUFFIX="${{ steps.bucket_check_prod.outputs.bucket_suffix }}"
-          BACKEND_BUCKET="finance-tracker-serverless-$BUCKET_SUFFIX"
-          
-          echo "🔄 Migrating Terraform state to S3 backend: $BACKEND_BUCKET"
-          
-          # First, make sure the DynamoDB table is available for locking
-          echo "Waiting for DynamoDB table to be ready..."
-          sleep 15
-          
-          # Reconfigure backend to use S3 with all configurations
-          terraform init -force-copy \
-            -backend-config="bucket=$BACKEND_BUCKET" \
-            -backend-config="key=terraform-state/prod/terraform.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="encrypt=true"
-          
-          echo "✅ Terraform state migrated to S3 backend successfully"
 
       - name: Save Terraform outputs
         working-directory: terraform/environments/prod
@@ -553,20 +631,16 @@ jobs:
       - name: Terraform Init with S3 backend
         working-directory: terraform/environments/dev
         run: |
-          if [ "${{ steps.bucket_check_destroy.outputs.bucket_exists }}" = "true" ]; then
-            BUCKET_NAME="finance-tracker-serverless-${{ steps.bucket_check_destroy.outputs.bucket_suffix }}"
-            echo "Configuring S3 backend with bucket: $BUCKET_NAME"
-            
-            # Initialize with S3 backend configuration
-            terraform init -reconfigure \
-              -backend-config="bucket=$BUCKET_NAME" \
-              -backend-config="key=terraform-state/dev/terraform.tfstate" \
-              -backend-config="region=${{ env.AWS_REGION }}" \
-              -backend-config="encrypt=true"
-          else
-            echo "No S3 bucket found, using local backend"
-            terraform init
-          fi
+          BUCKET_NAME="finance-tracker-serverless-tfstates"
+          echo "Configuring S3 backend with bucket: $BUCKET_NAME"
+          
+          # Initialize with S3 backend configuration
+          terraform init -reconfigure \
+            -backend-config="bucket=$BUCKET_NAME" \
+            -backend-config="key=terraform-state/dev/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock-dev" \
+            -backend-config="encrypt=true"
 
       - name: Terraform Destroy
         working-directory: terraform/environments/dev
@@ -673,20 +747,16 @@ jobs:
       - name: Terraform Init with S3 backend
         working-directory: terraform/environments/prod
         run: |
-          if [ "${{ steps.bucket_check_destroy_prod.outputs.bucket_exists }}" = "true" ]; then
-            BUCKET_NAME="finance-tracker-serverless-${{ steps.bucket_check_destroy_prod.outputs.bucket_suffix }}"
-            echo "Configuring S3 backend with bucket: $BUCKET_NAME"
-            
-            # Initialize with S3 backend configuration
-            terraform init -reconfigure \
-              -backend-config="bucket=$BUCKET_NAME" \
-              -backend-config="key=terraform-state/prod/terraform.tfstate" \
-              -backend-config="region=${{ env.AWS_REGION }}" \
-              -backend-config="encrypt=true"
-          else
-            echo "No S3 bucket found, using local backend"
-            terraform init
-          fi
+          BUCKET_NAME="finance-tracker-serverless-tfstates"
+          echo "Configuring S3 backend with bucket: $BUCKET_NAME"
+          
+          # Initialize with S3 backend configuration
+          terraform init -reconfigure \
+            -backend-config="bucket=$BUCKET_NAME" \
+            -backend-config="key=terraform-state/prod/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock-prod" \
+            -backend-config="encrypt=true"
 
       - name: Production Destroy Confirmation
         run: |
