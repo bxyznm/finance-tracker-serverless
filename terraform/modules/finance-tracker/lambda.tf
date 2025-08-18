@@ -115,7 +115,9 @@ locals {
   common_lambda_environment = merge({
     ENVIRONMENT          = var.environment
     PROJECT_NAME         = var.project_name
-    AWS_REGION           = var.aws_region
+    # Nota: AWS_REGION es una variable reservada de Lambda, usamos APP_AWS_REGION en su lugar
+    # Las funciones Lambda pueden obtener la región automáticamente via boto3.Session().region_name
+    APP_AWS_REGION       = var.aws_region  
     USERS_TABLE          = aws_dynamodb_table.users.name
     TRANSACTIONS_TABLE   = aws_dynamodb_table.transactions.name
     CATEGORIES_TABLE     = aws_dynamodb_table.categories.name

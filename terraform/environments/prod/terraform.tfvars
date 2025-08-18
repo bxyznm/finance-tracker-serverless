@@ -54,8 +54,9 @@ cors_allowed_headers = [
   "X-Amz-User-Agent"
 ]
 
-# IMPORTANTE: En producción, especifica dominios específicos en lugar de "*"
-cors_allowed_origins = ["https://tu-dominio-frontend.com"]
+# TEMPORAL: Permitir CORS de todos los orígenes para testing
+# TODO: Cambiar a dominios específicos en producción real
+cors_allowed_origins = ["*"]
 
 # -----------------------------------------------------------------------------
 # Configuración de DynamoDB (PRODUCCIÓN)
