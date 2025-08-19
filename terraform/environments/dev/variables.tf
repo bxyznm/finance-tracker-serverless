@@ -44,7 +44,7 @@ variable "github_token" {
 variable "dev_release_tag" {
   description = "Tag específico del prerelease para desarrollo. Si está vacío, usa el último prerelease."
   type        = string
-  default     = "vdev"
+  default     = ""
 }
 
 # -----------------------------------------------------------------------------
