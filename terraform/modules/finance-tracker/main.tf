@@ -28,13 +28,13 @@ terraform {
 # Data Sources - GitHub Release
 # -----------------------------------------------------------------------------
 
-# Obtener el release apropiado basado en el entorno
-data "github_release" "finance_tracker" {
-  repository  = var.github_repository
-  owner       = var.github_owner
-  retrieve_by = "tag"
-  release_tag = env.RELEASE_TAG
-}
+# # Obtener el release apropiado basado en el entorno
+# data "github_release" "finance_tracker" {
+#   repository  = var.github_repository
+#   owner       = var.github_owner
+#   retrieve_by = "tag"
+#   release_tag = env.RELEASE_TAG
+# }
 
 # -----------------------------------------------------------------------------
 # Local Values
