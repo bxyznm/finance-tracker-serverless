@@ -46,7 +46,7 @@ locals {
     Project     = var.project_name
     Environment = var.environment
     ManagedBy   = "terraform"
-    Release     = data.github_release.finance_tracker.release_tag
+    Release     = var.dev_release_tag
   })
 
   # Nombre base para recursos
@@ -123,7 +123,7 @@ resource "aws_s3_bucket_public_access_block" "deployment_assets" {
 # Descargar layer.zip del release
 resource "null_resource" "download_layer" {
   triggers = {
-    release_tag = data.github_release.finance_tracker.release_tag
+    release_tag = var.dev_release_tag
     asset_url   = local.layer_asset_url
   }
 
@@ -139,7 +139,7 @@ resource "null_resource" "download_layer" {
 # Descargar code.zip del release
 resource "null_resource" "download_code" {
   triggers = {
-    release_tag = data.github_release.finance_tracker.release_tag
+    release_tag = var.dev_release_tag
     asset_url   = local.code_asset_url
   }
 
@@ -157,12 +157,12 @@ resource "aws_s3_object" "layer_zip" {
   depends_on = [null_resource.download_layer]
 
   bucket = aws_s3_bucket.deployment_assets.bucket
-  key    = "releases/${data.github_release.finance_tracker.release_tag}/layer.zip"
+  key    = "releases/${var.dev_release_tag}/layer.zip"
   source = "/tmp/layer.zip"
   
   # Use release tag as a trigger for updates instead of file hash
   metadata = {
-    release_tag = data.github_release.finance_tracker.release_tag
+    release_tag = var.dev_release_tag
   }
   
   tags = local.common_tags
@@ -173,12 +173,12 @@ resource "aws_s3_object" "code_zip" {
   depends_on = [null_resource.download_code]
 
   bucket = aws_s3_bucket.deployment_assets.bucket
-  key    = "releases/${data.github_release.finance_tracker.release_tag}/code.zip"
+  key    = "releases/${var.dev_release_tag}/code.zip"
   source = "/tmp/code.zip"
   
   # Use release tag as a trigger for updates instead of file hash
   metadata = {
-    release_tag = data.github_release.finance_tracker.release_tag
+    release_tag = var.dev_release_tag
   }
   
   tags = local.common_tags
