@@ -82,3 +82,8 @@ jobs:
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save Release Tag
+        run: |
+          echo "RELEASE_TAG=v-dev-${{ github.ref_name }}-${{ github.run_number }}" >> $GITHUB_ENV
+          echo "$RELEASE_TAG"

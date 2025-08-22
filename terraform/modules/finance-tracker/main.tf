@@ -32,7 +32,8 @@ terraform {
 data "github_release" "finance_tracker" {
   repository  = var.github_repository
   owner       = var.github_owner
-  retrieve_by = "latest"
+  retrieve_by = "tag"
+  release_tag = env.RELEASE_TAG
 }
 
 # -----------------------------------------------------------------------------
