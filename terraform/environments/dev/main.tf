@@ -67,8 +67,8 @@ provider "github" {
 data "github_release" "latest_prerelease" {
   repository  = var.github_repository
   owner       = var.github_owner
-  retrieve_by = var.dev_release_tag != "" ? "tag" : "latest"
-  release_tag = var.dev_release_tag != "" ? var.dev_release_tag : null
+  retrieve_by = "tag"
+  release_tag = var.dev_release_tag
 }
 
 # Obtener información del caller actual
