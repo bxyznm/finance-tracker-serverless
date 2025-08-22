@@ -17,8 +17,8 @@ github_owner = "bxyznm"                    # Usuario de GitHub del propietario d
 # github_token = "ghp_tu_token_personal_aqui"  # Descomenta y agrega tu token si no usas variables de entorno
 
 # Opcional: Tag específico del prerelease para usar
-# Si se deja vacío, usará el último prerelease disponible
-dev_release_tag = ""  # Usar el tag más reciente que tiene los assets layer.zip y code.zip
+# Si se deja vacío o null, usará "local-dev" por defecto
+# dev_release_tag = ""  # Descomenta para usar un tag específico del workflow
 
 # -----------------------------------------------------------------------------
 # Configuración del Proyecto (OPCIONAL)
