@@ -118,13 +118,20 @@ output "s3_deployment_bucket" {
 
 output "github_release_info" {
   description = "Información del release de GitHub utilizado"
-  value = {
-    tag_name     = data.github_release.finance_tracker.release_tag
-    release_id   = data.github_release.finance_tracker.id
-    created_at   = data.github_release.finance_tracker.created_at
-    published_at = data.github_release.finance_tracker.published_at
-    prerelease   = data.github_release.finance_tracker.prerelease
-    assets_count = length(data.github_release.finance_tracker.assets)
+  value = length(data.github_release.finance_tracker) > 0 ? {
+    tag_name     = data.github_release.finance_tracker[0].release_tag
+    release_id   = data.github_release.finance_tracker[0].id
+    created_at   = data.github_release.finance_tracker[0].created_at
+    published_at = data.github_release.finance_tracker[0].published_at
+    prerelease   = data.github_release.finance_tracker[0].prerelease
+    assets_count = length(data.github_release.finance_tracker[0].assets)
+  } : {
+    tag_name     = "local-dev"
+    release_id   = null
+    created_at   = null
+    published_at = null
+    prerelease   = null
+    assets_count = 0
   }
 }
 

@@ -28,8 +28,9 @@ terraform {
 # Data Sources - GitHub Release
 # -----------------------------------------------------------------------------
 
-# # Obtener el release apropiado basado en el entorno
+# Obtener el release apropiado basado en el entorno (solo si hay release tag válido)
 data "github_release" "finance_tracker" {
+  count       = var.dev_release_tag != null && var.dev_release_tag != "" && var.dev_release_tag != "vdev" ? 1 : 0
   repository  = var.github_repository
   owner       = var.github_owner
   retrieve_by = "tag"
@@ -46,22 +47,22 @@ locals {
     Project     = var.project_name
     Environment = var.environment
     ManagedBy   = "terraform"
-    Release     = var.dev_release_tag
+    Release     = var.dev_release_tag != null && var.dev_release_tag != "" && var.dev_release_tag != "vdev" ? var.dev_release_tag : "local-dev"
   })
 
   # Nombre base para recursos
   name_prefix = "${var.project_name}-${var.environment}"
 
-  # URLs de los assets del release
-  layer_asset_url = [
-    for asset in data.github_release.finance_tracker.assets :
+  # URLs de los assets del release (opcional - solo si hay release)
+  layer_asset_url = length(data.github_release.finance_tracker) > 0 ? [
+    for asset in data.github_release.finance_tracker[0].assets :
     asset.browser_download_url if asset.name == "layer.zip"
-  ][0]
+  ][0] : null
 
-  code_asset_url = [
-    for asset in data.github_release.finance_tracker.assets :
+  code_asset_url = length(data.github_release.finance_tracker) > 0 ? [
+    for asset in data.github_release.finance_tracker[0].assets :
     asset.browser_download_url if asset.name == "code.zip"
-  ][0]
+  ][0] : null
 }
 
 # -----------------------------------------------------------------------------

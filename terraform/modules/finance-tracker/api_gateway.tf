@@ -8,7 +8,7 @@
 
 resource "aws_api_gateway_rest_api" "finance_tracker_api" {
   name        = "${local.name_prefix}-api"
-  description = "Finance Tracker API - ${var.environment} (${data.github_release.finance_tracker.release_tag})"
+  description = "Finance Tracker API - ${var.environment} (${var.dev_release_tag != null ? var.dev_release_tag : (length(data.github_release.finance_tracker) > 0 ? data.github_release.finance_tracker[0].release_tag : "local-dev")})"
 
   endpoint_configuration {
     types = ["REGIONAL"]
