@@ -167,7 +167,7 @@ output "dev_info" {
   description = "Información específica del entorno de desarrollo"
   value = {
     message           = "🚀 Entorno de desarrollo desplegado exitosamente"
-    prerelease_used   = data.github_release.latest_prerelease.release_tag
+    prerelease_used   = var.dev_release_tag
     auto_destroy      = true
     cost_optimization = "Configurado para costos mínimos en desarrollo"
     debug_mode        = true
