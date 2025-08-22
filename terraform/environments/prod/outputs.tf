@@ -40,9 +40,14 @@ output "lambda_layer_arn" {
 # Información de DynamoDB
 # -----------------------------------------------------------------------------
 
-output "dynamodb_tables" {
-  description = "Información de las tablas DynamoDB en producción"
-  value       = module.finance_tracker.dynamodb_tables
+output "dynamodb_table" {
+  description = "Información de la tabla DynamoDB en producción (Single Table Design)"
+  value       = module.finance_tracker.dynamodb_table
+}
+
+output "dynamodb_table_name" {
+  description = "Nombre de la tabla DynamoDB para variables de entorno"
+  value       = module.finance_tracker.dynamodb_table_name
 }
 
 # -----------------------------------------------------------------------------
@@ -170,7 +175,7 @@ output "prod_deployment_summary" {
     📊 Recursos de Producción:
     • API Gateway: ${module.finance_tracker.api_gateway_id}
     • Lambda Functions: 5 funciones con ${var.lambda_memory_size}MB RAM
-    • DynamoDB Tables: 3 tablas con Point-in-Time Recovery
+    • DynamoDB Table: 1 tabla (Single Table Design) con Point-in-Time Recovery
     • CloudWatch Alarms: ${length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1} alarmas activas
     
     🔍 Monitoreo:

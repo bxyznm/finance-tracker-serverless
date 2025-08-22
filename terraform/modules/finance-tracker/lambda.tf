@@ -72,12 +72,8 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
           "dynamodb:Scan"
         ]
         Resource = [
-          aws_dynamodb_table.users.arn,
-          aws_dynamodb_table.transactions.arn,
-          aws_dynamodb_table.categories.arn,
-          "${aws_dynamodb_table.users.arn}/index/*",
-          "${aws_dynamodb_table.transactions.arn}/index/*",
-          "${aws_dynamodb_table.categories.arn}/index/*"
+          aws_dynamodb_table.main.arn,
+          "${aws_dynamodb_table.main.arn}/index/*"
         ]
       }
     ]
@@ -118,9 +114,7 @@ locals {
     # Nota: AWS_REGION es una variable reservada de Lambda, usamos APP_AWS_REGION en su lugar
     # Las funciones Lambda pueden obtener la región automáticamente via boto3.Session().region_name
     APP_AWS_REGION       = var.aws_region  
-    USERS_TABLE          = aws_dynamodb_table.users.name
-    TRANSACTIONS_TABLE   = aws_dynamodb_table.transactions.name
-    CATEGORIES_TABLE     = aws_dynamodb_table.categories.name
+    DYNAMODB_TABLE       = aws_dynamodb_table.main.name  # Single Table Design
     LOG_LEVEL            = var.environment == "prod" ? "INFO" : "DEBUG"
     CORS_ALLOWED_ORIGINS = join(",", var.cors_allowed_origins)
   }, var.lambda_environment_variables)

@@ -72,26 +72,31 @@ output "lambda_execution_role_arn" {
 }
 
 # -----------------------------------------------------------------------------
-# DynamoDB Tables Outputs
+# DynamoDB Table Output (Single Table Design)
 # -----------------------------------------------------------------------------
 
-output "dynamodb_tables" {
-  description = "Información de las tablas DynamoDB creadas"
+output "dynamodb_table" {
+  description = "Información de la tabla principal DynamoDB (Single Table Design)"
   value = {
-    users = {
-      name = aws_dynamodb_table.users.name
-      arn  = aws_dynamodb_table.users.arn
+    main = {
+      name = aws_dynamodb_table.main.name
+      arn  = aws_dynamodb_table.main.arn
+      hash_key = aws_dynamodb_table.main.hash_key
+      range_key = aws_dynamodb_table.main.range_key
+      billing_mode = aws_dynamodb_table.main.billing_mode
+      gsi1_name = "GSI1"
+      gsi2_name = "GSI2"
     }
-    transactions = {
-      name = aws_dynamodb_table.transactions.name
-      arn  = aws_dynamodb_table.transactions.arn
-    }
-    categories = {
-      name = aws_dynamodb_table.categories.name
-      arn  = aws_dynamodb_table.categories.arn
-    }
-    # terraform_state_lock table no longer needed - using S3 native locking
   }
+}
+
+# -----------------------------------------------------------------------------
+# DynamoDB Environment Variable
+# -----------------------------------------------------------------------------
+
+output "dynamodb_table_name" {
+  description = "Nombre de la tabla DynamoDB para variables de entorno"
+  value = aws_dynamodb_table.main.name
 }
 
 # -----------------------------------------------------------------------------

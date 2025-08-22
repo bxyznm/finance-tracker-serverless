@@ -39,9 +39,14 @@ output "lambda_layer_arn" {
 # Información de DynamoDB
 # -----------------------------------------------------------------------------
 
-output "dynamodb_tables" {
-  description = "Información de las tablas DynamoDB en desarrollo"
-  value       = module.finance_tracker.dynamodb_tables
+output "dynamodb_table" {
+  description = "Información de la tabla DynamoDB en desarrollo (Single Table Design)"
+  value       = module.finance_tracker.dynamodb_table
+}
+
+output "dynamodb_table_name" {
+  description = "Nombre de la tabla DynamoDB para variables de entorno"
+  value       = module.finance_tracker.dynamodb_table_name
 }
 
 # -----------------------------------------------------------------------------
@@ -129,7 +134,7 @@ output "dev_deployment_summary" {
     📊 Recursos Creados:
     • API Gateway: ${module.finance_tracker.api_gateway_id}
     • Lambda Functions: 5 funciones
-    • DynamoDB Tables: 3 tablas
+    • DynamoDB Table: 1 tabla (Single Table Design)
     • CloudWatch Log Groups: configurados
     
     💡 Comandos de Prueba:

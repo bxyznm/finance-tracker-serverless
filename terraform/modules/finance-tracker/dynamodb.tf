@@ -1,127 +1,62 @@
 # =============================================================================
 # Finance Tracker Serverless - DynamoDB Resources
+# Single Table Design Implementation
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# DynamoDB Table para Users
+# DynamoDB Single Table - Main Table
+# Implementa Single Table Design para optimizar rendimiento y costos
 # -----------------------------------------------------------------------------
 
-resource "aws_dynamodb_table" "users" {
-  name         = "${local.name_prefix}-users"
+resource "aws_dynamodb_table" "main" {
+  name         = "${local.name_prefix}-main"
   billing_mode = var.dynamodb_billing_mode
-  hash_key     = "user_id"
+  hash_key     = "pk"
+  range_key    = "sk"
 
-  # Configuración para PAY_PER_REQUEST
-  dynamic "attribute" {
-    for_each = var.dynamodb_billing_mode == "PAY_PER_REQUEST" ? [1] : []
-    content {
-      name = "user_id"
-      type = "S"
-    }
+  # Atributos principales requeridos por DynamoDB
+  attribute {
+    name = "pk"
+    type = "S"
   }
 
-  # Configuración para PROVISIONED
-  dynamic "attribute" {
-    for_each = var.dynamodb_billing_mode == "PROVISIONED" ? [1] : []
-    content {
-      name = "user_id"
-      type = "S"
-    }
+  attribute {
+    name = "sk"
+    type = "S"
   }
 
-  dynamic "attribute" {
-    for_each = var.dynamodb_billing_mode == "PROVISIONED" ? [1] : []
-    content {
-      name = "email"
-      type = "S"
-    }
+  # Atributos para GSI1 (búsqueda por email, categorías, etc.)
+  attribute {
+    name = "gsi1_pk"
+    type = "S"
   }
 
-  # Capacidad solo para PROVISIONED
+  attribute {
+    name = "gsi1_sk"
+    type = "S"
+  }
+
+  # Atributos para GSI2 (búsqueda por fecha, tipo, etc.)
+  attribute {
+    name = "gsi2_pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "gsi2_sk"
+    type = "S"
+  }
+
+  # Capacidad para tabla principal
   read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
   write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
 
-  # GSI para buscar por email
-  dynamic "global_secondary_index" {
-    for_each = var.dynamodb_billing_mode == "PROVISIONED" ? [1] : [1]
-    content {
-      name     = "email-index"
-      hash_key = "email"
-
-      read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-      write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-      projection_type = "ALL"
-    }
-  }
-
-  # Configurar atributos para GSI
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "email"
-    type = "S"
-  }
-
-  # Point-in-Time Recovery
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  # Server-side encryption
-  server_side_encryption {
-    enabled = true
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-users"
-    Type = "dynamodb-table"
-  })
-}
-
-# -----------------------------------------------------------------------------
-# DynamoDB Table para Transacciones
-# -----------------------------------------------------------------------------
-
-resource "aws_dynamodb_table" "transactions" {
-  name         = "${local.name_prefix}-transactions"
-  billing_mode = var.dynamodb_billing_mode
-  hash_key     = "user_id"
-  range_key    = "transaction_id"
-
-  # Atributos principales
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "transaction_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "created_at"
-    type = "S"
-  }
-
-  attribute {
-    name = "category"
-    type = "S"
-  }
-
-  # Capacidad solo para PROVISIONED
-  read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-  write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-  # GSI para buscar por fecha
+  # GSI1 - Para búsquedas por email, entidad específica
+  # Ejemplo: EMAIL#{email} -> USER#{user_id}
   global_secondary_index {
-    name      = "user-date-index"
-    hash_key  = "user_id"
-    range_key = "created_at"
+    name     = "GSI1"
+    hash_key = "gsi1_pk"
+    range_key = "gsi1_sk"
 
     read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
     write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
@@ -129,11 +64,12 @@ resource "aws_dynamodb_table" "transactions" {
     projection_type = "ALL"
   }
 
-  # GSI para buscar por categoría
+  # GSI2 - Para búsquedas por fecha, tipo, categoría
+  # Ejemplo: USER#{user_id}#DATE -> {timestamp}
   global_secondary_index {
-    name      = "user-category-index"
-    hash_key  = "user_id"
-    range_key = "category"
+    name     = "GSI2"
+    hash_key = "gsi2_pk"
+    range_key = "gsi2_sk"
 
     read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
     write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
@@ -152,66 +88,10 @@ resource "aws_dynamodb_table" "transactions" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-transactions"
-    Type = "dynamodb-table"
-  })
-}
-
-# -----------------------------------------------------------------------------
-# DynamoDB Table para Categorías
-# -----------------------------------------------------------------------------
-
-resource "aws_dynamodb_table" "categories" {
-  name         = "${local.name_prefix}-categories"
-  billing_mode = var.dynamodb_billing_mode
-  hash_key     = "user_id"
-  range_key    = "category_id"
-
-  # Atributos principales
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "category_id"
-    type = "S"
-  }
-
-  attribute {
-    name = "category_type"
-    type = "S"
-  }
-
-  # Capacidad solo para PROVISIONED
-  read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-  write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-  # GSI para buscar por tipo de categoría
-  global_secondary_index {
-    name      = "user-type-index"
-    hash_key  = "user_id"
-    range_key = "category_type"
-
-    read_capacity  = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_read_capacity : null
-    write_capacity = var.dynamodb_billing_mode == "PROVISIONED" ? var.dynamodb_write_capacity : null
-
-    projection_type = "ALL"
-  }
-
-  # Point-in-Time Recovery
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  # Server-side encryption
-  server_side_encryption {
-    enabled = true
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-categories"
-    Type = "dynamodb-table"
+    Name = "${local.name_prefix}-main"
+    Type = "dynamodb-single-table"
+    Pattern = "single-table-design"
+    Description = "Main table using Single Table Design pattern for all entities"
   })
 }
 

@@ -1,0 +1,190 @@
+# Workflow manual para desplegar solo infraestructura de desarrollo
+# No crea releases, solo despliega usando un release existente
+name: Dev Infrastructure Only
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag del release/pre-release a usar (opcional, usa el último pre-release si está vacío)'
+        required: false
+        type: string
+      operation:
+        description: 'Operación a realizar'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+        - deploy
+        - destroy
+      destroy_first:
+        description: 'Destruir infraestructura existente antes de desplegar (solo para deploy)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: mx-central-1
+  TERRAFORM_VERSION: "1.12.2"
+
+jobs:
+  deploy-dev-infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show deployment info
+        run: |
+          echo "🏗️ Información del Deployment de Infraestructura Dev:"
+          echo "   Operación: ${{ inputs.operation }}"
+          echo "   Release Tag: ${{ inputs.release_tag || 'último pre-release' }}"
+          echo "   Destruir primero: ${{ inputs.destroy_first }}"
+          echo "   Ejecutado por: ${{ github.actor }}"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Get release tag to use
+        id: get_release
+        run: |
+          if [ -n "${{ inputs.release_tag }}" ]; then
+            RELEASE_TAG="${{ inputs.release_tag }}"
+            echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+            echo "ℹ️ Usando release tag especificado: $RELEASE_TAG"
+          else
+            # Obtener el último pre-release
+            LATEST_PRERELEASE=$(gh release list --limit 1 --json tagName,isPrerelease --jq '.[] | select(.isPrerelease==true) | .tagName')
+            if [ -n "$LATEST_PRERELEASE" ]; then
+              echo "release_tag=$LATEST_PRERELEASE" >> $GITHUB_OUTPUT
+              echo "ℹ️ Usando último pre-release: $LATEST_PRERELEASE"
+            else
+              echo "❌ No se encontró ningún pre-release disponible"
+              exit 1
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify release exists
+        run: |
+          RELEASE_TAG="${{ steps.get_release.outputs.release_tag }}"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "✅ Release $RELEASE_TAG existe y está disponible"
+          else
+            echo "❌ Release $RELEASE_TAG no existe"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure S3 bucket exists for terraform state
+        if: inputs.operation == 'deploy'
+        run: |
+          BUCKET_NAME="finance-tracker-serverless-tfstates"
+          
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "✅ S3 bucket $BUCKET_NAME already exists"
+          else
+            echo "📦 Creating S3 bucket $BUCKET_NAME for terraform state"
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ env.AWS_REGION }} \
+              --create-bucket-configuration LocationConstraint=${{ env.AWS_REGION }}
+            
+            aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" \
+              --versioning-configuration Status=Enabled
+            
+            aws s3api put-bucket-encryption --bucket "$BUCKET_NAME" \
+              --server-side-encryption-configuration '{
+                "Rules": [{
+                  "ApplyServerSideEncryptionByDefault": {
+                    "SSEAlgorithm": "AES256"
+                  },
+                  "BucketKeyEnabled": false
+                }]
+              }'
+            
+            echo "✅ S3 bucket $BUCKET_NAME created and configured"
+          fi
+
+      - name: Terraform Init
+        working-directory: terraform/environments/dev
+        run: terraform init -upgrade
+
+      - name: Destroy existing infrastructure (if requested)
+        if: inputs.operation == 'deploy' && inputs.destroy_first == true
+        working-directory: terraform/environments/dev
+        env:
+          TF_VAR_github_owner: ${{ github.repository_owner }}
+          TF_VAR_github_repository: ${{ github.event.repository.name }}
+          TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
+          TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+        run: |
+          echo "🗑️ Destruyendo infraestructura existente..."
+          terraform destroy -auto-approve
+
+      - name: Terraform Plan
+        if: inputs.operation == 'deploy'
+        working-directory: terraform/environments/dev
+        env:
+          TF_VAR_github_owner: ${{ github.repository_owner }}
+          TF_VAR_github_repository: ${{ github.event.repository.name }}
+          TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
+          TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Deploy
+        if: inputs.operation == 'deploy'
+        working-directory: terraform/environments/dev
+        env:
+          TF_VAR_github_owner: ${{ github.repository_owner }}
+          TF_VAR_github_repository: ${{ github.event.repository.name }}
+          TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
+          TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+        run: |
+          echo "🚀 Desplegando infraestructura..."
+          terraform apply -auto-approve tfplan
+
+      - name: Terraform Destroy
+        if: inputs.operation == 'destroy'
+        working-directory: terraform/environments/dev
+        env:
+          TF_VAR_github_owner: ${{ github.repository_owner }}
+          TF_VAR_github_repository: ${{ github.event.repository.name }}
+          TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
+          TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+        run: |
+          echo "🗑️ Destruyendo infraestructura..."
+          terraform destroy -auto-approve
+
+      - name: Create deployment summary
+        run: |
+          echo "# 🏗️ Finance Tracker Dev Infrastructure Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Información del Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "| Variable | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Fecha** | \`$(date '+%Y-%m-%d %H:%M:%S UTC')\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Operación** | \`${{ inputs.operation }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Tag** | \`${{ steps.get_release.outputs.release_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Destruir Primero** | \`${{ inputs.destroy_first }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Ejecutado por** | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🏗️ Estado del Deployment" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.operation }}" = "deploy" ]; then
+            echo "- ✅ Infraestructura desplegada exitosamente en dev" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ✅ Infraestructura destruida exitosamente en dev" >> $GITHUB_STEP_SUMMARY
+          fi
