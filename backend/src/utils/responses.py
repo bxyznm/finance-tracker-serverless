@@ -1,6 +1,6 @@
 """
-Utilidades de respuesta HTTP para Lambda handlers.
-Funciones comunes para generar respuestas estandarizadas.
+HTTP response utilities for Lambda handlers.
+Common functions to generate standardized responses.
 """
 
 import json
@@ -17,15 +17,15 @@ def create_response(
     headers: Optional[Dict[str, str]] = None
 ) -> Dict[str, Any]:
     """
-    Crear una respuesta HTTP estandarizada para Lambda.
+    Create a standardized HTTP response for Lambda.
     
     Args:
-        status_code: Código de estado HTTP
-        body: Cuerpo de la respuesta
-        headers: Headers adicionales
+        status_code: HTTP status code
+        body: Response body
+        headers: Additional headers
         
     Returns:
-        Respuesta formateada para API Gateway
+        Response formatted for API Gateway
     """
     default_headers = {
         "Content-Type": "application/json",
@@ -37,7 +37,7 @@ def create_response(
     if headers:
         default_headers.update(headers)
     
-    # Agregar timestamp a todas las respuestas
+    # Add timestamp to all responses
     if isinstance(body, dict):
         body["timestamp"] = datetime.now(timezone.utc).isoformat()
     
@@ -50,14 +50,14 @@ def create_response(
 
 def success_response(data: Any, message: str = "Success") -> Dict[str, Any]:
     """
-    Crear respuesta de éxito (200).
+    Create success response (200).
     
     Args:
-        data: Datos a retornar
-        message: Mensaje descriptivo
+        data: Data to return
+        message: Descriptive message
         
     Returns:
-        Respuesta HTTP 200
+        HTTP 200 response
     """
     return create_response(200, {
         "success": True,
@@ -68,14 +68,14 @@ def success_response(data: Any, message: str = "Success") -> Dict[str, Any]:
 
 def created_response(data: Any, message: str = "Resource created") -> Dict[str, Any]:
     """
-    Crear respuesta de recurso creado (201).
+    Create resource created response (201).
     
     Args:
-        data: Datos del recurso creado
-        message: Mensaje descriptivo
+        data: Created resource data
+        message: Descriptive message
         
     Returns:
-        Respuesta HTTP 201
+        HTTP 201 response
     """
     return create_response(201, {
         "success": True,
@@ -86,14 +86,14 @@ def created_response(data: Any, message: str = "Resource created") -> Dict[str, 
 
 def bad_request_response(message: str, errors: Optional[Dict] = None) -> Dict[str, Any]:
     """
-    Crear respuesta de solicitud incorrecta (400).
+    Create bad request response (400).
     
     Args:
-        message: Mensaje de error
-        errors: Detalles específicos de errores
+        message: Error message
+        errors: Specific error details
         
     Returns:
-        Respuesta HTTP 400
+        HTTP 400 response
     """
     body = {
         "success": False,
@@ -109,13 +109,13 @@ def bad_request_response(message: str, errors: Optional[Dict] = None) -> Dict[st
 
 def unauthorized_response(message: str = "Unauthorized") -> Dict[str, Any]:
     """
-    Crear respuesta de no autorizado (401).
+    Create unauthorized response (401).
     
     Args:
-        message: Mensaje de error
+        message: Error message
         
     Returns:
-        Respuesta HTTP 401
+        HTTP 401 response
     """
     return create_response(401, {
         "success": False,
@@ -126,13 +126,13 @@ def unauthorized_response(message: str = "Unauthorized") -> Dict[str, Any]:
 
 def forbidden_response(message: str = "Forbidden") -> Dict[str, Any]:
     """
-    Crear respuesta de prohibido (403).
+    Create forbidden response (403).
     
     Args:
-        message: Mensaje de error
+        message: Error message
         
     Returns:
-        Respuesta HTTP 403
+        HTTP 403 response
     """
     return create_response(403, {
         "success": False,
@@ -143,13 +143,13 @@ def forbidden_response(message: str = "Forbidden") -> Dict[str, Any]:
 
 def not_found_response(message: str = "Resource not found") -> Dict[str, Any]:
     """
-    Crear respuesta de no encontrado (404).
+    Create not found response (404).
     
     Args:
-        message: Mensaje de error
+        message: Error message
         
     Returns:
-        Respuesta HTTP 404
+        HTTP 404 response
     """
     return create_response(404, {
         "success": False,
@@ -163,14 +163,14 @@ def internal_server_error_response(
     error_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Crear respuesta de error interno del servidor (500).
+    Create internal server error response (500).
     
     Args:
-        message: Mensaje de error
-        error_id: ID único del error para tracking
+        message: Error message
+        error_id: Unique error ID for tracking
         
     Returns:
-        Respuesta HTTP 500
+        HTTP 500 response
     """
     body = {
         "success": False,
@@ -186,10 +186,10 @@ def internal_server_error_response(
 
 def handle_cors_preflight() -> Dict[str, Any]:
     """
-    Manejar solicitudes CORS preflight (OPTIONS).
+    Handle CORS preflight requests (OPTIONS).
     
     Returns:
-        Respuesta HTTP 200 para OPTIONS
+        HTTP 200 response for OPTIONS
     """
     return create_response(200, {}, {
         "Access-Control-Max-Age": "86400"

@@ -1,6 +1,6 @@
 """
 Health Check Handler
-Endpoint simple para verificar que la API está funcionando correctamente.
+Simple endpoint to verify that the API is working correctly.
 """
 
 import json
@@ -8,21 +8,21 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any
 
-# Configurar logging
+# Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Handler para health check de la API.
+    Handler for API health check.
     
     Args:
-        event: Evento de API Gateway
-        context: Contexto de Lambda
+        event: API Gateway event
+        context: Lambda context
         
     Returns:
-        Response con status de la API
+        Response with API status
     """
     try:
         logger.info("Health check endpoint called")
@@ -32,14 +32,14 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "message": "Finance Tracker API is running",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "version": "1.0.0",
-            "environment": "dev"  # TODO: Obtener de variables de entorno
+            "environment": "dev"  # TODO: Get from environment variables
         }
         
         return {
             "statusCode": 200,
             "headers": {
                 "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",  # CORS básico
+                "Access-Control-Allow-Origin": "*",  # Basic CORS
                 "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE",
                 "Access-Control-Allow-Headers": "Content-Type, Authorization"
             },

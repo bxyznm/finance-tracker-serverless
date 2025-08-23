@@ -1,6 +1,6 @@
 """
-Handlers para gestión de usuarios
-Implementa CRUD completo usando Single Table Design
+Handlers for user management
+Implements complete CRUD using Single Table Design
 """
 
 import json
@@ -9,30 +9,31 @@ import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-# Importaciones locales
+# Local imports
 from utils.responses import create_response, internal_server_error_response
 from utils.dynamodb_client import DynamoDBClient
 from models import User, UserCreate, UserUpdate, create_user_from_input
 
-# Configurar logging
+# Configure logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# Cliente DynamoDB
+# DynamoDB client
 db_client = DynamoDBClient()
 
 def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
     """
-    Handler principal para todas las operaciones de usuarios
+    Main handler for all user operations
     """
     try:
-        logger.info(f"Procesando evento: {event}")
+        logger.info(f"Processing event: {event}")
         
         http_method = event.get('httpMethod', '')
         path_parameters = event.get('pathParameters') or {}
+        path = event.get('path', '')
         body = event.get('body', '{}')
         
-        # Parsear body si existe
+        # Parse body if it exists
         if body and body != '{}':
             try:
                 body_data = json.loads(body)
@@ -42,9 +43,14 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
         else:
             body_data = {}
         
-        # Routing basado en método HTTP
+        # Routing based on HTTP method and path
         if http_method == 'POST':
-            return create_user_handler(body_data)
+            # POST /users/login - Authentication
+            if path.endswith('/login'):
+                return login_user_handler(body_data)
+            # POST /users - Registration
+            else:
+                return create_user_handler(body_data)
         elif http_method == 'GET':
             user_id = path_parameters.get('user_id')
             if user_id:
@@ -65,39 +71,135 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             return create_response(405, {"error": f"Method {http_method} not allowed"})
             
     except Exception as e:
-        logger.error(f"Error en lambda_handler: {str(e)}", exc_info=True)
-        return internal_server_error_response("Error interno del servidor")
+        logger.error(f"Error in lambda_handler: {str(e)}", exc_info=True)
+        return internal_server_error_response("Internal server error")
 
 def create_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Crear un nuevo usuario
+    Create a new user with enhanced security validations
     """
     try:
-        logger.info(f"Creando usuario con datos: {data}")
+        logger.info(f"Creating user with email: {data.get('email', 'N/A')}")
         
-        # Validar datos usando Pydantic
+        # Validate data using Pydantic
         user_create = UserCreate(**data)
         
-        # Verificar si el email ya existe
-        existing_user = db_client.get_user_by_email(user_create.email)
+        # Normalize email to lowercase
+        email_normalized = user_create.email.lower()
+        
+        # Check if email already exists
+        existing_user = db_client.get_user_by_email(email_normalized)
         if existing_user:
+            logger.warning(f"Registration attempt with existing email: {email_normalized}")
             return create_response(409, {
-                "error": "El email ya está registrado",
-                "email": user_create.email
+                "error": "Email is already registered",
+                "message": "If you already have an account, try logging in or recovering your password"
             })
         
-        # Crear el usuario usando la función auxiliar
+        # Create user using helper function
         user_data = create_user_from_input(user_create)
         created_user = db_client.create_user(user_data)
         
-        # Convertir a modelo User para la respuesta
+        # Convert to User model for response (without password)
         user_response = User.from_dynamodb_item(created_user)
         
-        logger.info(f"Usuario creado exitosamente: {user_response.user_id}")
+        logger.info(f"User created successfully: {user_response.user_id}")
         return create_response(201, {
-            "message": "Usuario creado exitosamente",
-            "user": user_response.model_dump()
+            "message": "User created successfully",
+            "user": user_response.model_dump(),
+            "next_steps": [
+                "Verify your email to fully activate your account",
+                "Log in with your credentials"
+            ]
         })
+        
+    except ValueError as e:
+        logger.error(f"Validation error in registration: {str(e)}")
+        return create_response(400, {
+            "error": "Invalid registration data",
+            "details": str(e)
+        })
+    except Exception as e:
+        logger.error(f"Internal error creating user: {str(e)}", exc_info=True)
+        return internal_server_error_response("Internal server error")
+
+def login_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Authenticate user (new login function)
+    """
+    try:
+        from models.user import UserLogin, verify_password
+        
+        logger.info(f"Login attempt for email: {data.get('email', 'N/A')}")
+        
+        # Validate login data
+        login_data = UserLogin(**data)
+        email_normalized = login_data.email.lower()
+        
+        # Find user by email
+        user = db_client.get_user_by_email(email_normalized)
+        if not user:
+            logger.warning(f"Login attempt with unregistered email: {email_normalized}")
+            return create_response(401, {
+                "error": "Invalid credentials",
+                "message": "Email or password incorrect"
+            })
+        
+        # Check if account is active
+        if not user.get('is_active', True):
+            logger.warning(f"Login attempt with inactive account: {email_normalized}")
+            return create_response(403, {
+                "error": "Inactive account",
+                "message": "Your account has been deactivated. Contact support"
+            })
+        
+        # Verify password
+        if not verify_password(login_data.password, user.get('password_hash', '')):
+            # Increment failed attempts
+            failed_attempts = user.get('failed_login_attempts', 0) + 1
+            db_client.update_failed_login_attempts(user['user_id'], failed_attempts)
+            
+            logger.warning(f"Incorrect password for user: {email_normalized} (attempts: {failed_attempts})")
+            
+            # Block account after 5 failed attempts
+            if failed_attempts >= 5:
+                db_client.deactivate_user_temporarily(user['user_id'])
+                logger.warning(f"Account temporarily blocked due to failed attempts: {email_normalized}")
+                return create_response(423, {
+                    "error": "Account blocked",
+                    "message": "Too many failed attempts. Your account has been temporarily blocked"
+                })
+            
+            return create_response(401, {
+                "error": "Invalid credentials",
+                "message": "Email or password incorrect"
+            })
+        
+        # Successful login - reset failed attempts and update last login
+        db_client.successful_login(user['user_id'])
+        
+        # Convert to User model for response (without password)
+        user_response = User.from_dynamodb_item(user)
+        
+        logger.info(f"Successful login for user: {user_response.user_id}")
+        
+        # TODO: Generate JWT token here when we implement complete authentication
+        return create_response(200, {
+            "message": "Successful login",
+            "user": user_response.model_dump(),
+            "access_token": "TODO_JWT_TOKEN",  # Placeholder for JWT
+            "token_type": "bearer"
+        })
+        
+    except ValueError as e:
+        logger.error(f"Validation error in login: {str(e)}")
+        return create_response(400, {
+            "error": "Invalid login data",
+            "details": str(e)
+        })
+    except Exception as e:
+        logger.error(f"Internal error in login: {str(e)}", exc_info=True)
+        return internal_server_error_response("Internal server error")
         
     except ValueError as e:
         logger.error(f"Error de validación: {str(e)}")
@@ -108,65 +210,108 @@ def create_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_user_handler(user_id: str) -> Dict[str, Any]:
     """
-    Obtener un usuario por ID
+    Get a user by ID
     """
     try:
-        logger.info(f"Obteniendo usuario: {user_id}")
+        logger.info(f"Getting user: {user_id}")
         
         user = db_client.get_user_by_id(user_id)
         if not user:
             return create_response(404, {
-                "error": "Usuario no encontrado",
+                "error": "User not found",
                 "user_id": user_id
             })
         
-        # Respuesta sin contraseña
+        # Response without password
         user_response = user.copy()
         user_response.pop('password_hash', None)
         
         return create_response(200, {"user": user_response})
         
     except Exception as e:
-        logger.error(f"Error obteniendo usuario {user_id}: {str(e)}", exc_info=True)
-        return internal_server_error_response("Error interno del servidor")
+        logger.error(f"Error getting user {user_id}: {str(e)}", exc_info=True)
+        return internal_server_error_response("Internal server error")
 
 def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Actualizar un usuario existente
+    Update an existing user with security validations
     """
     try:
-        logger.info(f"Actualizando usuario {user_id} con datos: {data}")
+        from models.user import verify_password, hash_password
         
-        # Verificar si el usuario existe
+        logger.info(f"Updating user {user_id}")
+        
+        # Check if user exists
         existing_user = db_client.get_user_by_id(user_id)
         if not existing_user:
             return create_response(404, {
-                "error": "Usuario no encontrado",
+                "error": "User not found",
                 "user_id": user_id
             })
         
-        # Si se está actualizando el email, verificar que no exista
-        if 'email' in data and data['email'] != existing_user.get('email'):
-            user_with_email = db_client.get_user_by_email(data['email'])
-            if user_with_email:
-                return create_response(409, {
-                    "error": "El email ya está registrado",
-                    "email": data['email']
+        # Validate data using Pydantic
+        user_update = UserUpdate(**data)
+        
+        # For sensitive changes (email or password), verify current password
+        sensitive_changes = user_update.email or user_update.new_password
+        if sensitive_changes and not user_update.current_password:
+            return create_response(400, {
+                "error": "Current password required",
+                "message": "To change email or password, you must provide your current password"
+            })
+        
+        # Verify current password if provided
+        if user_update.current_password:
+            if not verify_password(user_update.current_password, existing_user.get('password_hash', '')):
+                return create_response(401, {
+                    "error": "Incorrect current password"
                 })
         
-        # Actualizar el usuario
-        user_update = UserUpdate(**data)
-        updated_user = db_client.update_user(user_id, user_update.model_dump())
+        # If updating email, check that it doesn't exist
+        if user_update.email and user_update.email.lower() != existing_user.get('email', '').lower():
+            user_with_email = db_client.get_user_by_email(user_update.email.lower())
+            if user_with_email:
+                return create_response(409, {
+                    "error": "Email is already registered",
+                    "email": user_update.email
+                })
         
-        # Respuesta sin contraseña
-        user_response = updated_user.copy()
-        user_response.pop('password_hash', None)
+        # Prepare data for update
+        update_data = {}
+        if user_update.name:
+            update_data['name'] = user_update.name
+        if user_update.email:
+            update_data['email'] = user_update.email.lower()
+        if user_update.currency:
+            update_data['currency'] = user_update.currency
+        if user_update.new_password:
+            update_data['password_hash'] = hash_password(user_update.new_password)
         
-        logger.info(f"Usuario actualizado exitosamente: {user_id}")
+        # Add update timestamp
+        update_data['updated_at'] = datetime.now().isoformat()
+        
+        # Update the user
+        updated_user = db_client.update_user(user_id, update_data)
+        
+        # Convert to User model for response (without password)
+        user_response = User.from_dynamodb_item(updated_user)
+        
+        logger.info(f"User updated successfully: {user_id}")
         return create_response(200, {
-            "message": "Usuario actualizado exitosamente",
-            "user": user_response
+            "message": "User updated successfully",
+            "user": user_response.model_dump(),
+            "updated_fields": list(update_data.keys())
         })
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        return create_response(400, {
+            "error": "Invalid update data", 
+            "details": str(e)
+        })
+    except Exception as e:
+        logger.error(f"Error updating user {user_id}: {str(e)}", exc_info=True)
+        return internal_server_error_response("Internal server error")
         
     except ValueError as e:
         logger.error(f"Error de validación: {str(e)}")
@@ -177,54 +322,68 @@ def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
 
 def delete_user_handler(user_id: str) -> Dict[str, Any]:
     """
-    Eliminar un usuario
+    Delete a user
     """
     try:
-        logger.info(f"Eliminando usuario: {user_id}")
+        logger.info(f"Deleting user: {user_id}")
         
-        # Verificar si el usuario existe
+        # Check if user exists
         existing_user = db_client.get_user_by_id(user_id)
         if not existing_user:
             return create_response(404, {
-                "error": "Usuario no encontrado",
+                "error": "User not found",
                 "user_id": user_id
             })
         
-        # Eliminar el usuario (soft delete)
+        # Delete user (soft delete)
         updated_at = datetime.now().isoformat()
         db_client.delete_user(user_id, updated_at)
         
-        logger.info(f"Usuario eliminado exitosamente: {user_id}")
+        logger.info(f"User deleted successfully: {user_id}")
         return create_response(200, {
-            "message": "Usuario eliminado exitosamente",
+            "message": "User deleted successfully",
             "user_id": user_id
         })
         
     except Exception as e:
-        logger.error(f"Error eliminando usuario {user_id}: {str(e)}", exc_info=True)
-        return internal_server_error_response("Error interno del servidor")
+        logger.error(f"Error deleting user {user_id}: {str(e)}", exc_info=True)
+        return internal_server_error_response("Internal server error")
 
 def get_user_summary_handler() -> Dict[str, Any]:
     """
-    Obtener resumen de usuarios (para testing/admin)
+    Get user summary and available endpoints
     """
     try:
-        logger.info("Obteniendo resumen de usuarios")
-        
-        # Por ahora retornamos un resumen simple
-        # En el futuro podríamos implementar paginación, filtros, etc.
+        logger.info("Getting user summary")
         
         return create_response(200, {
-            "message": "Endpoint de usuarios activo",
+            "message": "Finance Tracker Users API",
+            "version": "2.0.0",
             "timestamp": datetime.utcnow().isoformat(),
+            "features": [
+                "User registration with password validation",
+                "Login with brute force attack protection", 
+                "Password encryption with bcrypt",
+                "Email and data validation",
+                "User soft delete",
+                "Secure profile updates"
+            ],
             "available_operations": [
-                "POST /users - Crear usuario",
-                "GET /users/{user_id} - Obtener usuario",
-                "PUT /users/{user_id} - Actualizar usuario",
-                "DELETE /users/{user_id} - Eliminar usuario"
+                "POST /users - Register new user",
+                "POST /users/login - Log in",
+                "GET /users/{user_id} - Get user by ID",
+                "PUT /users/{user_id} - Update user",
+                "DELETE /users/{user_id} - Delete user (soft delete)"
+            ],
+            "supported_currencies": ["MXN", "USD", "EUR", "CAD"],
+            "security_features": [
+                "Passwords must be at least 8 characters",
+                "Include uppercase, lowercase, numbers and symbols",
+                "Maximum 5 login attempts before temporary lockout",
+                "Secure password hashing with bcrypt"
             ]
         })
         
     except Exception as e:
-        logger.error(f"Error obteniendo resumen de usuarios: {str(e)}", exc_info=True)
-        return internal_server_error_response("Error interno del servidor")
+        logger.error(f"Error getting user summary: {str(e)}", exc_info=True)
+        return internal_server_error_response("Internal server error")

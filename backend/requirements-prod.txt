@@ -1,7 +1,15 @@
 # Production dependencies only - for Lambda layer
-boto3==1.35.9
-botocore==1.35.9
-fastapi==0.112.0
-mangum==0.18.0
-pydantic[email]==2.8.2
-python-dotenv==1.0.1
+# Core AWS and framework dependencies
+boto3==1.35.9            # AWS SDK (updated version)
+botocore==1.35.9         # AWS SDK core
+fastapi==0.112.0         # Fast API framework
+mangum==0.18.0           # ASGI adapter for AWS Lambda (updated version)
+
+# Data validation and processing
+pydantic[email]==2.8.2   # Data validation with email support
+
+# Security dependencies
+bcrypt==4.1.3            # Password hashing - REQUIRED for user authentication
+
+# Utilities
+python-dotenv==1.0.1     # Environment variables
