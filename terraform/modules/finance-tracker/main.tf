@@ -135,15 +135,28 @@ resource "null_resource" "download_layer" {
            -o /tmp/layer.zip \
            "${local.layer_asset_url}"
       
-      # Validate that the layer contains critical dependencies
-      echo "🔍 Validating layer contents..."
-      unzip -l /tmp/layer.zip | grep -E "(pydantic|boto3)" || {
-        echo "❌ Error: Layer missing critical dependencies (pydantic, boto3)"
+      # Validate that the layer contains critical dependencies in correct AWS Lambda structure
+      echo "🔍 Validating layer contents and AWS Lambda structure..."
+      
+      # Check if python/ directory exists (required for Python Lambda layers)
+      if ! unzip -l /tmp/layer.zip | grep -q "python/"; then
+        echo "❌ Error: Layer missing python/ directory (required for AWS Lambda Python layers)"
+        echo "📋 Layer structure:"
+        unzip -l /tmp/layer.zip | head -20
+        exit 1
+      fi
+      
+      # Check for critical Python packages in python/ directory
+      if ! unzip -l /tmp/layer.zip | grep -E "python/(pydantic|boto3)"; then
+        echo "❌ Error: Layer missing critical dependencies (pydantic, boto3) in python/ directory"
         echo "📋 Layer contents:"
         unzip -l /tmp/layer.zip | head -20
         exit 1
-      }
-      echo "✅ Layer validation passed"
+      fi
+      
+      echo "✅ Layer validation passed - correct AWS Lambda Python structure found"
+      echo "📁 Layer structure preview:"
+      unzip -l /tmp/layer.zip | grep "python/" | head -10
     EOT
   }
 }

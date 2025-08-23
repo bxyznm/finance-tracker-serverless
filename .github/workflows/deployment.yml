@@ -83,42 +83,46 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend/
-          mkdir -p release/layer
+          mkdir -p release/layer/python
           mkdir -p release/code
           # Actualizar pip para evitar problemas de compatibilidad
           pip install --upgrade pip setuptools wheel
-          # Instalar dependencias de producción en el directorio layer con flags para compatibilidad con Lambda
-          pip install -r requirements-prod.txt -t release/layer --no-cache-dir --only-binary=all --implementation cp --abi abi3 --platform linux_x86_64
-          # Verificar que pydantic se instaló correctamente
-          if [ ! -d "release/layer/pydantic" ]; then
-            echo "❌ Error: pydantic no se instaló correctamente"
+          # Instalar dependencias de producción en el directorio layer/python según AWS Lambda Layer spec
+          pip install -r requirements-prod.txt -t release/layer/python --no-cache-dir --only-binary=all --implementation cp --abi abi3 --platform linux_x86_64
+          # Verificar que pydantic se instaló correctamente en la estructura correcta
+          if [ ! -d "release/layer/python/pydantic" ]; then
+            echo "❌ Error: pydantic no se instaló correctamente en release/layer/python/"
             exit 1
           fi
-          echo "✅ pydantic instalado correctamente"
-          ls -la release/layer/ | grep pydantic
+          echo "✅ pydantic instalado correctamente en la estructura de layer AWS Lambda"
+          ls -la release/layer/python/ | grep pydantic
 
       - name: Create ZIP files
         run: |
           cd backend/
-          # Validar que las dependencias críticas estén presentes
-          echo "🔍 Validando dependencias críticas en el layer..."
+          # Validar que las dependencias críticas estén presentes en la estructura correcta
+          echo "🔍 Validando dependencias críticas en el layer (estructura AWS Lambda)..."
           MISSING_DEPS=()
           for dep in pydantic boto3 fastapi bcrypt; do
-            if [ ! -d "release/layer/$dep" ] && [ ! -d "release/layer/${dep}-"* ]; then
+            if [ ! -d "release/layer/python/$dep" ] && [ ! -d "release/layer/python/${dep}-"* ]; then
               MISSING_DEPS+=($dep)
             else
-              echo "✅ $dep encontrado"
+              echo "✅ $dep encontrado en release/layer/python/"
             fi
           done
           
           if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
             echo "❌ Error: Dependencias faltantes: ${MISSING_DEPS[*]}"
-            echo "📋 Contenido del directorio layer:"
-            ls -la release/layer/
+            echo "📋 Contenido del directorio layer/python:"
+            ls -la release/layer/python/
             exit 1
           fi
           
-          # Crear ZIP del layer con las dependencias
+          echo "🔍 Verificando estructura del layer AWS Lambda:"
+          echo "📁 Estructura del layer:"
+          tree release/layer/ -L 2 || find release/layer/ -type d -maxdepth 2
+          
+          # Crear ZIP del layer con las dependencias (estructura AWS Lambda)
           cd release/layer
           zip -r ../layer.zip .
           cd ../..
@@ -132,6 +136,10 @@ jobs:
           echo "📊 Tamaños de archivos:"
           echo "  layer.zip: $(du -sh release/layer.zip | cut -f1)"
           echo "  code.zip: $(du -sh release/code.zip | cut -f1)"
+          
+          # Verificar contenido del layer.zip final
+          echo "🔍 Verificando estructura final del layer.zip:"
+          unzip -l release/layer.zip | head -15
 
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
@@ -171,8 +179,9 @@ jobs:
           echo "| **code.zip** | \`$(du -h backend/release/code.zip | cut -f1)\` | \`$(date '+%Y-%m-%d %H:%M:%S UTC')\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## ✅ Estado del Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Dependencias instaladas correctamente" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependencias instaladas correctamente en estructura AWS Lambda (python/)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Archivos ZIP creados exitosamente" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Layer validado con estructura correcta para AWS Lambda Python" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Release publicado en GitHub" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🌐 API Endpoints Implementados" >> $GITHUB_STEP_SUMMARY

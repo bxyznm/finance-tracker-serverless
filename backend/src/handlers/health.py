@@ -23,7 +23,8 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
         "dependencies": {},
         "python_info": {
             "version": sys.version,
-            "path": sys.path[:3]  # First 3 paths to avoid too much data
+            "path": sys.path[:3],  # First 3 paths to avoid too much data
+            "lambda_layer_paths": [path for path in sys.path if '/opt/' in path]  # Show Lambda layer paths
         }
     }
     
