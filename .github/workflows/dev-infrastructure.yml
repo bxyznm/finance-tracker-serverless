@@ -188,3 +188,96 @@ jobs:
           else
             echo "- ✅ Infraestructura destruida exitosamente en dev" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Get API endpoints and create detailed summary
+        if: inputs.operation == 'deploy'
+        working-directory: terraform/environments/dev
+        env:
+          TF_VAR_github_owner: ${{ github.repository_owner }}
+          TF_VAR_github_repository: ${{ github.event.repository.name }}
+          TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
+          TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📡 API Endpoints Creados" >> $GITHUB_STEP_SUMMARY
+          
+          # Obtener la URL base de la API
+          API_URL=$(terraform output -raw api_gateway_url 2>/dev/null || echo "No disponible")
+          HEALTH_URL=$(terraform output -raw health_check_url 2>/dev/null || echo "No disponible")
+          
+          if [ "$API_URL" != "No disponible" ]; then
+            echo "### 🔗 Base URL" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "$API_URL" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "### 📋 Endpoints por Categoría" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Sistema
+            echo "#### 🔧 Sistema" >> $GITHUB_STEP_SUMMARY
+            echo "| Endpoint | Método | Descripción | URL Completa |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|--------|-------------|--------------|" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/health\` | GET | Verificar estado del sistema | [$HEALTH_URL]($HEALTH_URL) |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Autenticación
+            echo "#### 🔐 Autenticación" >> $GITHUB_STEP_SUMMARY
+            echo "| Endpoint | Método | Descripción | Auth |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|--------|-------------|------|" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/auth/login\` | POST | Iniciar sesión de usuario | ❌ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/auth/register\` | POST | Registrar nuevo usuario | ❌ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/auth/refresh\` | POST | Renovar token de acceso | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Usuarios
+            echo "#### 👤 Gestión de Usuarios" >> $GITHUB_STEP_SUMMARY
+            echo "| Endpoint | Método | Descripción | Auth |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|--------|-------------|------|" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/users/profile\` | GET | Obtener perfil del usuario | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/users/profile\` | PUT | Actualizar perfil del usuario | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/users/profile\` | DELETE | Eliminar cuenta de usuario | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Transacciones
+            echo "#### 💰 Gestión de Transacciones" >> $GITHUB_STEP_SUMMARY
+            echo "| Endpoint | Método | Descripción | Auth |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|--------|-------------|------|" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/transactions\` | GET | Listar transacciones del usuario | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/transactions\` | POST | Crear nueva transacción | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/transactions/{id}\` | GET | Obtener transacción específica | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/transactions/{id}\` | PUT | Actualizar transacción existente | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/transactions/{id}\` | DELETE | Eliminar transacción | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Categorías
+            echo "#### 📂 Gestión de Categorías" >> $GITHUB_STEP_SUMMARY
+            echo "| Endpoint | Método | Descripción | Auth |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|--------|-------------|------|" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/categories\` | GET | Listar categorías disponibles | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/categories\` | POST | Crear nueva categoría | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/categories/{id}\` | GET | Obtener categoría específica | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/categories/{id}\` | PUT | Actualizar categoría existente | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "| \`/categories/{id}\` | DELETE | Eliminar categoría | ✅ |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "### 🧪 Comandos de Prueba" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "# Verificar estado del sistema" >> $GITHUB_STEP_SUMMARY
+            echo "curl $HEALTH_URL" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Ver logs de las funciones Lambda" >> $GITHUB_STEP_SUMMARY
+            echo "aws logs tail /aws/lambda/finance-tracker-dev-health --follow" >> $GITHUB_STEP_SUMMARY
+            echo "aws logs tail /aws/lambda/finance-tracker-dev-users --follow" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "### 📝 Notas" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ = Requiere autenticación JWT" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ = No requiere autenticación" >> $GITHUB_STEP_SUMMARY
+            echo "- Todos los endpoints soportan CORS para desarrollo" >> $GITHUB_STEP_SUMMARY
+            echo "- El ambiente está optimizado para costos mínimos" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No se pudieron obtener los endpoints. Verifica que el deployment fue exitoso." >> $GITHUB_STEP_SUMMARY
+          fi

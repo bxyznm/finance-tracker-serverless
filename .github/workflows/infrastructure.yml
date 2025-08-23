@@ -310,6 +310,42 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** development" >> $GITHUB_STEP_SUMMARY
           echo "**Release Used:** $(terraform output -raw github_release_info | jq -r .tag_name)" >> $GITHUB_STEP_SUMMARY
+          
+          # Agregar tabla de endpoints
+          API_URL=$(terraform output -raw api_gateway_url)
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📡 API Endpoints Disponibles" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔧 Sistema" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Método | URL Completa |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|--------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/health\` | GET | [$(terraform output -raw health_check_url)]($(terraform output -raw health_check_url)) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔐 Autenticación" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Método | Descripción |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/auth/login\` | POST | Iniciar sesión de usuario |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/auth/register\` | POST | Registrar nuevo usuario |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/auth/refresh\` | POST | Renovar token de acceso ⚡ |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 👤 Usuarios" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Métodos | Descripción |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/users/profile\` | GET, PUT, DELETE | Gestión completa de perfil ⚡ |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 💰 Transacciones" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Métodos | Descripción |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/transactions\` | GET, POST | Listar y crear transacciones ⚡ |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/transactions/{id}\` | GET, PUT, DELETE | Gestión individual de transacciones ⚡ |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 📂 Categorías" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Métodos | Descripción |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/categories\` | GET, POST | Listar y crear categorías ⚡ |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/categories/{id}\` | GET, PUT, DELETE | Gestión individual de categorías ⚡ |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Nota:** ⚡ = Requiere autenticación JWT" >> $GITHUB_STEP_SUMMARY
 
       - name: Test deployment
         working-directory: terraform/environments/dev
@@ -538,6 +574,46 @@ jobs:
           echo "**Environment:** production" >> $GITHUB_STEP_SUMMARY
           echo "**Release Used:** $(terraform output -raw github_release_info | jq -r .tag_name)" >> $GITHUB_STEP_SUMMARY
           echo "**Monitoring:** $(terraform output -json cloudwatch_alarms | jq length) CloudWatch alarms configured" >> $GITHUB_STEP_SUMMARY
+          
+          # Agregar tabla de endpoints para producción
+          API_URL=$(terraform output -raw api_gateway_url)
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 Production API Endpoints" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔧 Sistema" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Método | URL Completa |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|--------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/health\` | GET | [$(terraform output -raw health_check_url)]($(terraform output -raw health_check_url)) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔐 Autenticación" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Método | Descripción |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/auth/login\` | POST | Iniciar sesión de usuario |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/auth/register\` | POST | Registrar nuevo usuario |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/auth/refresh\` | POST | Renovar token de acceso 🔒 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 👤 Usuarios" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Métodos | Descripción |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/users/profile\` | GET, PUT, DELETE | Gestión completa de perfil 🔒 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 💰 Transacciones" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Métodos | Descripción |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/transactions\` | GET, POST | Listar y crear transacciones 🔒 |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/transactions/{id}\` | GET, PUT, DELETE | Gestión individual de transacciones 🔒 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 📂 Categorías" >> $GITHUB_STEP_SUMMARY
+          echo "| Endpoint | Métodos | Descripción |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/categories\` | GET, POST | Listar y crear categorías 🔒 |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`/categories/{id}\` | GET, PUT, DELETE | Gestión individual de categorías 🔒 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Notas de Producción:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔒 = Requiere autenticación JWT" >> $GITHUB_STEP_SUMMARY
+          echo "- Todos los endpoints están bajo HTTPS" >> $GITHUB_STEP_SUMMARY
+          echo "- Rate limiting y throttling configurados" >> $GITHUB_STEP_SUMMARY
+          echo "- Monitoreo con CloudWatch habilitado" >> $GITHUB_STEP_SUMMARY
 
       - name: Test production deployment
         working-directory: terraform/environments/prod

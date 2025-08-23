@@ -92,3 +92,48 @@ jobs:
         run: |
           echo "RELEASE_TAG=v-dev-${{ github.ref_name }}-${{ github.run_number }}" >> $GITHUB_ENV
           echo "$RELEASE_TAG"
+
+      - name: Create pre-release summary
+        run: |
+          echo "# 🚀 Finance Tracker Pre-Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Release Information" >> $GITHUB_STEP_SUMMARY
+          echo "| Variable | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tag** | \`$RELEASE_TAG\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Trigger** | Push a \`${{ github.ref_name }}\` con cambios en backend/ |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Number** | \`${{ github.run_number }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Assets Creados" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ \`code.zip\` - Código de las funciones Lambda" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ \`layer.zip\` - Dependencias Python para Lambda" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔄 Próximos Pasos" >> $GITHUB_STEP_SUMMARY
+          echo "Este pre-release activará automáticamente el deployment de infraestructura a **desarrollo**." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📡 Endpoints que se Desplegarán" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔧 Sistema" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET /health\` - Health check del sistema" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔐 Autenticación" >> $GITHUB_STEP_SUMMARY
+          echo "- \`POST /auth/login\` - Iniciar sesión" >> $GITHUB_STEP_SUMMARY
+          echo "- \`POST /auth/register\` - Registro de usuario" >> $GITHUB_STEP_SUMMARY
+          echo "- \`POST /auth/refresh\` - Renovar token 🔒" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 👤 Usuarios" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET/PUT/DELETE /users/profile\` - Gestión de perfil 🔒" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 💰 Transacciones" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET/POST /transactions\` - Listar/crear transacciones 🔒" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET/PUT/DELETE /transactions/{id}\` - Gestión individual 🔒" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 📂 Categorías" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET/POST /categories\` - Listar/crear categorías 🔒" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET/PUT/DELETE /categories/{id}\` - Gestión individual 🔒" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Nota:** 🔒 = Requiere autenticación JWT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎯 Seguimiento" >> $GITHUB_STEP_SUMMARY
+          echo "Monitorea el progreso del deployment en el [workflow de Infrastructure Deployment](../../actions/workflows/infrastructure.yml)." >> $GITHUB_STEP_SUMMARY
