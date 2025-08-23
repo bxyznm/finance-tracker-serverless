@@ -31,6 +31,7 @@ try:
     # Local imports with error handling
     from utils.responses import create_response, internal_server_error_response
     from utils.dynamodb_client import DynamoDBClient
+    from utils.jwt_auth import create_token_response, require_auth, validate_token_from_event
     from models import User, UserCreate, UserUpdate, create_user_from_input
     logger.info("✅ All local imports successful")
 except ImportError as e:
@@ -67,25 +68,28 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
             # POST /users/login - Authentication
             if path.endswith('/login'):
                 return login_user_handler(body_data)
+            # POST /users/refresh-token - Token refresh
+            elif path.endswith('/refresh-token'):
+                return refresh_token_handler(body_data)
             # POST /users - Registration
             else:
                 return create_user_handler(body_data)
         elif http_method == 'GET':
             user_id = path_parameters.get('user_id')
             if user_id:
-                return get_user_handler(user_id)
+                return get_user_handler(user_id, event)
             else:
-                return get_user_summary_handler()
+                return get_user_summary_handler(event)
         elif http_method == 'PUT':
             user_id = path_parameters.get('user_id')
             if not user_id:
                 return create_response(400, {"error": "user_id is required for PUT requests"})
-            return update_user_handler(user_id, body_data)
+            return update_user_handler(user_id, body_data, event)
         elif http_method == 'DELETE':
             user_id = path_parameters.get('user_id')
             if not user_id:
                 return create_response(400, {"error": "user_id is required for DELETE requests"})
-            return delete_user_handler(user_id)
+            return delete_user_handler(user_id, event)
         else:
             return create_response(405, {"error": f"Method {http_method} not allowed"})
             
@@ -202,13 +206,18 @@ def login_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
         
         logger.info(f"Successful login for user: {user_response.user_id}")
         
-        # TODO: Generate JWT token here when we implement complete authentication
-        return create_response(200, {
-            "message": "Successful login",
-            "user": user_response.model_dump(),
-            "access_token": "TODO_JWT_TOKEN",  # Placeholder for JWT
-            "token_type": "bearer"
-        })
+        # Generate JWT tokens
+        try:
+            token_data = create_token_response(user['user_id'], user['email'])
+            
+            return create_response(200, {
+                "message": "Login successful",
+                "user": user_response.model_dump(),
+                "tokens": token_data
+            })
+        except Exception as token_error:
+            logger.error(f"Error creating JWT tokens: {str(token_error)}")
+            return internal_server_error_response("Failed to generate authentication tokens")
         
     except ValueError as e:
         logger.error(f"Validation error in login: {str(e)}")
@@ -227,11 +236,27 @@ def login_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
         logger.error(f"Error creando usuario: {str(e)}", exc_info=True)
         return internal_server_error_response("Error interno del servidor")
 
-def get_user_handler(user_id: str) -> Dict[str, Any]:
+def get_user_handler(user_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Get a user by ID
+    Get a user by ID - requires authentication
     """
     try:
+        # Validate authentication
+        token_payload = validate_token_from_event(event)
+        if not token_payload:
+            return create_response(401, {
+                "error": "Authentication required",
+                "message": "Valid JWT token must be provided"
+            })
+        
+        # Check if user is requesting their own data or is admin
+        # For now, users can only access their own data
+        if token_payload.user_id != user_id:
+            return create_response(403, {
+                "error": "Access denied",
+                "message": "You can only access your own user data"
+            })
+        
         logger.info(f"Getting user: {user_id}")
         
         user = db_client.get_user_by_id(user_id)
@@ -241,22 +266,36 @@ def get_user_handler(user_id: str) -> Dict[str, Any]:
                 "user_id": user_id
             })
         
-        # Response without password
-        user_response = user.copy()
-        user_response.pop('password_hash', None)
+        # Convert to User model for response (without password)
+        user_response = User.from_dynamodb_item(user)
         
-        return create_response(200, {"user": user_response})
+        return create_response(200, {"user": user_response.model_dump()})
         
     except Exception as e:
         logger.error(f"Error getting user {user_id}: {str(e)}", exc_info=True)
         return internal_server_error_response("Internal server error")
 
-def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+def update_user_handler(user_id: str, data: Dict[str, Any], event: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Update an existing user with security validations
+    Update an existing user with security validations - requires authentication
     """
     try:
         from models.user import verify_password, hash_password
+        
+        # Validate authentication
+        token_payload = validate_token_from_event(event)
+        if not token_payload:
+            return create_response(401, {
+                "error": "Authentication required",
+                "message": "Valid JWT token must be provided"
+            })
+        
+        # Check if user is updating their own data
+        if token_payload.user_id != user_id:
+            return create_response(403, {
+                "error": "Access denied",
+                "message": "You can only update your own user data"
+            })
         
         logger.info(f"Updating user {user_id}")
         
@@ -339,11 +378,26 @@ def update_user_handler(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         logger.error(f"Error actualizando usuario {user_id}: {str(e)}", exc_info=True)
         return internal_server_error_response("Error interno del servidor")
 
-def delete_user_handler(user_id: str) -> Dict[str, Any]:
+def delete_user_handler(user_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Delete a user
+    Delete a user - requires authentication
     """
     try:
+        # Validate authentication
+        token_payload = validate_token_from_event(event)
+        if not token_payload:
+            return create_response(401, {
+                "error": "Authentication required",
+                "message": "Valid JWT token must be provided"
+            })
+        
+        # Check if user is deleting their own account
+        if token_payload.user_id != user_id:
+            return create_response(403, {
+                "error": "Access denied",
+                "message": "You can only delete your own account"
+            })
+        
         logger.info(f"Deleting user: {user_id}")
         
         # Check if user exists
@@ -360,7 +414,7 @@ def delete_user_handler(user_id: str) -> Dict[str, Any]:
         
         logger.info(f"User deleted successfully: {user_id}")
         return create_response(200, {
-            "message": "User deleted successfully",
+            "message": "User account deleted successfully",
             "user_id": user_id
         })
         
@@ -368,38 +422,93 @@ def delete_user_handler(user_id: str) -> Dict[str, Any]:
         logger.error(f"Error deleting user {user_id}: {str(e)}", exc_info=True)
         return internal_server_error_response("Internal server error")
 
-def get_user_summary_handler() -> Dict[str, Any]:
+def refresh_token_handler(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Get user summary and available endpoints
+    Refresh access token using refresh token
     """
     try:
+        from utils.jwt_auth import refresh_access_token
+        
+        logger.info("Processing token refresh request")
+        
+        # Validate input data
+        if not data.get('refresh_token'):
+            return create_response(400, {
+                "error": "Missing refresh token",
+                "message": "refresh_token is required"
+            })
+        
+        # Refresh the token
+        try:
+            new_token_data = refresh_access_token(data['refresh_token'])
+            
+            logger.info(f"Token refreshed successfully for user: {new_token_data['user_id']}")
+            return create_response(200, {
+                "message": "Token refreshed successfully",
+                "tokens": new_token_data
+            })
+            
+        except Exception as refresh_error:
+            logger.warning(f"Token refresh failed: {str(refresh_error)}")
+            return create_response(401, {
+                "error": "Invalid refresh token",
+                "message": "The provided refresh token is invalid or expired"
+            })
+    
+    except Exception as e:
+        logger.error(f"Error in token refresh: {str(e)}", exc_info=True)
+        return internal_server_error_response("Internal server error")
+
+def get_user_summary_handler(event: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Get user summary and available endpoints - requires authentication
+    """
+    try:
+        # Validate authentication for this endpoint
+        token_payload = validate_token_from_event(event)
+        if not token_payload:
+            return create_response(401, {
+                "error": "Authentication required",
+                "message": "Valid JWT token must be provided"
+            })
+        
         logger.info("Getting user summary")
         
         return create_response(200, {
             "message": "Finance Tracker Users API",
             "version": "2.0.0",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
+            "authenticated_user": {
+                "user_id": token_payload.user_id,
+                "email": token_payload.email
+            },
             "features": [
+                "JWT token-based authentication",
                 "User registration with password validation",
                 "Login with brute force attack protection", 
                 "Password encryption with bcrypt",
                 "Email and data validation",
                 "User soft delete",
-                "Secure profile updates"
+                "Secure profile updates",
+                "Token refresh capability"
             ],
             "available_operations": [
                 "POST /users - Register new user",
                 "POST /users/login - Log in",
-                "GET /users/{user_id} - Get user by ID",
-                "PUT /users/{user_id} - Update user",
-                "DELETE /users/{user_id} - Delete user (soft delete)"
+                "POST /users/refresh-token - Refresh access token",
+                "GET /users - Get user summary (authenticated)",
+                "GET /users/{user_id} - Get user by ID (authenticated)",
+                "PUT /users/{user_id} - Update user (authenticated)",
+                "DELETE /users/{user_id} - Delete user (authenticated)"
             ],
             "supported_currencies": ["MXN", "USD", "EUR", "CAD"],
             "security_features": [
-                "Passwords must be at least 8 characters",
-                "Include uppercase, lowercase, numbers and symbols",
-                "Maximum 5 login attempts before temporary lockout",
-                "Secure password hashing with bcrypt"
+                "JWT access tokens (30 min expiry)",
+                "JWT refresh tokens (7 days expiry)",
+                "Account lockout after 5 failed login attempts",
+                "Password hashing with bcrypt",
+                "Email normalization",
+                "Request validation with pydantic"
             ]
         })
         

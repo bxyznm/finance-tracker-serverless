@@ -276,6 +276,13 @@ output "api_endpoints_table" {
         description = "Login de usuario"
         auth_required = false
       }
+      refresh_token = {
+        method      = "POST"
+        path        = "/users/refresh-token"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/refresh-token"
+        description = "Renovar access token con refresh token"
+        auth_required = false
+      }
       get_user_by_id = {
         method      = "GET"
         path        = "/users/{user_id}"

@@ -1,6 +1,41 @@
 # =============================================================================
 # Finance Tracker Serverless - API Gateway Resources
-# =============================================================================
+# ====# Users login - POST /users/login
+resource "aws_api_gateway_method" "users_login_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.users_login.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "users_login_post_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.users_login.id
+  http_method = aws_api_gateway_method.users_login_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.users.invoke_arn
+}
+
+# Users refresh-token - POST /users/refresh-token
+resource "aws_api_gateway_method" "users_refresh_token_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.users_refresh_token.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "users_refresh_token_post_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.users_refresh_token.id
+  http_method = aws_api_gateway_method.users_refresh_token_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.users.invoke_arn
+}
+
 
 # -----------------------------------------------------------------------------
 # API Gateway REST API
@@ -38,11 +73,18 @@ resource "aws_api_gateway_resource" "users" {
   path_part   = "users"
 }
 
-# Recurso /users/login
+# Users login resource - /users/login
 resource "aws_api_gateway_resource" "users_login" {
   rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
   parent_id   = aws_api_gateway_resource.users.id
   path_part   = "login"
+}
+
+# Users refresh-token resource - /users/refresh-token
+resource "aws_api_gateway_resource" "users_refresh_token" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.users.id
+  path_part   = "refresh-token"
 }
 
 # Recurso /users/{user_id} para operaciones CRUD por ID
@@ -361,6 +403,7 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_resource.health.id,
       aws_api_gateway_resource.users.id,
       aws_api_gateway_resource.users_login.id,
+      aws_api_gateway_resource.users_refresh_token.id,
       aws_api_gateway_resource.users_user_id.id,
       aws_api_gateway_resource.transactions.id,
       aws_api_gateway_resource.categories.id,
@@ -369,6 +412,7 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_method.users_get.id,
       aws_api_gateway_method.users_post.id,
       aws_api_gateway_method.users_login_post.id,
+      aws_api_gateway_method.users_refresh_token_post.id,
       aws_api_gateway_method.users_user_id_get.id,
       aws_api_gateway_method.users_user_id_put.id,
       aws_api_gateway_method.users_user_id_delete.id,

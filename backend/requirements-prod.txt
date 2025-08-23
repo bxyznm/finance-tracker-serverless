@@ -11,6 +11,8 @@ pydantic[email]==2.8.2   # Data validation with email support
 
 # Security dependencies
 bcrypt==4.1.3            # Password hashing - REQUIRED for user authentication
+PyJWT==2.8.0             # JWT token handling
+cryptography==41.0.7     # Cryptographic library for JWT
 
 # Utilities
 python-dotenv==1.0.1     # Environment variables

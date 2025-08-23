@@ -146,8 +146,9 @@ output "dev_deployment_summary" {
     │ Endpoint            │ Método   │ Descripción                                             │
     ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
     │ /users              │ POST     │ Registrar nuevo usuario                                │
-    │ /users/login        │ POST     │ Iniciar sesión de usuario                              │
-    │ /users              │ GET      │ Listar usuarios (requiere auth)            [AUTH REQ]  │
+    │ /users/login        │ POST     │ Iniciar sesión y obtener JWT tokens                   │
+    │ /users/refresh-token│ POST     │ Renovar access token con refresh token                │
+    │ /users              │ GET      │ Obtener resumen del API (requiere auth)    [AUTH REQ] │
     │ /users/{user_id}    │ GET      │ Obtener usuario por ID                     [AUTH REQ]  │
     │ /users/{user_id}    │ PUT      │ Actualizar datos de usuario                [AUTH REQ]  │
     │ /users/{user_id}    │ DELETE   │ Eliminar usuario                           [AUTH REQ]  │
