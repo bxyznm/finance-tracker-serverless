@@ -38,6 +38,13 @@ resource "aws_api_gateway_resource" "users" {
   path_part   = "users"
 }
 
+# Recurso /users/login
+resource "aws_api_gateway_resource" "users_login" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.users.id
+  path_part   = "login"
+}
+
 # Recurso /transactions
 resource "aws_api_gateway_resource" "transactions" {
   rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
@@ -110,6 +117,24 @@ resource "aws_api_gateway_integration" "users_post_integration" {
   rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
   resource_id = aws_api_gateway_resource.users.id
   http_method = aws_api_gateway_method.users_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.users.invoke_arn
+}
+
+# Users Login - POST /users/login
+resource "aws_api_gateway_method" "users_login_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.users_login.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "users_login_post_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.users_login.id
+  http_method = aws_api_gateway_method.users_login_post.http_method
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
@@ -257,6 +282,7 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
     aws_api_gateway_integration.health_integration,
     aws_api_gateway_integration.users_get_integration,
     aws_api_gateway_integration.users_post_integration,
+    aws_api_gateway_integration.users_login_post_integration,
     aws_api_gateway_integration.transactions_get_integration,
     aws_api_gateway_integration.transactions_post_integration,
     aws_api_gateway_integration.categories_get_integration,
@@ -270,12 +296,14 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.health.id,
       aws_api_gateway_resource.users.id,
+      aws_api_gateway_resource.users_login.id,
       aws_api_gateway_resource.transactions.id,
       aws_api_gateway_resource.categories.id,
       aws_api_gateway_resource.auth.id,
       aws_api_gateway_method.health_get.id,
       aws_api_gateway_method.users_get.id,
       aws_api_gateway_method.users_post.id,
+      aws_api_gateway_method.users_login_post.id,
       aws_api_gateway_method.transactions_get.id,
       aws_api_gateway_method.transactions_post.id,
       aws_api_gateway_method.categories_get.id,
@@ -284,6 +312,7 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_integration.health_integration.id,
       aws_api_gateway_integration.users_get_integration.id,
       aws_api_gateway_integration.users_post_integration.id,
+      aws_api_gateway_integration.users_login_post_integration.id,
       aws_api_gateway_integration.transactions_get_integration.id,
       aws_api_gateway_integration.transactions_post_integration.id,
       aws_api_gateway_integration.categories_get_integration.id,
