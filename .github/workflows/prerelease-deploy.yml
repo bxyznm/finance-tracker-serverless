@@ -11,6 +11,8 @@ on:
       - 'backend/**'
       - '.github/workflows/**'
 
+  workflow_dispatch:
+
 permissions:
   contents: write
   actions: read
