@@ -52,7 +52,8 @@ jobs:
           pip install --upgrade pip setuptools wheel
           
           # Instalar dependencias de producción en el directorio layer/python (estructura AWS Lambda)
-          pip install -r requirements-prod.txt -t release/layer/python --no-cache-dir --only-binary=all --implementation cp --abi abi3 --platform linux_x86_64
+          # Usar approach más simple y compatible
+          pip install -r requirements-prod.txt -t release/layer/python --no-cache-dir --upgrade
           
           # Verificar que pydantic se instaló correctamente en la estructura correcta
           if [ ! -d "release/layer/python/pydantic" ]; then
