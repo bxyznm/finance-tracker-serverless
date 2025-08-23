@@ -182,35 +182,31 @@ output "prod_deployment_summary" {
     └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
     
     ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-    │                            AUTENTICACIÓN                                                │
+    │                       AUTENTICACIÓN Y USUARIOS                                         │
     ├─────────────────────┬──────────┬─────────────────────────────────────────────────────────┤
     │ Endpoint            │ Método   │ Descripción                                             │
     ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
-    │ /auth/login         │ POST     │ Iniciar sesión de usuario                              │
-    │ /auth/register      │ POST     │ Registrar nuevo usuario                                │
-    │ /auth/refresh       │ POST     │ Renovar token de acceso                     [AUTH REQ]  │
+    │ /users              │ POST     │ Registrar nuevo usuario                                │
+    │ /users/login        │ POST     │ Iniciar sesión de usuario                              │
+    │ /users              │ GET      │ Listar usuarios (requiere auth)            [AUTH REQ]  │
     └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
     
     ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-    │                          GESTIÓN DE USUARIOS                                            │
+    │                            TRANSACCIONES                                                │
     ├─────────────────────┬──────────┬─────────────────────────────────────────────────────────┤
     │ Endpoint            │ Método   │ Descripción                                             │
     ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
-    │ /users/profile      │ GET      │ Obtener perfil del usuario actual          [AUTH REQ]  │
-    │ /users/profile      │ PUT      │ Actualizar perfil del usuario              [AUTH REQ]  │
-    │ /users/profile      │ DELETE   │ Eliminar cuenta de usuario                  [AUTH REQ]  │
+    │ /transactions       │ GET      │ Listar transacciones del usuario          [AUTH REQ]   │
+    │ /transactions       │ POST     │ Crear nueva transacción                    [AUTH REQ]   │
     └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
     
     ┌─────────────────────────────────────────────────────────────────────────────────────────┐
-    │                        GESTIÓN DE TRANSACCIONES                                         │
+    │                             CATEGORÍAS                                                  │
     ├─────────────────────┬──────────┬─────────────────────────────────────────────────────────┤
     │ Endpoint            │ Método   │ Descripción                                             │
     ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
-    │ /transactions       │ GET      │ Listar transacciones del usuario           [AUTH REQ]  │
-    │ /transactions       │ POST     │ Crear nueva transacción                     [AUTH REQ]  │
-    │ /transactions/{id}  │ GET      │ Obtener transacción específica             [AUTH REQ]  │
-    │ /transactions/{id}  │ PUT      │ Actualizar transacción existente           [AUTH REQ]  │
-    │ /transactions/{id}  │ DELETE   │ Eliminar transacción                       [AUTH REQ]  │
+    │ /categories         │ GET      │ Listar categorías del usuario             [AUTH REQ]   │
+    │ /categories         │ POST     │ Crear nueva categoría                      [AUTH REQ]   │
     └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
     
     ┌─────────────────────────────────────────────────────────────────────────────────────────┐

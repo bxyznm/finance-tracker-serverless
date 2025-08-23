@@ -228,53 +228,48 @@ output "api_endpoints_table" {
       }
     }
     
-    # Endpoints de Autenticación
+    # Endpoints de Autenticación y Gestión de Usuarios
     authentication = {
-      login = {
-        method      = "POST"
-        path        = "/auth/login"
-        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/auth/login"
-        description = "Iniciar sesión de usuario"
-        auth_required = false
-      }
       register = {
         method      = "POST"
-        path        = "/auth/register"
-        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/auth/register"
+        path        = "/users"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users"
         description = "Registrar nuevo usuario"
         auth_required = false
       }
-      refresh_token = {
+      login = {
         method      = "POST"
-        path        = "/auth/refresh"
-        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/auth/refresh"
-        description = "Renovar token de acceso"
+        path        = "/users/login"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/login"
+        description = "Iniciar sesión de usuario"
+        auth_required = false
+      }
+      get_users = {
+        method      = "GET"
+        path        = "/users"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users"
+        description = "Obtener información de usuarios"
         auth_required = true
       }
     }
     
     # Endpoints de Gestión de Usuarios
     user_management = {
-      get_profile = {
-        method      = "GET"
-        path        = "/users/profile"
-        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/profile"
-        description = "Obtener perfil del usuario actual"
-        auth_required = true
+      # Note: Los endpoints de perfil específico (/users/profile) no están implementados aún
+      # Los endpoints reales son /users (registro, login, listado)
+      user_operations = {
+        method      = "GET,POST"
+        path        = "/users"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users"
+        description = "Operaciones de usuario: POST=registro, GET=listado"
+        auth_required = "GET=true, POST=false"
       }
-      update_profile = {
-        method      = "PUT"
-        path        = "/users/profile"
-        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/profile"
-        description = "Actualizar perfil del usuario"
-        auth_required = true
-      }
-      delete_account = {
-        method      = "DELETE"
-        path        = "/users/profile"
-        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/profile"
-        description = "Eliminar cuenta de usuario"
-        auth_required = true
+      user_login = {
+        method      = "POST"
+        path        = "/users/login"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/login"
+        description = "Login de usuario"
+        auth_required = false
       }
     }
     

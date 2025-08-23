@@ -85,12 +85,39 @@ jobs:
           cd backend/
           mkdir -p release/layer
           mkdir -p release/code
-          # Instalar dependencias de producción en el directorio layer
-          pip install -r requirements-prod.txt -t release/layer
+          # Actualizar pip para evitar problemas de compatibilidad
+          pip install --upgrade pip setuptools wheel
+          # Instalar dependencias de producción en el directorio layer con flags para compatibilidad con Lambda
+          pip install -r requirements-prod.txt -t release/layer --no-cache-dir --only-binary=all --implementation cp --abi abi3 --platform linux_x86_64
+          # Verificar que pydantic se instaló correctamente
+          if [ ! -d "release/layer/pydantic" ]; then
+            echo "❌ Error: pydantic no se instaló correctamente"
+            exit 1
+          fi
+          echo "✅ pydantic instalado correctamente"
+          ls -la release/layer/ | grep pydantic
 
       - name: Create ZIP files
         run: |
           cd backend/
+          # Validar que las dependencias críticas estén presentes
+          echo "🔍 Validando dependencias críticas en el layer..."
+          MISSING_DEPS=()
+          for dep in pydantic boto3 fastapi bcrypt; do
+            if [ ! -d "release/layer/$dep" ] && [ ! -d "release/layer/${dep}-"* ]; then
+              MISSING_DEPS+=($dep)
+            else
+              echo "✅ $dep encontrado"
+            fi
+          done
+          
+          if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
+            echo "❌ Error: Dependencias faltantes: ${MISSING_DEPS[*]}"
+            echo "📋 Contenido del directorio layer:"
+            ls -la release/layer/
+            exit 1
+          fi
+          
           # Crear ZIP del layer con las dependencias
           cd release/layer
           zip -r ../layer.zip .
@@ -100,6 +127,11 @@ jobs:
           cp -r src/* release/code/
           cd release/code
           zip -r ../code.zip .
+          
+          # Información final
+          echo "📊 Tamaños de archivos:"
+          echo "  layer.zip: $(du -sh release/layer.zip | cut -f1)"
+          echo "  code.zip: $(du -sh release/code.zip | cut -f1)"
 
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
@@ -142,5 +174,14 @@ jobs:
           echo "- ✅ Dependencias instaladas correctamente" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Archivos ZIP creados exitosamente" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Release publicado en GitHub" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🌐 API Endpoints Implementados" >> $GITHUB_STEP_SUMMARY
+          echo "Una vez desplegado por Terraform, la API estará disponible en:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET /health\` - Health check" >> $GITHUB_STEP_SUMMARY
+          echo "- \`POST /users\` - Registro de usuarios" >> $GITHUB_STEP_SUMMARY
+          echo "- \`POST /users/login\` - Login de usuarios" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET /users\` - Listar usuarios [AUTH]" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET/POST /transactions\` - Gestión de transacciones [AUTH]" >> $GITHUB_STEP_SUMMARY
+          echo "- \`GET/POST /categories\` - Gestión de categorías [AUTH]" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Tag del Release:** \`${{ format('v{0}-{1}-{2}', inputs.environment || 'dev', github.ref_name, github.run_number) }}\`" >> $GITHUB_STEP_SUMMARY

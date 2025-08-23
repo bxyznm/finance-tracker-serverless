@@ -130,9 +130,20 @@ resource "null_resource" "download_layer" {
 
   provisioner "local-exec" {
     command = <<-EOT
+      echo "📥 Downloading layer.zip from: ${local.layer_asset_url}"
       curl -L -H "Accept: application/octet-stream" \
            -o /tmp/layer.zip \
            "${local.layer_asset_url}"
+      
+      # Validate that the layer contains critical dependencies
+      echo "🔍 Validating layer contents..."
+      unzip -l /tmp/layer.zip | grep -E "(pydantic|boto3)" || {
+        echo "❌ Error: Layer missing critical dependencies (pydantic, boto3)"
+        echo "📋 Layer contents:"
+        unzip -l /tmp/layer.zip | head -20
+        exit 1
+      }
+      echo "✅ Layer validation passed"
     EOT
   }
 }

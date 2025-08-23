@@ -16,9 +16,15 @@ resource "aws_lambda_layer_version" "dependencies" {
 
   compatible_runtimes = [var.lambda_runtime]
 
+  # Force recreation when release tag changes to ensure fresh layer
   skip_destroy = false
 
   depends_on = [aws_s3_object.layer_zip]
+
+  # Add lifecycle rule to ensure layer updates properly
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # -----------------------------------------------------------------------------

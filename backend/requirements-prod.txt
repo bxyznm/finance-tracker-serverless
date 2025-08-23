@@ -5,8 +5,9 @@ botocore==1.35.9         # AWS SDK core
 fastapi==0.112.0         # Fast API framework
 mangum==0.18.0           # ASGI adapter for AWS Lambda (updated version)
 
-# Data validation and processing
-pydantic==2.8.2   # Data validation with email support
+# Data validation and processing - CRITICAL for Lambda functions
+pydantic==2.8.2          # Data validation
+pydantic[email]==2.8.2   # Data validation with email support
 
 # Security dependencies
 bcrypt==4.1.3            # Password hashing - REQUIRED for user authentication

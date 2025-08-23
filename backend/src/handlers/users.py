@@ -6,17 +6,36 @@ Implements complete CRUD using Single Table Design
 import json
 import logging
 import uuid
+import sys
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-# Local imports
-from utils.responses import create_response, internal_server_error_response
-from utils.dynamodb_client import DynamoDBClient
-from models import User, UserCreate, UserUpdate, create_user_from_input
-
-# Configure logging
+# Configure logging first
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Debug imports - log what's available
+logger.info(f"Python path: {sys.path}")
+logger.info("Attempting to import dependencies...")
+
+try:
+    # Try importing pydantic first with detailed error info
+    import pydantic
+    logger.info(f"✅ pydantic imported successfully, version: {pydantic.__version__}")
+except ImportError as e:
+    logger.error(f"❌ Failed to import pydantic: {e}")
+    logger.error(f"Available modules: {[name for name in sys.modules.keys() if 'pydantic' in name.lower()]}")
+    raise
+
+try:
+    # Local imports with error handling
+    from utils.responses import create_response, internal_server_error_response
+    from utils.dynamodb_client import DynamoDBClient
+    from models import User, UserCreate, UserUpdate, create_user_from_input
+    logger.info("✅ All local imports successful")
+except ImportError as e:
+    logger.error(f"❌ Failed to import local modules: {e}")
+    raise
 
 # DynamoDB client
 db_client = DynamoDBClient()
