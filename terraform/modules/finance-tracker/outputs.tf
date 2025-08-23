@@ -255,21 +255,47 @@ output "api_endpoints_table" {
     
     # Endpoints de Gestión de Usuarios
     user_management = {
-      # Note: Los endpoints de perfil específico (/users/profile) no están implementados aún
-      # Los endpoints reales son /users (registro, login, listado)
-      user_operations = {
-        method      = "GET,POST"
+      register_user = {
+        method      = "POST"
         path        = "/users"
         url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users"
-        description = "Operaciones de usuario: POST=registro, GET=listado"
-        auth_required = "GET=true, POST=false"
+        description = "Registrar nuevo usuario"
+        auth_required = false
       }
-      user_login = {
+      list_users = {
+        method      = "GET"
+        path        = "/users"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users"
+        description = "Listar usuarios"
+        auth_required = true
+      }
+      login_user = {
         method      = "POST"
         path        = "/users/login"
         url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/login"
         description = "Login de usuario"
         auth_required = false
+      }
+      get_user_by_id = {
+        method      = "GET"
+        path        = "/users/{user_id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/{user_id}"
+        description = "Obtener usuario por ID"
+        auth_required = true
+      }
+      update_user = {
+        method      = "PUT"
+        path        = "/users/{user_id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/{user_id}"
+        description = "Actualizar usuario existente"
+        auth_required = true
+      }
+      delete_user = {
+        method      = "DELETE"
+        path        = "/users/{user_id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/{user_id}"
+        description = "Eliminar usuario (soft delete)"
+        auth_required = true
       }
     }
     

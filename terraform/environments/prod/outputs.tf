@@ -189,6 +189,9 @@ output "prod_deployment_summary" {
     │ /users              │ POST     │ Registrar nuevo usuario                                │
     │ /users/login        │ POST     │ Iniciar sesión de usuario                              │
     │ /users              │ GET      │ Listar usuarios (requiere auth)            [AUTH REQ]  │
+    │ /users/{user_id}    │ GET      │ Obtener usuario por ID                     [AUTH REQ]  │
+    │ /users/{user_id}    │ PUT      │ Actualizar datos de usuario                [AUTH REQ]  │
+    │ /users/{user_id}    │ DELETE   │ Eliminar usuario                           [AUTH REQ]  │
     └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
     
     ┌─────────────────────────────────────────────────────────────────────────────────────────┐
