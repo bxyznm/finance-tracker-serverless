@@ -1,5 +1,6 @@
 # Workflow para crear releases automatizados con los zips del layer de dependencias 
-# y el código de las funciones Lambda:
+# y el código de las funciones Lambda.
+# Se ejecuta solo cuando hay cambios en backend/ o .github/workflows/
 # - Automáticamente: cuando se hace push a la rama 'main'
 # - Automáticamente: cuando se hace PR a la rama 'main'
 # - Manualmente: usando workflow_dispatch
@@ -9,9 +10,15 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'
   pull_request:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       environment:

@@ -22,6 +22,12 @@ output "api_endpoints" {
   sensitive   = false
 }
 
+output "api_endpoints_table" {
+  description = "Tabla detallada de endpoints organizados por categoría para producción"
+  value       = module.finance_tracker.api_endpoints_table
+  sensitive   = false
+}
+
 # -----------------------------------------------------------------------------
 # Información de Lambda Functions
 # -----------------------------------------------------------------------------
@@ -153,7 +159,7 @@ output "documentation_urls" {
 # -----------------------------------------------------------------------------
 
 output "prod_deployment_summary" {
-  description = "Resumen del deployment de producción"
+  description = "Resumen del deployment de producción con tabla de endpoints"
   value = <<-EOT
     🚀 Finance Tracker - Entorno de Producción Desplegado
     
@@ -163,32 +169,93 @@ output "prod_deployment_summary" {
     • Región: ${var.aws_region}
     • Release: ${module.finance_tracker.github_release_info.tag_name}
     • Deployment: ${module.finance_tracker.environment_info.deployed_at}
+    • Base URL: ${module.finance_tracker.api_gateway_url}
     
-    🌐 API Endpoints de Producción:
-    • Health Check: ${module.finance_tracker.health_check_url}
-    • API Base URL: ${module.finance_tracker.api_gateway_url}
-    • Users: ${module.finance_tracker.api_endpoints.users}
-    • Transactions: ${module.finance_tracker.api_endpoints.transactions}
-    • Categories: ${module.finance_tracker.api_endpoints.categories}
-    • Auth: ${module.finance_tracker.api_endpoints.auth}
+    📡 API Endpoints de Producción:
+    
+    ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+    │                                SISTEMA                                                  │
+    ├─────────────────────┬──────────┬─────────────────────────────────────────────────────────┤
+    │ Endpoint            │ Método   │ Descripción                                             │
+    ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
+    │ /health             │ GET      │ Verificar estado del sistema                            │
+    └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
+    
+    ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+    │                            AUTENTICACIÓN                                                │
+    ├─────────────────────┬──────────┬─────────────────────────────────────────────────────────┤
+    │ Endpoint            │ Método   │ Descripción                                             │
+    ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
+    │ /auth/login         │ POST     │ Iniciar sesión de usuario                              │
+    │ /auth/register      │ POST     │ Registrar nuevo usuario                                │
+    │ /auth/refresh       │ POST     │ Renovar token de acceso                     [AUTH REQ]  │
+    └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
+    
+    ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+    │                          GESTIÓN DE USUARIOS                                            │
+    ├─────────────────────┬──────────┬─────────────────────────────────────────────────────────┤
+    │ Endpoint            │ Método   │ Descripción                                             │
+    ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
+    │ /users/profile      │ GET      │ Obtener perfil del usuario actual          [AUTH REQ]  │
+    │ /users/profile      │ PUT      │ Actualizar perfil del usuario              [AUTH REQ]  │
+    │ /users/profile      │ DELETE   │ Eliminar cuenta de usuario                  [AUTH REQ]  │
+    └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
+    
+    ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+    │                        GESTIÓN DE TRANSACCIONES                                         │
+    ├─────────────────────┬──────────┬─────────────────────────────────────────────────────────┤
+    │ Endpoint            │ Método   │ Descripción                                             │
+    ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
+    │ /transactions       │ GET      │ Listar transacciones del usuario           [AUTH REQ]  │
+    │ /transactions       │ POST     │ Crear nueva transacción                     [AUTH REQ]  │
+    │ /transactions/{id}  │ GET      │ Obtener transacción específica             [AUTH REQ]  │
+    │ /transactions/{id}  │ PUT      │ Actualizar transacción existente           [AUTH REQ]  │
+    │ /transactions/{id}  │ DELETE   │ Eliminar transacción                       [AUTH REQ]  │
+    └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
+    
+    ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+    │                         GESTIÓN DE CATEGORÍAS                                           │
+    ├─────────────────────┬──────────┬─────────────────────────────────────────────────────────┤
+    │ Endpoint            │ Método   │ Descripción                                             │
+    ├─────────────────────┼──────────┼─────────────────────────────────────────────────────────┤
+    │ /categories         │ GET      │ Listar categorías disponibles              [AUTH REQ]  │
+    │ /categories         │ POST     │ Crear nueva categoría                       [AUTH REQ]  │
+    │ /categories/{id}    │ GET      │ Obtener categoría específica               [AUTH REQ]  │
+    │ /categories/{id}    │ PUT      │ Actualizar categoría existente             [AUTH REQ]  │
+    │ /categories/{id}    │ DELETE   │ Eliminar categoría                         [AUTH REQ]  │
+    └─────────────────────┴──────────┴─────────────────────────────────────────────────────────┘
     
     📊 Recursos de Producción:
-    • API Gateway: ${module.finance_tracker.api_gateway_id}
-    • Lambda Functions: 5 funciones con ${var.lambda_memory_size}MB RAM
-    • DynamoDB Table: 1 tabla (Single Table Design) con Point-in-Time Recovery
-    • CloudWatch Alarms: ${length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1} alarmas activas
+    • API Gateway: ${module.finance_tracker.api_gateway_id} con throttling configurado
+    • Lambda Functions: 5 funciones con ${var.lambda_memory_size}MB RAM cada una
+    • DynamoDB Table: ${module.finance_tracker.dynamodb_table_name} (Single Table Design)
+    • Lambda Layer: Dependencies layer optimizado para producción
+    • CloudWatch: ${length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1} alarmas activas
+    • S3 Bucket: para artefactos de deployment con versionado
     
-    🔍 Monitoreo:
-    • Lambda Logs: aws logs tail /aws/lambda/${var.project_name}-prod-{function} --follow
-    • API Logs: aws logs tail /aws/apigateway/${var.project_name}-prod --follow
+    🔍 Comandos de Monitoreo:
+    • Health Check: curl ${module.finance_tracker.health_check_url}
+    • Ver Logs API: aws logs tail /aws/apigateway/${var.project_name}-prod --follow
+    • Ver Logs Lambda: aws logs tail /aws/lambda/${var.project_name}-prod-{function} --follow
     • CloudWatch Console: https://${var.aws_region}.console.aws.amazon.com/cloudwatch/
     
     ✅ Características de Producción:
-    • High Availability: Habilitada
+    • [AUTH REQ] = Requiere token de autenticación JWT
+    • High Availability: Multi-AZ deployment habilitado
     • Point-in-Time Recovery: Habilitado para DynamoDB
-    • Monitoring: ${length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1} alarmas configuradas
-    • Security: CORS configurado específicamente
-    • Backup: Automático para todas las tablas
+    • Monitoring: ${length(aws_cloudwatch_metric_alarm.lambda_errors) + length(aws_cloudwatch_metric_alarm.lambda_duration) + 1} alarmas CloudWatch configuradas
+    • Security: CORS configurado específicamente para dominios de producción
+    • Backup: Automático para todas las tablas DynamoDB
+    • Encryption: At-rest y in-transit habilitado
+    • Throttling: Rate limiting configurado en API Gateway
+    
+    📝 Notas de Producción:
+    • Todos los endpoints están bajo HTTPS
+    • Logs con retención extendida configurada
+    • Variables de entorno optimizadas para producción
+    • Configuración de memoria y timeout optimizada
+    
+    🔗 URLs Completas Disponibles en: terraform output api_endpoints_table
     
     ⚠️  Importante: Este es un entorno de producción. Todos los cambios deben ser probados en desarrollo primero.
   EOT

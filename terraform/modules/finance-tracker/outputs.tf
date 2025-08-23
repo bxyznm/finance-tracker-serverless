@@ -207,3 +207,153 @@ output "api_endpoints" {
     auth         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/auth"
   }
 }
+
+# -----------------------------------------------------------------------------
+# Detailed API Endpoints Table
+# -----------------------------------------------------------------------------
+
+output "api_endpoints_table" {
+  description = "Tabla detallada de endpoints organizados por categoría"
+  value = {
+    base_url = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}"
+    
+    # Endpoints de Sistema
+    system = {
+      health_check = {
+        method      = "GET"
+        path        = "/health"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/health"
+        description = "Verificar estado del sistema"
+        auth_required = false
+      }
+    }
+    
+    # Endpoints de Autenticación
+    authentication = {
+      login = {
+        method      = "POST"
+        path        = "/auth/login"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/auth/login"
+        description = "Iniciar sesión de usuario"
+        auth_required = false
+      }
+      register = {
+        method      = "POST"
+        path        = "/auth/register"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/auth/register"
+        description = "Registrar nuevo usuario"
+        auth_required = false
+      }
+      refresh_token = {
+        method      = "POST"
+        path        = "/auth/refresh"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/auth/refresh"
+        description = "Renovar token de acceso"
+        auth_required = true
+      }
+    }
+    
+    # Endpoints de Gestión de Usuarios
+    user_management = {
+      get_profile = {
+        method      = "GET"
+        path        = "/users/profile"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/profile"
+        description = "Obtener perfil del usuario actual"
+        auth_required = true
+      }
+      update_profile = {
+        method      = "PUT"
+        path        = "/users/profile"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/profile"
+        description = "Actualizar perfil del usuario"
+        auth_required = true
+      }
+      delete_account = {
+        method      = "DELETE"
+        path        = "/users/profile"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/users/profile"
+        description = "Eliminar cuenta de usuario"
+        auth_required = true
+      }
+    }
+    
+    # Endpoints de Gestión de Transacciones
+    transactions = {
+      list_transactions = {
+        method      = "GET"
+        path        = "/transactions"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/transactions"
+        description = "Listar transacciones del usuario"
+        auth_required = true
+      }
+      create_transaction = {
+        method      = "POST"
+        path        = "/transactions"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/transactions"
+        description = "Crear nueva transacción"
+        auth_required = true
+      }
+      get_transaction = {
+        method      = "GET"
+        path        = "/transactions/{id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/transactions/{id}"
+        description = "Obtener transacción específica"
+        auth_required = true
+      }
+      update_transaction = {
+        method      = "PUT"
+        path        = "/transactions/{id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/transactions/{id}"
+        description = "Actualizar transacción existente"
+        auth_required = true
+      }
+      delete_transaction = {
+        method      = "DELETE"
+        path        = "/transactions/{id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/transactions/{id}"
+        description = "Eliminar transacción"
+        auth_required = true
+      }
+    }
+    
+    # Endpoints de Gestión de Categorías
+    categories = {
+      list_categories = {
+        method      = "GET"
+        path        = "/categories"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/categories"
+        description = "Listar categorías disponibles"
+        auth_required = true
+      }
+      create_category = {
+        method      = "POST"
+        path        = "/categories"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/categories"
+        description = "Crear nueva categoría"
+        auth_required = true
+      }
+      get_category = {
+        method      = "GET"
+        path        = "/categories/{id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/categories/{id}"
+        description = "Obtener categoría específica"
+        auth_required = true
+      }
+      update_category = {
+        method      = "PUT"
+        path        = "/categories/{id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/categories/{id}"
+        description = "Actualizar categoría existente"
+        auth_required = true
+      }
+      delete_category = {
+        method      = "DELETE"
+        path        = "/categories/{id}"
+        url         = "https://${aws_api_gateway_rest_api.finance_tracker_api.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.finance_tracker_stage.stage_name}/categories/{id}"
+        description = "Eliminar categoría"
+        auth_required = true
+      }
+    }
+  }
+}

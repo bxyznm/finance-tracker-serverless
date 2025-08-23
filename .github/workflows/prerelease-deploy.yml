@@ -1,11 +1,15 @@
 # Workflow para crear pre-releases automáticos desde main
-# Cualquier push a main genera un pre-release y despliega automáticamente a dev
+# Se ejecuta solo cuando hay cambios en backend/ o .github/workflows/
+# Cualquier push a main con estos cambios genera un pre-release y despliega automáticamente a dev
 name: Pre-Release Deployment
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'
 
 permissions:
   contents: write
@@ -29,6 +33,7 @@ jobs:
           echo "   Commit: ${{ github.sha }}"
           echo "   Ambiente: development (auto-deploy)"
           echo "   Ejecutado por: ${{ github.actor }}"
+          echo "   Trigger: Cambios detectados en backend/ o .github/workflows/"
 
       - name: Set up Python
         uses: actions/setup-python@v4
