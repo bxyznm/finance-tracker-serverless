@@ -8,7 +8,8 @@ Aplicación serverless para gestión de finanzas personales construida con Pytho
 
 - **🔗 API Base**: https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api
 - **💚 Health Check**: https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/health  
-- **👥 Users API**: https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/users
+- **� Auth API**: https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/auth
+- **�👥 Users API**: https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/users
 
 ## ✅ Funcionalidades Implementadas
 
@@ -17,31 +18,50 @@ Aplicación serverless para gestión de finanzas personales construida con Pytho
 curl -X GET https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/health
 ```
 
+### Autenticación ✅
+```bash
+# Registrar nuevo usuario
+curl -X POST https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Tu Nombre","email":"tu@email.com","password":"TuPassword123!","currency":"MXN"}'
+
+# Iniciar sesión
+curl -X POST https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"tu@email.com","password":"TuPassword123!"}'
+
+# Renovar token de acceso
+curl -X POST https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"tu_refresh_token_aqui"}'
+```
+
 ### CRUD de Usuarios ✅
 ```bash
-# Crear usuario
-curl -X POST https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Tu Nombre","email":"tu@email.com","currency":"MXN"}'
+# Obtener usuario por ID (requiere autenticación)
+curl -X GET https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/users/{user_id} \
+  -H "Authorization: Bearer tu_access_token"
 
-# Obtener usuario por ID  
-curl -X GET https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/users/{user_id}
-
-# Actualizar usuario
+# Actualizar usuario (requiere autenticación)
 curl -X PUT https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/users/{user_id} \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu_access_token" \
   -d '{"name":"Nuevo Nombre","currency":"USD"}'
 
-# Eliminar usuario (soft delete)
-curl -X DELETE https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/users/{user_id}
+# Eliminar usuario - soft delete (requiere autenticación)
+curl -X DELETE https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/users/{user_id} \
+  -H "Authorization: Bearer tu_access_token"
 ```
 
 ### Validaciones Implementadas ✅
+- ✅ Sistema de autenticación JWT con access/refresh tokens
+- ✅ Validación de contraseñas seguras (8+ caracteres, mayús/minús/número/especial)
 - ✅ Email único y formato válido
-- ✅ Campos requeridos (name, email)
+- ✅ Campos requeridos (name, email, password)
 - ✅ Currency en formato ISO (MXN, USD, etc.)
 - ✅ Error handling descriptivo con Pydantic
 - ✅ Soft delete (marcar usuario como inactivo)
+- ✅ Endpoints de autenticación separados (/auth/) y gestión de usuarios (/users/)
 
 ## 🏗️ Arquitectura
 
@@ -85,11 +105,30 @@ curl -X DELETE https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/use
 
 ## 📋 API Reference
 
-### Crear Usuario
-- **Endpoint**: `POST /users`
-- **Campos requeridos**: `name` (string), `email` (string)
+### Endpoints de Autenticación
+
+#### Registrar Usuario
+- **Endpoint**: `POST /auth/register`
+- **Campos requeridos**: `name` (string), `email` (string), `password` (string)
 - **Campos opcionales**: `currency` (string, default: "MXN")
-- **Validaciones**: Email único, formato válido, longitud de nombre
+- **Validaciones**: Email único, formato válido, contraseña segura
+
+#### Iniciar Sesión
+- **Endpoint**: `POST /auth/login`
+- **Campos requeridos**: `email` (string), `password` (string)
+- **Response**: Access token + Refresh token + datos del usuario
+
+#### Renovar Token
+- **Endpoint**: `POST /auth/refresh`  
+- **Campos requeridos**: `refresh_token` (string)
+- **Response**: Nuevo access token
+
+### Endpoints de Usuarios (Requieren Autenticación)
+
+#### Obtener Usuario
+- **Endpoint**: `GET /users/{user_id}`
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Validaciones**: Solo el propio usuario puede acceder a sus datos
 
 ### Ejemplo de Respuesta Exitosa
 ```json

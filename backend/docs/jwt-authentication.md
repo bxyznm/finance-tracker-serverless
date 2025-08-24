@@ -6,6 +6,11 @@ Este documento describe la implementación completa de autenticación JWT en el 
 
 La implementación JWT proporciona autenticación segura y stateless para todos los endpoints que requieren autorización. Utiliza tokens de acceso de corta duración y tokens de refresco de larga duración para mantener la seguridad y usabilidad.
 
+**🔄 Cambio Importante**: Los endpoints de autenticación ahora están separados en `/auth/` para mejor organización:
+- `/auth/register` - Registro de usuarios
+- `/auth/login` - Inicio de sesión  
+- `/auth/refresh` - Renovación de tokens
+
 ## 🔐 Arquitectura de Seguridad
 
 ### Token Types
@@ -38,18 +43,33 @@ JWT_SECRET_KEY=your-secret-key-change-in-production  # Required in production
 - `validate_token_from_event(event)`: Validate token from event
 - `require_auth(handler_func)`: Decorator for protected endpoints
 
-### 2. Updated User Handlers (`src/handlers/users.py`)
+### 2. Authentication Handlers (`src/handlers/auth.py`)
 
 #### Authentication Flow
 ```python
-# Login returns JWT tokens
-POST /users/login
+# Registro - ahora en endpoint separado
+POST /auth/register
 {
+    "name": "Juan Pérez",
     "email": "user@example.com",
-    "password": "password"
+    "password": "SecurePass123!",
+    "currency": "MXN"
 }
 
-# Response
+# Login - movido a endpoint de auth
+POST /auth/login  
+{
+    "email": "user@example.com",
+    "password": "SecurePass123!"
+}
+
+# Refresh - endpoint actualizado
+POST /auth/refresh
+{
+    "refresh_token": "eyJ..."
+}
+
+# Response para login y register
 {
     "message": "Login successful",
     "user": {...},
@@ -64,18 +84,36 @@ POST /users/login
 }
 ```
 
-#### Protected Endpoints
-All endpoints except registration, login, and refresh-token require authentication:
+#### User Management Handlers (`src/handlers/users.py`)
+Los endpoints de usuarios ahora se enfocan únicamente en operaciones CRUD, sin funciones de autenticación:
 
-- `GET /users` - User summary (authenticated)
+#### Protected Endpoints
+Todos los endpoints de usuarios ahora requieren autenticación (fueron removidas las funciones de auth):
+
 - `GET /users/{user_id}` - Get user by ID (own data only)
-- `PUT /users/{user_id}` - Update user (own data only)
+- `PUT /users/{user_id}` - Update user (own data only)  
 - `DELETE /users/{user_id}` - Delete user (own account only)
+
+#### Public Endpoints (no authentication required)
+- `GET /health` - Health check
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `POST /auth/refresh` - Token refresh
 
 ### 3. API Gateway Integration
 
-#### New Endpoints
-- `POST /users/refresh-token` - Token refresh endpoint
+#### New Authentication Endpoints Structure
+```
+/auth/
+  ├── POST /register     # User registration
+  ├── POST /login        # User authentication
+  └── POST /refresh      # Token refresh
+  
+/users/
+  ├── GET /{user_id}     # Get user (authenticated)
+  ├── PUT /{user_id}     # Update user (authenticated)  
+  └── DELETE /{user_id}  # Delete user (authenticated)
+```
 
 #### Authentication Headers
 ```bash
@@ -86,25 +124,33 @@ Authorization: Bearer <access_token>
 
 ### 1. User Registration
 ```bash
-POST /users
+POST /auth/register
 {
     "name": "John Doe",
     "email": "john@example.com",
-    "password": "securepassword",
+    "password": "SecurePass123!",
     "currency": "MXN"
 }
 ```
 
-### 2. User Login
+### 2. User Login  
 ```bash
-POST /users/login
+POST /auth/login
 {
     "email": "john@example.com",
     "password": "securepassword"
 }
 ```
 
-### 3. Using Protected Endpoints
+### 3. Token Refresh
+```bash
+POST /auth/refresh
+{
+    "refresh_token": "eyJ..."
+}
+```
+
+### 4. Using Protected Endpoints
 ```bash
 GET /users/user123
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...

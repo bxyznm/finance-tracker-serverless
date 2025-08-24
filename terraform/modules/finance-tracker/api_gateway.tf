@@ -38,20 +38,6 @@ resource "aws_api_gateway_resource" "users" {
   path_part   = "users"
 }
 
-# Users login resource - /users/login
-resource "aws_api_gateway_resource" "users_login" {
-  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
-  parent_id   = aws_api_gateway_resource.users.id
-  path_part   = "login"
-}
-
-# Users refresh-token resource - /users/refresh-token
-resource "aws_api_gateway_resource" "users_refresh_token" {
-  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
-  parent_id   = aws_api_gateway_resource.users.id
-  path_part   = "refresh-token"
-}
-
 # Recurso /users/{user_id} para operaciones CRUD por ID
 resource "aws_api_gateway_resource" "users_user_id" {
   rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
@@ -80,6 +66,27 @@ resource "aws_api_gateway_resource" "auth" {
   path_part   = "auth"
 }
 
+# Auth login resource - /auth/login
+resource "aws_api_gateway_resource" "auth_login" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.auth.id
+  path_part   = "login"
+}
+
+# Auth register resource - /auth/register  
+resource "aws_api_gateway_resource" "auth_register" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.auth.id
+  path_part   = "register"
+}
+
+# Auth refresh resource - /auth/refresh
+resource "aws_api_gateway_resource" "auth_refresh" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.auth.id
+  path_part   = "refresh"
+}
+
 # -----------------------------------------------------------------------------
 # API Gateway Methods y Integraciones
 # -----------------------------------------------------------------------------
@@ -102,7 +109,7 @@ resource "aws_api_gateway_integration" "health_integration" {
   uri                     = aws_lambda_function.health.invoke_arn
 }
 
-# Users - GET/POST /users
+# Users - GET /users (solo GET, POST movido a auth)
 resource "aws_api_gateway_method" "users_get" {
   rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
   resource_id   = aws_api_gateway_resource.users.id
@@ -110,63 +117,10 @@ resource "aws_api_gateway_method" "users_get" {
   authorization = "NONE" # TODO: Implementar autorización
 }
 
-resource "aws_api_gateway_method" "users_post" {
-  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
-  resource_id   = aws_api_gateway_resource.users.id
-  http_method   = "POST"
-  authorization = "NONE"
-}
-
 resource "aws_api_gateway_integration" "users_get_integration" {
   rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
   resource_id = aws_api_gateway_resource.users.id
   http_method = aws_api_gateway_method.users_get.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.users.invoke_arn
-}
-
-resource "aws_api_gateway_integration" "users_post_integration" {
-  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
-  resource_id = aws_api_gateway_resource.users.id
-  http_method = aws_api_gateway_method.users_post.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.users.invoke_arn
-}
-
-# Users Login - POST /users/login
-resource "aws_api_gateway_method" "users_login_post" {
-  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
-  resource_id   = aws_api_gateway_resource.users_login.id
-  http_method   = "POST"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "users_login_post_integration" {
-  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
-  resource_id = aws_api_gateway_resource.users_login.id
-  http_method = aws_api_gateway_method.users_login_post.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.users.invoke_arn
-}
-
-# Users Refresh Token - POST /users/refresh-token
-resource "aws_api_gateway_method" "users_refresh_token_post" {
-  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
-  resource_id   = aws_api_gateway_resource.users_refresh_token.id
-  http_method   = "POST"
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "users_refresh_token_post_integration" {
-  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
-  resource_id = aws_api_gateway_resource.users_refresh_token.id
-  http_method = aws_api_gateway_method.users_refresh_token_post.http_method
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
@@ -297,18 +251,54 @@ resource "aws_api_gateway_integration" "categories_post_integration" {
   uri                     = aws_lambda_function.categories.invoke_arn
 }
 
-# Auth - POST /auth
-resource "aws_api_gateway_method" "auth_post" {
+# Auth Login - POST /auth/login
+resource "aws_api_gateway_method" "auth_login_post" {
   rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
-  resource_id   = aws_api_gateway_resource.auth.id
+  resource_id   = aws_api_gateway_resource.auth_login.id
   http_method   = "POST"
   authorization = "NONE"
 }
 
-resource "aws_api_gateway_integration" "auth_integration" {
+resource "aws_api_gateway_integration" "auth_login_integration" {
   rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
-  resource_id = aws_api_gateway_resource.auth.id
-  http_method = aws_api_gateway_method.auth_post.http_method
+  resource_id = aws_api_gateway_resource.auth_login.id
+  http_method = aws_api_gateway_method.auth_login_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.auth.invoke_arn
+}
+
+# Auth Register - POST /auth/register
+resource "aws_api_gateway_method" "auth_register_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.auth_register.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "auth_register_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.auth_register.id
+  http_method = aws_api_gateway_method.auth_register_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.auth.invoke_arn
+}
+
+# Auth Refresh - POST /auth/refresh
+resource "aws_api_gateway_method" "auth_refresh_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.auth_refresh.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "auth_refresh_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.auth_refresh.id
+  http_method = aws_api_gateway_method.auth_refresh_post.http_method
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"

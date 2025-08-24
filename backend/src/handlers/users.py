@@ -43,10 +43,11 @@ db_client = DynamoDBClient()
 
 def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
     """
-    Main handler for all user operations
+    Main handler for user management operations (CRUD only)
+    Authentication endpoints moved to auth handler
     """
     try:
-        logger.info(f"Processing event: {event}")
+        logger.info(f"Processing users event: {event}")
         
         http_method = event.get('httpMethod', '')
         path_parameters = event.get('pathParameters') or {}
@@ -63,18 +64,8 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
         else:
             body_data = {}
         
-        # Routing based on HTTP method and path
-        if http_method == 'POST':
-            # POST /users/login - Authentication
-            if path.endswith('/login'):
-                return login_user_handler(body_data)
-            # POST /users/refresh-token - Token refresh
-            elif path.endswith('/refresh-token'):
-                return refresh_token_handler(body_data)
-            # POST /users - Registration
-            else:
-                return create_user_handler(body_data)
-        elif http_method == 'GET':
+        # Routing based on HTTP method and path - only CRUD operations
+        if http_method == 'GET':
             user_id = path_parameters.get('user_id')
             if user_id:
                 return get_user_handler(user_id, event)
@@ -91,150 +82,11 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 return create_response(400, {"error": "user_id is required for DELETE requests"})
             return delete_user_handler(user_id, event)
         else:
-            return create_response(405, {"error": f"Method {http_method} not allowed"})
+            return create_response(405, {"error": f"Method {http_method} not allowed for users endpoint"})
             
     except Exception as e:
-        logger.error(f"Error in lambda_handler: {str(e)}", exc_info=True)
+        logger.error(f"Error in users lambda_handler: {str(e)}", exc_info=True)
         return internal_server_error_response("Internal server error")
-
-def create_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Create a new user with enhanced security validations
-    """
-    try:
-        logger.info(f"Creating user with email: {data.get('email', 'N/A')}")
-        
-        # Validate data using Pydantic
-        user_create = UserCreate(**data)
-        
-        # Normalize email to lowercase
-        email_normalized = user_create.email.lower()
-        
-        # Check if email already exists
-        existing_user = db_client.get_user_by_email(email_normalized)
-        if existing_user:
-            logger.warning(f"Registration attempt with existing email: {email_normalized}")
-            return create_response(409, {
-                "error": "Email is already registered",
-                "message": "If you already have an account, try logging in or recovering your password"
-            })
-        
-        # Create user using helper function
-        user_data = create_user_from_input(user_create)
-        created_user = db_client.create_user(user_data)
-        
-        # Convert to User model for response (without password)
-        user_response = User.from_dynamodb_item(created_user)
-        
-        logger.info(f"User created successfully: {user_response.user_id}")
-        return create_response(201, {
-            "message": "User created successfully",
-            "user": user_response.model_dump(),
-            "next_steps": [
-                "Verify your email to fully activate your account",
-                "Log in with your credentials"
-            ]
-        })
-        
-    except ValueError as e:
-        logger.error(f"Validation error in registration: {str(e)}")
-        return create_response(400, {
-            "error": "Invalid registration data",
-            "details": str(e)
-        })
-    except Exception as e:
-        logger.error(f"Internal error creating user: {str(e)}", exc_info=True)
-        return internal_server_error_response("Internal server error")
-
-def login_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Authenticate user (new login function)
-    """
-    try:
-        from models.user import UserLogin, verify_password
-        
-        logger.info(f"Login attempt for email: {data.get('email', 'N/A')}")
-        
-        # Validate login data
-        login_data = UserLogin(**data)
-        email_normalized = login_data.email.lower()
-        
-        # Find user by email
-        user = db_client.get_user_by_email(email_normalized)
-        if not user:
-            logger.warning(f"Login attempt with unregistered email: {email_normalized}")
-            return create_response(401, {
-                "error": "Invalid credentials",
-                "message": "Email or password incorrect"
-            })
-        
-        # Check if account is active
-        if not user.get('is_active', True):
-            logger.warning(f"Login attempt with inactive account: {email_normalized}")
-            return create_response(403, {
-                "error": "Inactive account",
-                "message": "Your account has been deactivated. Contact support"
-            })
-        
-        # Verify password
-        if not verify_password(login_data.password, user.get('password_hash', '')):
-            # Increment failed attempts
-            failed_attempts = user.get('failed_login_attempts', 0) + 1
-            db_client.update_failed_login_attempts(user['user_id'], failed_attempts)
-            
-            logger.warning(f"Incorrect password for user: {email_normalized} (attempts: {failed_attempts})")
-            
-            # Block account after 5 failed attempts
-            if failed_attempts >= 5:
-                db_client.deactivate_user_temporarily(user['user_id'])
-                logger.warning(f"Account temporarily blocked due to failed attempts: {email_normalized}")
-                return create_response(423, {
-                    "error": "Account blocked",
-                    "message": "Too many failed attempts. Your account has been temporarily blocked"
-                })
-            
-            return create_response(401, {
-                "error": "Invalid credentials",
-                "message": "Email or password incorrect"
-            })
-        
-        # Successful login - reset failed attempts and update last login
-        db_client.successful_login(user['user_id'])
-        
-        # Convert to User model for response (without password)
-        user_response = User.from_dynamodb_item(user)
-        
-        logger.info(f"Successful login for user: {user_response.user_id}")
-        
-        # Generate JWT tokens
-        try:
-            token_data = create_token_response(user['user_id'], user['email'])
-            
-            return create_response(200, {
-                "message": "Login successful",
-                "user": user_response.model_dump(),
-                "tokens": token_data
-            })
-        except Exception as token_error:
-            logger.error(f"Error creating JWT tokens: {str(token_error)}")
-            return internal_server_error_response("Failed to generate authentication tokens")
-        
-    except ValueError as e:
-        logger.error(f"Validation error in login: {str(e)}")
-        return create_response(400, {
-            "error": "Invalid login data",
-            "details": str(e)
-        })
-    except Exception as e:
-        logger.error(f"Internal error in login: {str(e)}", exc_info=True)
-        return internal_server_error_response("Internal server error")
-        
-    except ValueError as e:
-        logger.error(f"Error de validación: {str(e)}")
-        return create_response(400, {"error": str(e)})
-    except Exception as e:
-        logger.error(f"Error creando usuario: {str(e)}", exc_info=True)
-        return internal_server_error_response("Error interno del servidor")
 
 def get_user_handler(user_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -420,43 +272,6 @@ def delete_user_handler(user_id: str, event: Dict[str, Any]) -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error deleting user {user_id}: {str(e)}", exc_info=True)
-        return internal_server_error_response("Internal server error")
-
-def refresh_token_handler(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Refresh access token using refresh token
-    """
-    try:
-        from utils.jwt_auth import refresh_access_token
-        
-        logger.info("Processing token refresh request")
-        
-        # Validate input data
-        if not data.get('refresh_token'):
-            return create_response(400, {
-                "error": "Missing refresh token",
-                "message": "refresh_token is required"
-            })
-        
-        # Refresh the token
-        try:
-            new_token_data = refresh_access_token(data['refresh_token'])
-            
-            logger.info(f"Token refreshed successfully for user: {new_token_data['user_id']}")
-            return create_response(200, {
-                "message": "Token refreshed successfully",
-                "tokens": new_token_data
-            })
-            
-        except Exception as refresh_error:
-            logger.warning(f"Token refresh failed: {str(refresh_error)}")
-            return create_response(401, {
-                "error": "Invalid refresh token",
-                "message": "The provided refresh token is invalid or expired"
-            })
-    
-    except Exception as e:
-        logger.error(f"Error in token refresh: {str(e)}", exc_info=True)
         return internal_server_error_response("Internal server error")
 
 def get_user_summary_handler(event: Dict[str, Any]) -> Dict[str, Any]:

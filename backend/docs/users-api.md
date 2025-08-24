@@ -1,9 +1,43 @@
 # API de Usuarios - Finance Tracker
 
 ## Descripción
-API serverless para gestión de usuarios del sistema Finance Tracker, implementada con AWS Lambda, DynamoDB y Python.
+API serverless para gestión de usuarios del sistema Finance Tracker, implementada con AWS Lambda, DynamoDB y Python. Incluye autenticación JWT para endpoints seguros.
+
+**🔄 Cambio Importante**: Los endpoints de autenticación han sido reorganizados para mejor separación de responsabilidades:
+- **Autenticación**: `/auth/register`, `/auth/login`, `/auth/refresh`  
+- **Gestión de Usuarios**: `/users/{user_id}` (CRUD operations)
+
+## 🔐 Autenticación JWT
+
+### Sistema de Tokens
+- **Access Token**: Válido por 30 minutos, usado para autenticar requests
+- **Refresh Token**: Válido por 7 días, usado para renovar access tokens
+- **Algoritmo**: HS256 (HMAC with SHA-256)
+- **Header requerido**: `Authorization: Bearer <access_token>`
+
+### Endpoints Públicos (sin autenticación)
+- `POST /auth/register` - Registro de usuario
+- `POST /auth/login` - Inicio de sesión
+- `POST /auth/refresh` - Renovación de tokens
+- `GET /health` - Estado del sistema
+
+### Endpoints Privados (requieren autenticación)
+- `GET /users/{user_id}` - Obtener datos de usuario
+- `PUT /users/{user_id}` - Actualizar datos de usuario  
+- `DELETE /users/{user_id}` - Eliminar cuenta de usuario
+
+### Control de Acceso
+- Los usuarios solo pueden acceder/modificar sus propios datos
+- Intento de acceso a datos de otro usuario retorna `403 Forbidden`
+- Tokens inválidos o expirados retornan `401 Unauthorized`
 
 ## Características de Seguridad
+
+### ✅ Autenticación JWT
+- Access tokens de corta duración (30 min)
+- Refresh tokens de larga duración (7 días)
+- Validación de expiración automática
+- Extracción segura de tokens desde headers
 
 ### ✅ Validación de Contraseñas
 - Mínimo 8 caracteres
@@ -26,7 +60,7 @@ API serverless para gestión de usuarios del sistema Finance Tracker, implementa
 ## Endpoints
 
 ### 1. Registro de Usuario
-**POST** `/users`
+**POST** `/auth/register`
 
 Crear una nueva cuenta de usuario.
 
@@ -56,9 +90,17 @@ Crear una nueva cuenta de usuario.
     "email_verified": false,
     "last_login_at": null
   },
+  "tokens": {
+    "access_token": "eyJ...",
+    "refresh_token": "eyJ...",
+    "token_type": "Bearer",
+    "expires_in": 1800,
+    "user_id": "usr_123abc456def",
+    "email": "bryan@example.com"
+  },
   "next_steps": [
     "Verifica tu email para activar completamente tu cuenta",
-    "Inicia sesión con tus credenciales"
+    "Guarda tus tokens de forma segura"
   ]
 }
 ```
@@ -69,10 +111,10 @@ Crear una nueva cuenta de usuario.
 
 ---
 
-### 2. Login de Usuario
-**POST** `/users/login`
+### 2. Inicio de Sesión
+**POST** `/auth/login`
 
-Iniciar sesión con credenciales.
+Autenticar un usuario existente y obtener tokens JWT.
 
 **Request Body:**
 ```json
@@ -85,20 +127,22 @@ Iniciar sesión con credenciales.
 **Response Success (200):**
 ```json
 {
-  "message": "Login exitoso",
+  "message": "Login successful",
   "user": {
     "user_id": "usr_123abc456def",
     "name": "Bryan Torres",
     "email": "bryan@example.com",
     "currency": "MXN",
-    "created_at": "2025-08-22T12:00:00.000Z",
-    "updated_at": "2025-08-22T12:00:00.000Z",
-    "is_active": true,
-    "email_verified": false,
-    "last_login_at": "2025-08-22T15:30:00.000Z"
+    "last_login_at": "2025-08-22T12:30:00.000Z"
   },
-  "access_token": "TODO_JWT_TOKEN",
-  "token_type": "bearer"
+  "tokens": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "Bearer",
+    "expires_in": 1800,
+    "user_id": "usr_123abc456def",
+    "email": "bryan@example.com"
+  }
 }
 ```
 
@@ -110,10 +154,90 @@ Iniciar sesión con credenciales.
 
 ---
 
-### 3. Obtener Usuario
+### 3. Renovar Token de Acceso
+**POST** `/auth/refresh`
+
+Obtener un nuevo access token usando un refresh token válido.
+
+**Request Body:**
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response Success (200):**
+```json
+{
+  "message": "Token refreshed successfully",
+  "tokens": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "Bearer",
+    "expires_in": 1800,
+    "user_id": "usr_123abc456def",
+    "email": "bryan@example.com"
+  }
+}
+```
+
+---
+
+### 2. Login de Usuario
+**POST** `/users/login`
+
+Iniciar sesión con credenciales y obtener tokens JWT.
+
+**Request Body:**
+```json
+{
+  "email": "bryan@example.com",
+  "password": "MiContraseña123!"
+}
+```
+
+**Response Success (200):**
+```json
+{
+  "message": "Login successful",
+  "user": {
+    "user_id": "usr_123abc456def",
+    "name": "Bryan Torres",
+    "email": "bryan@example.com",
+    "currency": "MXN",
+    "created_at": "2025-08-22T12:00:00.000Z",
+    "updated_at": "2025-08-22T12:00:00.000Z",
+    "is_active": true,
+    "email_verified": false,
+    "last_login_at": "2025-08-22T15:30:00.000Z"
+  },
+  "tokens": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "Bearer",
+    "expires_in": 1800,
+    "user_id": "usr_123abc456def",
+    "email": "bryan@example.com"
+  }
+**Error Responses:**
+- `400` - Refresh token faltante
+- `401` - Refresh token inválido o expirado
+
+---
+
+### 4. Obtener Usuario 🔐
 **GET** `/users/{user_id}`
 
-Obtener información de un usuario específico.
+Obtener información de un usuario específico. **Requiere autenticación JWT.**
+
+**Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+```
+
+**Restricciones:**
+- Solo puedes acceder a tu propia información de usuario
+- El `user_id` debe coincidir con el usuario del token JWT
 
 **Response Success (200):**
 ```json
@@ -133,14 +257,25 @@ Obtener información de un usuario específico.
 ```
 
 **Error Responses:**
+- `401` - Token JWT faltante o inválido
+- `403` - Acceso denegado (intentando acceder a datos de otro usuario)
 - `404` - Usuario no encontrado
 
 ---
 
-### 4. Actualizar Usuario
+### 5. Actualizar Usuario 🔐
 **PUT** `/users/{user_id}`
 
-Actualizar información del usuario. Para cambios sensibles (email o contraseña) se requiere la contraseña actual.
+Actualizar información del usuario. **Requiere autenticación JWT.** Para cambios sensibles (email o contraseña) se requiere la contraseña actual.
+
+**Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Restricciones:**
+- Solo puedes actualizar tu propia información
+- El `user_id` debe coincidir con el usuario del token JWT
 
 **Request Body (actualización básica):**
 ```json
@@ -188,16 +323,26 @@ Actualizar información del usuario. Para cambios sensibles (email o contraseña
 
 **Error Responses:**
 - `400` - Datos inválidos o contraseña actual requerida
-- `401` - Contraseña actual incorrecta
+- `401` - Token JWT faltante o inválido, o contraseña actual incorrecta
+- `403` - Acceso denegado (intentando actualizar otro usuario)
 - `404` - Usuario no encontrado
 - `409` - Email ya en uso
 
 ---
 
-### 5. Eliminar Usuario
+### 6. Eliminar Usuario 🔐
 **DELETE** `/users/{user_id}`
 
-Eliminar usuario (soft delete - marca como inactivo).
+Eliminar usuario (soft delete - marca como inactivo). **Requiere autenticación JWT.**
+
+**Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Restricciones:**
+- Solo puedes eliminar tu propia cuenta
+- El `user_id` debe coincidir con el usuario del token JWT
 
 **Response Success (200):**
 ```json
@@ -208,24 +353,28 @@ Eliminar usuario (soft delete - marca como inactivo).
 ```
 
 **Error Responses:**
+- `401` - Token JWT faltante o inválido
+- `403` - Acceso denegado (intentando eliminar otro usuario)
 - `404` - Usuario no encontrado
 
 ---
 
-### 6. Información de la API
+### 7. Información de la API
 **GET** `/users`
 
-Obtener información sobre la API y endpoints disponibles.
+Obtener información sobre la API y endpoints disponibles. **Endpoint público.**
 
 **Response Success (200):**
 ```json
 {
   "message": "API de usuarios de Finance Tracker",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "timestamp": "2025-08-22T16:00:00.000Z",
   "features": [
     "Registro de usuarios con validación de contraseña",
+    "Autenticación JWT con tokens de acceso y refresh",
     "Login con protección contra ataques de fuerza bruta",
+    "Control de acceso basado en usuarios",
     "Encriptación de contraseñas con bcrypt",
     "Validación de emails y datos",
     "Soft delete de usuarios",
@@ -305,12 +454,73 @@ curl -X POST https://api.finance-tracker.com/users \
   }'
 ```
 
-### Login:
+### Login y obtener tokens JWT:
 ```bash
 curl -X POST https://api.finance-tracker.com/users/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "bryan@example.com",
+    "password": "MiContraseña123!"
+  }'
+```
+
+### Acceder a endpoint protegido:
+```bash
+curl -X GET https://api.finance-tracker.com/users/usr_123abc456def \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Refresh token:
+```bash
+curl -X POST https://api.finance-tracker.com/users/refresh-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+## Manejo de Errores JWT
+
+### Errores de Autenticación Comunes
+
+**Token faltante (401):**
+```json
+{
+  "error": "Unauthorized",
+  "message": "Token de autorización requerido"
+}
+```
+
+**Token inválido (401):**
+```json
+{
+  "error": "Unauthorized", 
+  "message": "Token inválido o expirado"
+}
+```
+
+**Acceso denegado (403):**
+```json
+{
+  "error": "Forbidden",
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+### Flujo de Renovación de Token
+
+1. El token de acceso expira después de 15 minutos
+2. Usa el refresh token para obtener un nuevo token de acceso
+3. El refresh token expira después de 7 días
+4. Si el refresh token expira, el usuario debe hacer login nuevamente
+
+### Seguridad y Mejores Prácticas
+
+- **Tokens de acceso cortos**: 15 minutos para minimizar riesgo
+- **Refresh tokens largos**: 7 días para mejor experiencia de usuario
+- **Aislamiento de usuarios**: Cada usuario solo puede acceder a sus propios datos
+- **Headers seguros**: Tokens enviados en headers Authorization
+- **Validación estricta**: Verificación de firma y expiración en cada request
     "password": "MiContraseña123!"
   }'
 ```
