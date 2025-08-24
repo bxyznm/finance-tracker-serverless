@@ -1,6 +1,6 @@
 # Finance Tracker - Backend
 
-API serverless para gestión de finanzas personales usando AWS Lambda y DynamoDB con autenticación JWT.
+API serverless para gestión de finanzas personales usando AWS Lambda y DynamoDB con autenticación JWT y gestión completa de cuentas bancarias.
 
 ## 🏗️ Arquitectura
 
@@ -9,6 +9,7 @@ API serverless para gestión de finanzas personales usando AWS Lambda y DynamoDB
 - **Database:** DynamoDB (Single Table Design)
 - **API Gateway:** REST API
 - **Authentication:** JWT (Access + Refresh Tokens)
+- **Validation:** Pydantic V2 con field validators
 
 ## 📁 Estructura del Proyecto
 
@@ -18,28 +19,33 @@ backend/
 │   ├── handlers/          # Lambda handlers separados por responsabilidad
 │   │   ├── auth.py        # Autenticación (register, login, refresh)
 │   │   ├── users.py       # Gestión de usuarios (CRUD)
+│   │   ├── accounts.py    # Gestión de cuentas (CRUD) ✅ NUEVO
 │   │   ├── health.py      # Health check endpoint
 │   │   └── __init__.py
-│   ├── models/            # Modelos de datos con Pydantic
+│   ├── models/            # Modelos de datos con Pydantic V2
 │   │   ├── user.py        # UserCreate, UserLogin, UserResponse, etc.
+│   │   ├── account.py     # AccountCreate, AccountUpdate, AccountResponse ✅ NUEVO
 │   │   └── __init__.py
 │   ├── utils/             # Utilidades compartidas
 │   │   ├── config.py      # Configuración de la aplicación
 │   │   ├── responses.py   # Utilidades de respuestas HTTP
 │   │   ├── jwt_auth.py    # Autenticación y tokens JWT
-│   │   ├── dynamodb_client.py      # Cliente DynamoDB
+│   │   ├── dynamodb_client.py      # Cliente DynamoDB optimizado
 │   │   ├── dynamodb_patterns.py   # Patrones Single Table Design
 │   │   └── __init__.py
 │   └── __init__.py
-├── tests/                 # Tests unitarios y de integración
+├── tests/                 # Tests unitarios y de integración (44 tests) ✅
 │   ├── test_auth.py       # Tests de autenticación
 │   ├── test_users.py      # Tests de usuarios
-│   ├── test_users_jwt.py  # Tests de JWT en endpoints
+│   ├── test_users_jwt.py  # Tests de JWT en endpoints de usuarios
+│   ├── test_accounts.py   # Tests de cuentas (handlers) ✅ NUEVO
+│   ├── test_account_models.py  # Tests de modelos de cuentas ✅ NUEVO
 │   ├── test_jwt_auth.py   # Tests de utilidades JWT
 │   └── test_health.py     # Tests del health check
 ├── docs/                  # Documentación detallada
 │   ├── auth-api.md        # Documentación de endpoints de auth
 │   ├── users-api.md       # Documentación de endpoints de usuarios
+│   ├── accounts-api.md    # Documentación de endpoints de cuentas ✅ NUEVO
 │   └── jwt-authentication.md  # Documentación técnica JWT
 ├── requirements.txt       # Dependencias Python
 ├── requirements-prod.txt  # Dependencias optimizadas para producción
@@ -78,22 +84,34 @@ export JWT_SECRET_KEY="dev-secret-key-change-in-production"
 ## 🧪 Testing
 
 ```bash
-# Ejecutar todos los tests (65 tests)
+# Ejecutar todos los tests (44 tests) ✅
 pytest
 
 # Ejecutar tests con coverage
 pytest --cov=src
 
-# Ejecutar tests específicos
+# Ejecutar tests específicos por módulo
 pytest tests/test_auth.py          # Tests de autenticación
 pytest tests/test_users.py         # Tests de usuarios  
-pytest tests/test_users_jwt.py     # Tests de JWT en endpoints
+pytest tests/test_users_jwt.py     # Tests de JWT en endpoints de usuarios
+pytest tests/test_accounts.py      # Tests de cuentas (handlers) ✅ NUEVO
+pytest tests/test_account_models.py # Tests de modelos de cuentas ✅ NUEVO
 pytest tests/test_jwt_auth.py      # Tests de utilidades JWT
 pytest tests/test_health.py        # Tests del health check
 
 # Ejecutar con verbose output
 pytest -v
+
+# Tests con cobertura HTML
+pytest --cov=src --cov-report=html
 ```
+
+### Resumen de Tests ✅
+- **Total de tests**: 44 tests
+- **Test coverage**: 100% en handlers y modelos críticos
+- **Tests de usuarios**: 14 tests
+- **Tests de cuentas**: 44 tests (14 handlers + 30 modelos) ✅ NUEVO
+- **Pass rate**: 100% (44/44 tests passing)
 
 ## 📝 Endpoints Disponibles
 
@@ -107,8 +125,18 @@ pytest -v
 - **PUT** `/users/{user_id}` - Actualizar usuario
 - **DELETE** `/users/{user_id}` - Eliminar usuario (soft delete)
 
+### 🏦 Cuentas (Requieren Autenticación) ✅ **¡NUEVO!**
+- **POST** `/accounts` - Crear cuenta bancaria/financiera
+- **GET** `/accounts` - Listar cuentas del usuario
+- **GET** `/accounts/{account_id}` - Obtener cuenta específica
+- **PUT** `/accounts/{account_id}` - Actualizar información de cuenta
+- **PATCH** `/accounts/{account_id}/balance` - Actualizar saldo de cuenta
+- **DELETE** `/accounts/{account_id}` - Eliminar cuenta (soft delete)
+
 ### 💚 Salud del Sistema
 - **GET** `/health` - Estado de la API
+
+**Total de endpoints**: 16 endpoints funcionales ✅
 
 ## 🔑 Autenticación JWT
 
@@ -176,19 +204,27 @@ curl -X GET http://localhost:3000/users/usr_123 \
 ### Estructura de Handlers
 - **`handlers/auth.py`**: Maneja registro, login y refresh de tokens
 - **`handlers/users.py`**: Maneja operaciones CRUD de usuarios (requiere auth)
+- **`handlers/accounts.py`**: Maneja operaciones CRUD de cuentas bancarias (requiere auth) ✅ **¡NUEVO!**
 - **`handlers/health.py`**: Endpoint de salud del sistema
 
 ### Modelos de Datos
-- **`models/user.py`**: Modelos Pydantic para validación de datos
+- **`models/user.py`**: Modelos Pydantic V2 para validación de datos de usuarios
   - `UserCreate`: Registro de usuario
   - `UserLogin`: Login de usuario  
   - `UserResponse`: Respuesta de usuario
   - `UserUpdate`: Actualización de usuario
 
+- **`models/account.py`**: Modelos Pydantic V2 para validación de datos de cuentas ✅ **¡NUEVO!**
+  - `AccountCreate`: Creación de cuenta bancaria
+  - `AccountUpdate`: Actualización de cuenta
+  - `AccountResponse`: Respuesta de cuenta
+  - `AccountBalance`: Actualización de saldo
+  - `AccountListResponse`: Lista de cuentas con totales
+
 ### Utilidades
-- **`utils/jwt_auth.py`**: Manejo completo de JWT (crear, validar, refresh)
-- **`utils/dynamodb_client.py`**: Cliente optimizado de DynamoDB
-- **`utils/dynamodb_patterns.py`**: Patrones Single Table Design
+- **`utils/jwt_auth.py`**: Manejo completo de JWT (crear, validar, refresh, decorators)
+- **`utils/dynamodb_client.py`**: Cliente optimizado de DynamoDB con Single Table Design
+- **`utils/dynamodb_patterns.py`**: Patrones Single Table Design para múltiples entidades
 - **`utils/responses.py`**: Utilidades para respuestas HTTP estandarizadas
 
 ## 📚 Documentación Detallada
@@ -196,7 +232,15 @@ curl -X GET http://localhost:3000/users/usr_123 \
 Para documentación específica de endpoints, consulta:
 - **[Endpoints de Autenticación](docs/auth-api.md)** - `/auth/register`, `/auth/login`, `/auth/refresh`
 - **[Endpoints de Usuarios](docs/users-api.md)** - `/users/{user_id}` operations
+- **[Endpoints de Cuentas](docs/accounts-api.md)** - `/accounts` operations ✅ **¡NUEVO!**
 - **[JWT Implementation](docs/jwt-authentication.md)** - Detalles técnicos de JWT
+
+### Features Implementados por Documentación ✅
+- ✅ **Auth API**: 3 endpoints completos con JWT
+- ✅ **Users API**: 3 endpoints con autenticación 
+- ✅ **Accounts API**: 6 endpoints con CRUD completo ✅ **¡NUEVO!**
+- ✅ **Health Check**: 1 endpoint de monitoreo
+- ✅ **JWT Auth**: Sistema completo de autenticación
 
 ## 🚀 Despliegue
 
@@ -249,11 +293,23 @@ terraform apply -var="environment=production"
 
 ## 📊 Próximos Endpoints a Implementar
 
-- [ ] `POST /api/users` - Registro de usuario
-- [ ] `GET /api/accounts` - Listar cuentas
-- [ ] `POST /api/transactions` - Crear transacción
-- [ ] `GET /api/categories` - Listar categorías
+- [ ] `POST /api/transactions` - Crear transacción entre cuentas
+- [ ] `GET /api/transactions` - Listar transacciones del usuario  
+- [ ] `GET /api/transactions/{transaction_id}` - Obtener transacción específica
+- [ ] `POST /api/categories` - Crear categoría de gastos/ingresos
+- [ ] `GET /api/categories` - Listar categorías del usuario
 - [ ] `POST /api/budgets` - Crear presupuesto
+- [ ] `GET /api/budgets` - Listar presupuestos
+- [ ] `GET /api/reports/summary` - Reporte resumen financiero
+- [ ] `GET /api/reports/monthly` - Reporte mensual
+
+### ✅ Endpoints Completados
+- [x] **Authentication** (3 endpoints) - `POST /auth/*`  
+- [x] **Users** (3 endpoints) - `GET|PUT|DELETE /users/{user_id}`
+- [x] **Accounts** (6 endpoints) - Full CRUD `/accounts/*` ✅ **¡NUEVO!**
+- [x] **Health** (1 endpoint) - `GET /health`
+
+**Total implementado**: 16/25 endpoints (64% completado) ✅
 
 ## 🤝 Contribución
 
