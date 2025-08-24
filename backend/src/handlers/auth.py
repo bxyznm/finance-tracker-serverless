@@ -149,8 +149,8 @@ def login_user_handler(data: Dict[str, Any]) -> Dict[str, Any]:
             logger.warning(f"Failed login attempt for email: {email_normalized}")
             return create_response(401, {"error": "Invalid credentials"})
         
-        # Update last login
-        db_client.update_user_last_login(user['user_id'])
+        # Record successful login (resets failed attempts and updates last login)
+        db_client.successful_login(user['user_id'])
         
         # Create token response
         token_response = create_token_response(
