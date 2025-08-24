@@ -1,53 +1,82 @@
 # Finance Tracker - Backend
 
-API serverless para gestión de finanzas personales usando AWS Lambda y DynamoDB con autenticación JWT y gestión completa de cuentas bancarias.
+> **✅ Live**: API Gateway + AWS Lambda | **Stack**: Python 3.12 + DynamoDB | **Auth**: JWT
 
-## 🏗️ Arquitectura
-
-- **Runtime:** Python 3.12
-- **Serverless:** AWS Lambda
-- **Database:** DynamoDB (Single Table Design)
-- **API Gateway:** REST API
-- **Authentication:** JWT (Access + Refresh Tokens)
-- **Validation:** Pydantic V2 con field validators
-
-## 📁 Estructura del Proyecto
-
+## 🚀 **API Base URL**
 ```
-backend/
-├── src/
-│   ├── handlers/          # Lambda handlers separados por responsabilidad
-│   │   ├── auth.py        # Autenticación (register, login, refresh)
-│   │   ├── users.py       # Gestión de usuarios (CRUD)
-│   │   ├── accounts.py    # Gestión de cuentas (CRUD) ✅ NUEVO
-│   │   ├── health.py      # Health check endpoint
-│   │   └── __init__.py
-│   ├── models/            # Modelos de datos con Pydantic V2
-│   │   ├── user.py        # UserCreate, UserLogin, UserResponse, etc.
-│   │   ├── account.py     # AccountCreate, AccountUpdate, AccountResponse ✅ NUEVO
-│   │   └── __init__.py
-│   ├── utils/             # Utilidades compartidas
-│   │   ├── config.py      # Configuración de la aplicación
-│   │   ├── responses.py   # Utilidades de respuestas HTTP
-│   │   ├── jwt_auth.py    # Autenticación y tokens JWT
-│   │   ├── dynamodb_client.py      # Cliente DynamoDB optimizado
-│   │   ├── dynamodb_patterns.py   # Patrones Single Table Design
-│   │   └── __init__.py
-│   └── __init__.py
-├── tests/                 # Tests unitarios y de integración (44 tests) ✅
-│   ├── test_auth.py       # Tests de autenticación
-│   ├── test_users.py      # Tests de usuarios
-│   ├── test_users_jwt.py  # Tests de JWT en endpoints de usuarios
-│   ├── test_accounts.py   # Tests de cuentas (handlers) ✅ NUEVO
-│   ├── test_account_models.py  # Tests de modelos de cuentas ✅ NUEVO
-│   ├── test_jwt_auth.py   # Tests de utilidades JWT
-│   └── test_health.py     # Tests del health check
-├── docs/                  # Documentación detallada
-│   ├── auth-api.md        # Documentación de endpoints de auth
-│   ├── users-api.md       # Documentación de endpoints de usuarios
-│   ├── accounts-api.md    # Documentación de endpoints de cuentas ✅ NUEVO
-│   └── jwt-authentication.md  # Documentación técnica JWT
-├── requirements.txt       # Dependencias Python
+https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api
+```
+
+## 🏗️ **Architecture**
+- **🐍 Python 3.12** + Pydantic V2
+- **⚡ AWS Lambda** (6 functions)
+- **🗄️ DynamoDB** Single Table Design  
+- **🔒 JWT Auth** (access + refresh tokens)
+- **📊 44 Tests** (100% pass rate)
+
+## 📁 **Project Structure**
+```
+backend/src/
+├── handlers/           # Lambda functions
+│   ├── auth.py        # Register, login, refresh
+│   ├── users.py       # Users CRUD
+│   ├── accounts.py    # Bank accounts CRUD
+│   └── health.py      # Health check
+├── models/            # Pydantic models
+│   ├── user.py        # User data models
+│   └── account.py     # Account data models  
+└── utils/             # Shared utilities
+    ├── jwt_auth.py    # JWT handling
+    ├── dynamodb_*.py  # Database patterns
+## 🧪 **Development & Testing**
+
+### **Local Setup**
+```bash
+cd backend
+pip install -r requirements.txt
+
+# Run tests
+python -m pytest tests/ -v
+
+# Run specific tests  
+python -m pytest tests/test_auth.py -v
+python -m pytest tests/test_accounts.py -v
+```
+
+### **Test Coverage ✅**
+- **44 tests total** (100% pass rate)
+- **Auth**: 6 tests (register, login, JWT)
+- **Users**: 14 tests (CRUD + validations)
+- **Accounts**: 14 tests (CRUD + balance)
+- **Models**: 30 tests (data validation)
+
+### **API Endpoints**
+```bash
+# Health check
+GET /api/health
+
+# Auth
+POST /api/auth/register
+POST /api/auth/login  
+POST /api/auth/refresh
+
+# Users (JWT required)
+GET    /api/users/{user_id}
+PUT    /api/users/{user_id}
+DELETE /api/users/{user_id}
+
+# Accounts (JWT required)
+POST   /api/accounts
+GET    /api/accounts
+GET    /api/accounts/{account_id}
+PUT    /api/accounts/{account_id}
+PATCH  /api/accounts/{account_id}/balance
+DELETE /api/accounts/{account_id}
+```
+
+---
+
+**¿Necesitas más detalles?** Ver [README principal](../README.md) y archivos en `/docs/`
 ├── requirements-prod.txt  # Dependencias optimizadas para producción
 └── README.md             # Este archivo
 ```

@@ -38,20 +38,14 @@ locals {
 }
 
 # -----------------------------------------------------------------------------
-# Random suffix para nombres únicos
-# -----------------------------------------------------------------------------
-
-resource "random_id" "suffix" {
-  byte_length = 4
-}
-
-# -----------------------------------------------------------------------------
 # S3 Bucket para Frontend Hosting en México
+# Nombre fijo para coincidir con dominio finance-tracker.brxvn.xyz
 # -----------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "frontend" {
-  bucket = "${local.name_prefix}-${random_id.suffix.hex}"
-  tags   = local.common_tags
+  bucket        = "finance-tracker.brxvn.xyz"
+  force_destroy = true  # Permite destruir bucket con contenido
+  tags          = local.common_tags
 }
 
 # Configuración de Website

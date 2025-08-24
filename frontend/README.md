@@ -1,23 +1,56 @@
-# Getting Started with Create React App
+# Finance Tracker - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> **✅ Live**: https://finance-tracker.brxvn.xyz | **Stack**: React 18 + TypeScript | **Deploy**: GitHub Actions
 
-## Available Scripts
+## 🚀 **Quick Start**
 
-In the project directory, you can run:
+### **Para Usuarios**
+- **Visita**: https://finance-tracker.brxvn.xyz
+- **Regístrate** y empieza a gestionar tus finanzas
 
-### `npm start`
+### **Para Desarrolladores**
+```bash
+# Setup local
+npm install
+npm start  # http://localhost:3000
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+# Tests
+npm test
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+# Build production
+npm run build
+```
 
-### `npm test`
+## 🏗️ **Arquitectura**
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### **Tech Stack**
+- **React 18** + TypeScript
+- **Context API** para state management  
+- **JWT Authentication** con refresh tokens
+- **CSS Modules** para styling
+- **Create React App** optimizado
+
+### **Estructura**
+```
+src/
+├── components/auth/    # Login, Register forms
+├── components/ui/      # Button, Input, Layout  
+├── context/           # AuthContext (JWT state)
+├── hooks/             # useAuth, useUserProfile
+├── pages/             # LoginPage, DashboardPage
+├── services/          # API calls (auth, users, accounts)
+└── types/             # TypeScript interfaces
+```
+
+### **Deployment**
+- **Auto**: Push a main con cambios en `/frontend/**`
+- **Manual**: GitHub Actions → Deploy Frontend → Run workflow
+- **Hosting**: AWS S3 + Cloudflare SSL
+- **Domain**: finance-tracker.brxvn.xyz
+
+---
+
+**¿Necesitas más detalles?** Ver [README principal](../README.md) para documentación completa.
 
 ### `npm run build`
 

@@ -1,52 +1,89 @@
-# Finance Tracker Serverless - Terraform Infrastructure
-
-Esta carpeta contiene toda la infraestructura como código (IaC) para el proyecto Finance Tracker Serverless, implementada siguiendo las mejores prácticas de Terraform con soporte completo para gestión de cuentas bancarias.
-
-## 🏗️ Arquitectura
-
-La infraestructura está diseñada con una arquitectura modular que soporta múltiples entornos:
-
+# Terraform Infrastructure - Finance Tra## 📂 **Structure**
 ```
 terraform/
-├── modules/
-│   └── finance-tracker/          # Módulo reutilizable principal
-│       ├── main.tf               # Configuración principal y GitHub releases
-│       ├── variables.tf          # Variables del módulo con JWT secret
-│       ├── outputs.tf            # Outputs del módulo
-│       ├── dynamodb.tf           # Single Table Design DynamoDB
-│       ├── lambda.tf             # 6 Funciones Lambda + Layer optimizado
-│       └── api_gateway.tf        # 24+ endpoints API Gateway
+├── modules/finance-tracker/    # Backend serverless infrastructure
+├── frontend-only/             # S3 website hosting + Cloudflare
 ├── environments/
-│   ├── dev/                      # Entorno de desarrollo
-│   │   ├── main.tf               # Configuración para desarrollo
-│   │   ├── variables.tf          # Variables específicas de dev
-│   │   ├── outputs.tf            # Outputs de desarrollo
-│   │   └── terraform.tfvars.example
-│   └── prod/                     # Entorno de producción
-│       ├── main.tf               # Configuración para producción
-│       ├── variables.tf          # Variables específicas de prod
-│       ├── outputs.tf            # Outputs de producción
-│       └── terraform.tfvars.example
-├── deploy-dev.sh                 # Script de deployment para desarrollo
-├── deploy-prod.sh                # Script de deployment para producción
-└── README.md                     # Este archivo
+│   ├── dev/                   # Development environment
+│   └── prod/                  # Production environment  
+└── README.md
 ```
 
-## 🔧 Recursos Creados
+## ⚙️ **Configuration Requirements**
 
-### AWS Lambda ✅ **¡ACTUALIZADO!**
-- **6 Funciones Lambda**: health, users, accounts ✅, transactions, categories, auth
-- **1 Lambda Layer**: Dependencias de Python compartidas (20MB optimizado)
-- **IAM Role**: Con permisos específicos para DynamoDB
-- **CloudWatch Log Groups**: Para logging de cada función
-- **JWT Environment Variables**: Configuración segura de autenticación ✅
+### **Backend Deployment**
+```bash
+# Required AWS credentials
+aws configure
 
-### Amazon DynamoDB ✅ **¡OPTIMIZADO!**
-- **Single Table Design**: Una tabla optimizada para múltiples entidades
-- **Entidades soportadas**: Users + Accounts ✅ (próximamente: transactions, categories)
-- **GSI1**: Búsqueda por email de usuarios y account_id de cuentas
-- **GSI2**: Consultas optimizadas por tipo de entidad
-- **Configuración**: Encriptación habilitada, Point-in-Time Recovery (prod)
+# Required terraform.tfvars in environment directory
+project_name = "finance-tracker"
+environment = "dev"
+aws_region = "mx-central-1"
+jwt_secret_key = "your-super-secret-key-here"
+```
+
+### **Frontend Deployment** 
+```bash
+# Required GitHub Secrets (for Actions)
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+
+# GitHub Variables (optional)
+DEV_S3_BUCKET_SUFFIX  
+PROD_S3_BUCKET_SUFFIX
+```
+
+---
+
+**¿Necesitas más detalles?** Ver [README principal](../README.md) para documentación completa del proyecto.✅ Live**: Backend deployed | **Frontend**: S3 + Cloudflare | **Database**: DynamoDB Single Table
+
+## 🏗️ **Infrastructure Overview**
+
+### **Backend Resources (terraform/environments/)**
+- **6 Lambda Functions**: health, auth, users, accounts + 2 more
+- **API Gateway**: 24+ endpoints with CORS  
+- **DynamoDB**: Single Table Design (Users + Accounts)
+- **CloudWatch**: Logging and monitoring
+- **IAM**: Restrictive roles and policies
+
+### **Frontend Resources (terraform/frontend-only/)**
+- **S3 Bucket**: `finance-tracker.brxvn.xyz` (website hosting)
+- **Cloudflare**: Free SSL + CDN via DNS
+- **GitHub Actions**: Auto-deploy on push to main
+
+## 🚀 **Deployment**
+
+### **Frontend (Automatic)**
+```bash
+# Auto-deploys on push to main with /frontend/** changes
+git push origin main
+
+# Manual trigger
+gh workflow run deploy-frontend.yml
+```
+
+### **Backend (Manual)**
+```bash
+# Development
+cd terraform/environments/dev
+terraform init && terraform apply
+
+# Production  
+cd terraform/environments/prod
+terraform init && terraform apply
+```
+
+## � **Structure**
+```
+terraform/
+├── modules/finance-tracker/    # Backend serverless infrastructure
+├── frontend-only/             # S3 website hosting + Cloudflare
+├── environments/
+│   ├── dev/                   # Development environment
+│   └── prod/                  # Production environment  
+└── README.md
+```
 
 ### API Gateway ✅ **¡EXPANDIDO!**
 - **REST API**: Con 24+ endpoints para todas las funcionalidades
@@ -61,6 +98,15 @@ terraform/
 - **Bucket S3**: Para almacenar assets de deployment temporalmente
 - **GitHub Release Integration**: Lee automáticamente releases/prereleases
 - **Assets Download**: Descarga y despliega código automáticamente
+
+### Frontend Infrastructure ✅ **¡NUEVO!**
+- **S3 Website Hosting**: Bucket `finance-tracker.brxvn.xyz` en mx-central-1
+- **Cloudflare Integration**: SSL gratuito + CDN global
+- **React SPA**: Deployment automatizado vía GitHub Actions
+- **Custom Domain**: https://finance-tracker.brxvn.xyz
+- **CORS Configuration**: S3 configurado para APIs backend
+- **Destroy Protection**: Workflow con doble confirmación para destrucción
+- **Build Pipeline**: React build optimizado + upload automático
 
 ### Monitoring (Solo Producción)
 - **CloudWatch Alarms**: Para errores y duración de Lambda
@@ -539,8 +585,8 @@ aws logs delete-log-group --log-group-name /aws/lambda/finance-tracker-dev-healt
 - [ ] **Categories API**: Categorización de gastos e ingresos  
 - [ ] **Reports API**: Generación de reportes financieros
 
-### Mediano Plazo (Próximo mes)
-- [ ] **Frontend React.js**: Interfaz de usuario completa
+### Mediano Plazo (Próximo mes)  
+- [x] **Frontend React.js**: ✅ Interfaz completa desplegada en https://finance-tracker.brxvn.xyz
 - [ ] **Mobile React Native**: Aplicación móvil
 - [ ] **Real-time Features**: WebSocket notifications
 
