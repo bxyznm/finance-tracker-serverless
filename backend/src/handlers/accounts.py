@@ -11,7 +11,7 @@ import secrets
 
 from utils.responses import create_response
 from utils.dynamodb_client import DynamoDBClient
-from utils.jwt_auth import require_auth
+from utils.jwt_auth import require_auth, TokenPayload
 from models.account import (
     AccountCreate, AccountUpdate, AccountResponse, 
     AccountBalance, AccountListResponse
@@ -25,13 +25,13 @@ def generate_account_id() -> str:
     return f"acc_{secrets.token_hex(8)}"
 
 @require_auth
-def create_account_handler(event: Dict[str, Any], context: Any, user_data: Dict[str, str]) -> Dict[str, Any]:
+def create_account_handler(event: Dict[str, Any], context: Any, user_data: TokenPayload) -> Dict[str, Any]:
     """
     Create a new account for the authenticated user
     POST /accounts
     """
     try:
-        user_id = user_data['user_id']
+        user_id = user_data.user_id
         logger.info(f"Creating account for user: {user_id}")
         
         # Parse request body
@@ -98,13 +98,13 @@ def create_account_handler(event: Dict[str, Any], context: Any, user_data: Dict[
         return create_response(500, {"error": "Internal server error"})
 
 @require_auth
-def list_accounts_handler(event: Dict[str, Any], context: Any, user_data: Dict[str, str]) -> Dict[str, Any]:
+def list_accounts_handler(event: Dict[str, Any], context: Any, user_data: TokenPayload) -> Dict[str, Any]:
     """
     List all accounts for the authenticated user
     GET /accounts
     """
     try:
-        user_id = user_data['user_id']
+        user_id = user_data.user_id
         logger.info(f"Listing accounts for user: {user_id}")
         
         # Get query parameters
@@ -169,13 +169,13 @@ def list_accounts_handler(event: Dict[str, Any], context: Any, user_data: Dict[s
         return create_response(500, {"error": "Internal server error"})
 
 @require_auth
-def get_account_handler(event: Dict[str, Any], context: Any, user_data: Dict[str, str]) -> Dict[str, Any]:
+def get_account_handler(event: Dict[str, Any], context: Any, user_data: TokenPayload) -> Dict[str, Any]:
     """
     Get a specific account by ID
     GET /accounts/{account_id}
     """
     try:
-        user_id = user_data['user_id']
+        user_id = user_data.user_id
         account_id = event['pathParameters']['account_id']
         
         logger.info(f"Getting account {account_id} for user: {user_id}")
@@ -214,13 +214,13 @@ def get_account_handler(event: Dict[str, Any], context: Any, user_data: Dict[str
         return create_response(500, {"error": "Internal server error"})
 
 @require_auth
-def update_account_handler(event: Dict[str, Any], context: Any, user_data: Dict[str, str]) -> Dict[str, Any]:
+def update_account_handler(event: Dict[str, Any], context: Any, user_data: TokenPayload) -> Dict[str, Any]:
     """
     Update an account
     PUT /accounts/{account_id}
     """
     try:
-        user_id = user_data['user_id']
+        user_id = user_data.user_id
         account_id = event['pathParameters']['account_id']
         
         logger.info(f"Updating account {account_id} for user: {user_id}")
@@ -284,13 +284,13 @@ def update_account_handler(event: Dict[str, Any], context: Any, user_data: Dict[
         return create_response(500, {"error": "Internal server error"})
 
 @require_auth
-def delete_account_handler(event: Dict[str, Any], context: Any, user_data: Dict[str, str]) -> Dict[str, Any]:
+def delete_account_handler(event: Dict[str, Any], context: Any, user_data: TokenPayload) -> Dict[str, Any]:
     """
     Delete an account (soft delete)
     DELETE /accounts/{account_id}
     """
     try:
-        user_id = user_data['user_id']
+        user_id = user_data.user_id
         account_id = event['pathParameters']['account_id']
         
         logger.info(f"Deleting account {account_id} for user: {user_id}")
@@ -319,13 +319,13 @@ def delete_account_handler(event: Dict[str, Any], context: Any, user_data: Dict[
         return create_response(500, {"error": "Internal server error"})
 
 @require_auth 
-def update_balance_handler(event: Dict[str, Any], context: Any, user_data: Dict[str, str]) -> Dict[str, Any]:
+def update_balance_handler(event: Dict[str, Any], context: Any, user_data: TokenPayload) -> Dict[str, Any]:
     """
     Update account balance
     PATCH /accounts/{account_id}/balance
     """
     try:
-        user_id = user_data['user_id']
+        user_id = user_data.user_id
         account_id = event['pathParameters']['account_id']
         
         logger.info(f"Updating balance for account {account_id}, user: {user_id}")
