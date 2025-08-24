@@ -1,0 +1,263 @@
+# =============================================================================
+# Workflow para Configurar Dominio con Cloudflare
+# =============================================================================
+# Este workflow configura automáticamente el DNS en Cloudflare
+
+name: Setup Cloudflare Domain
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Ambiente'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+      domain_name:
+        description: 'Dominio principal (ej: mifinanzas.com)'
+        required: true
+        type: string
+      frontend_subdomain:
+        description: 'Subdominio del frontend (ej: app)'
+        required: true
+        default: 'app'
+        type: string
+      update_terraform:
+        description: 'Actualizar configuración de Terraform'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  AWS_REGION: mx-central-1
+
+jobs:
+  setup-domain:
+    name: 🌐 Configurar Dominio Cloudflare
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: ⚙️ Configurar AWS CLI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: 🏗️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+          terraform_wrapper: false
+      
+      - name: 📝 Actualizar configuración de Terraform
+        if: inputs.update_terraform
+        run: |
+          echo "📝 Actualizando terraform.tfvars..."
+          
+          TFVARS_FILE="terraform/environments/${{ inputs.environment }}/terraform.tfvars"
+          
+          # Backup del archivo original
+          cp "$TFVARS_FILE" "$TFVARS_FILE.backup"
+          
+          # Actualizar o agregar variables de dominio
+          {
+            grep -v "^domain_name\|^frontend_subdomain\|^use_custom_domain\|^cloudflare_integration" "$TFVARS_FILE" || true
+            echo ""
+            echo "# Configuración de dominio personalizado"
+            echo "domain_name = \"${{ inputs.domain_name }}\""
+            echo "frontend_subdomain = \"${{ inputs.frontend_subdomain }}\""
+            echo "use_custom_domain = true"
+            echo "cloudflare_integration = true"
+          } > "$TFVARS_FILE.new"
+          
+          mv "$TFVARS_FILE.new" "$TFVARS_FILE"
+          
+          echo "✅ Configuración actualizada:"
+          echo "domain_name = \"${{ inputs.domain_name }}\""
+          echo "frontend_subdomain = \"${{ inputs.frontend_subdomain }}\""
+          echo "use_custom_domain = true"
+          echo "cloudflare_integration = true"
+      
+      - name: 🏗️ Aplicar cambios de Terraform
+        if: inputs.update_terraform
+        working-directory: ./terraform/environments/${{ inputs.environment }}
+        run: |
+          echo "🏗️ Aplicando cambios de infraestructura..."
+          
+          terraform init
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan
+          
+          echo "✅ Infraestructura actualizada"
+      
+      - name: 📊 Obtener información de CloudFront
+        id: cloudfront
+        working-directory: ./terraform/environments/${{ inputs.environment }}
+        run: |
+          echo "📊 Obteniendo información de CloudFront..."
+          
+          terraform init
+          
+          CLOUDFRONT_DOMAIN=$(terraform output -raw frontend_cloudfront_domain_name)
+          FRONTEND_URL=$(terraform output -raw frontend_url)
+          
+          echo "cloudfront_domain=$CLOUDFRONT_DOMAIN" >> $GITHUB_OUTPUT
+          echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          
+          echo "✅ Información obtenida:"
+          echo "  📡 CloudFront Domain: $CLOUDFRONT_DOMAIN"
+          echo "  🌐 Frontend URL: $FRONTEND_URL"
+      
+      - name: 🌐 Configurar DNS en Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DOMAIN: ${{ inputs.domain_name }}
+          SUBDOMAIN: ${{ inputs.frontend_subdomain }}
+          CLOUDFRONT_DOMAIN: ${{ steps.cloudfront.outputs.cloudfront_domain }}
+        run: |
+          if [[ -z "$CLOUDFLARE_API_TOKEN" ]]; then
+            echo "⚠️ CLOUDFLARE_API_TOKEN no configurado"
+            echo "📋 Configuración manual requerida:"
+            echo ""
+            echo "1. Ve a Cloudflare Dashboard > $DOMAIN > DNS"
+            echo "2. Agrega un registro CNAME:"
+            echo "   - Nombre: $SUBDOMAIN"
+            echo "   - Contenido: $CLOUDFRONT_DOMAIN"
+            echo "   - TTL: Auto"
+            echo "   - Proxy status: Activado (nube naranja)"
+            echo ""
+            echo "3. Tu frontend estará disponible en: https://$SUBDOMAIN.$DOMAIN"
+            exit 0
+          fi
+          
+          echo "🌐 Configurando DNS en Cloudflare..."
+          
+          # Obtener Zone ID
+          ZONE_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$DOMAIN" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" | \
+            jq -r '.result[0].id')
+          
+          if [[ "$ZONE_ID" == "null" || -z "$ZONE_ID" ]]; then
+            echo "❌ No se pudo encontrar el dominio $DOMAIN en Cloudflare"
+            exit 1
+          fi
+          
+          echo "✅ Zone ID encontrado: $ZONE_ID"
+          
+          # Verificar si el registro ya existe
+          EXISTING_RECORD=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?name=$SUBDOMAIN.$DOMAIN" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" | \
+            jq -r '.result[0].id // "null"')
+          
+          if [[ "$EXISTING_RECORD" != "null" ]]; then
+            echo "🔄 Actualizando registro existente..."
+            
+            RESPONSE=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$EXISTING_RECORD" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data '{
+                "type": "CNAME",
+                "name": "'$SUBDOMAIN'",
+                "content": "'$CLOUDFRONT_DOMAIN'",
+                "ttl": 1,
+                "proxied": true
+              }')
+          else
+            echo "➕ Creando nuevo registro DNS..."
+            
+            RESPONSE=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data '{
+                "type": "CNAME",
+                "name": "'$SUBDOMAIN'",
+                "content": "'$CLOUDFRONT_DOMAIN'",
+                "ttl": 1,
+                "proxied": true
+              }')
+          fi
+          
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
+          
+          if [[ "$SUCCESS" == "true" ]]; then
+            echo "✅ Registro DNS configurado exitosamente"
+            echo "🌐 Frontend disponible en: https://$SUBDOMAIN.$DOMAIN"
+          else
+            echo "❌ Error al configurar DNS:"
+            echo "$RESPONSE" | jq -r '.errors[]?.message // "Error desconocido"'
+            exit 1
+          fi
+      
+      - name: 🧪 Verificar configuración
+        run: |
+          FULL_DOMAIN="${{ inputs.frontend_subdomain }}.${{ inputs.domain_name }}"
+          
+          echo "🧪 Verificando configuración DNS..."
+          
+          # Esperar propagación DNS
+          sleep 30
+          
+          # Verificar resolución DNS
+          echo "🔍 Verificando resolución DNS..."
+          nslookup "$FULL_DOMAIN" || echo "⚠️ DNS aún propagándose"
+          
+          # Verificar HTTP
+          echo "🌐 Verificando acceso HTTP..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$FULL_DOMAIN" || echo "000")
+          
+          if [[ "$HTTP_STATUS" == "200" ]]; then
+            echo "✅ Dominio funcionando correctamente"
+          else
+            echo "⚠️ Dominio respondió con código: $HTTP_STATUS"
+            echo "💡 La propagación DNS puede tomar hasta 24 horas"
+          fi
+      
+      - name: 📊 Commit cambios (si hay)
+        if: inputs.update_terraform
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if git diff --quiet; then
+            echo "📝 No hay cambios para commitear"
+          else
+            git add terraform/environments/${{ inputs.environment }}/terraform.tfvars
+            git commit -m "feat: configurar dominio ${{ inputs.frontend_subdomain }}.${{ inputs.domain_name }} para ${{ inputs.environment }}"
+            git push
+            echo "✅ Cambios commiteados y pusheados"
+          fi
+      
+      - name: 📊 Resumen de configuración
+        run: |
+          echo ""
+          echo "🎉 ¡CONFIGURACIÓN DE DOMINIO COMPLETADA!"
+          echo "====================================="
+          echo ""
+          echo "🏷️  Ambiente: ${{ inputs.environment }}"
+          echo "🌐 Dominio: ${{ inputs.frontend_subdomain }}.${{ inputs.domain_name }}"
+          echo "📡 CloudFront: ${{ steps.cloudfront.outputs.cloudfront_domain }}"
+          echo "🔗 Frontend URL: ${{ steps.cloudfront.outputs.frontend_url }}"
+          echo ""
+          echo "📋 Configuración aplicada:"
+          echo "• DNS CNAME: ${{ inputs.frontend_subdomain }} → ${{ steps.cloudfront.outputs.cloudfront_domain }}"
+          echo "• Proxy Cloudflare: Activado"
+          echo "• TTL: Auto"
+          echo ""
+          echo "💡 Notas importantes:"
+          echo "• La propagación DNS puede tomar hasta 24 horas"
+          echo "• Cloudflare provee SSL/TLS automático"
+          echo "• El caché de Cloudflare se combina con CloudFront"
+          echo ""
+          echo "🔗 Accede a tu aplicación en:"
+          echo "https://${{ inputs.frontend_subdomain }}.${{ inputs.domain_name }}"

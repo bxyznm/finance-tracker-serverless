@@ -1,0 +1,407 @@
+# =============================================================================
+# Workflow Automatizado para Despliegue de Frontend
+# =============================================================================
+# Este workflow automatiza completamente el proceso de build y deploy del frontend
+# Se ejecuta automáticamente en pushes a main o manualmente
+
+name: Deploy Frontend
+
+on:
+  # Trigger automático en pushes a main que modifiquen el frontend
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  
+  # Trigger manual para deploys on-demand
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Ambiente de despliegue'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+      force_rebuild:
+        description: 'Forzar rebuild completo (ignora caché)'
+        required: false
+        default: false
+        type: boolean
+      skip_tests:
+        description: 'Saltar tests (solo para desarrollo)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  # Configuración AWS para región de México
+  AWS_REGION: mx-central-1
+  AWS_DEFAULT_REGION: mx-central-1
+  
+  # Configuración de Node.js
+  NODE_VERSION: '18'
+  
+  # Configuración de caché
+  CACHE_VERSION: v1
+
+jobs:
+  # =============================================================================
+  # Job de Verificación y Preparación
+  # =============================================================================
+  prepare:
+    name: 🔍 Preparar y Verificar
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.setup.outputs.environment }}
+      should_deploy: ${{ steps.changes.outputs.should_deploy }}
+      cache_key: ${{ steps.setup.outputs.cache_key }}
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: ⚙️ Configurar ambiente
+        id: setup
+        run: |
+          # Determinar ambiente
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVIRONMENT="${{ inputs.environment }}"
+          else
+            ENVIRONMENT="dev"
+          fi
+          
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "cache_key=frontend-${{ env.CACHE_VERSION }}-${{ hashFiles('frontend/package-lock.json') }}" >> $GITHUB_OUTPUT
+          
+          echo "🏷️ Ambiente seleccionado: $ENVIRONMENT"
+      
+      - name: 🔍 Detectar cambios
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "✅ Deploy manual solicitado"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            # Verificar si hay cambios en el frontend
+            if git diff --name-only HEAD^ HEAD | grep -E '^frontend/' > /dev/null; then
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
+              echo "✅ Cambios detectados en frontend"
+            else
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+              echo "⏭️ Sin cambios en frontend"
+            fi
+          fi
+
+  # =============================================================================
+  # Job de Build y Test
+  # =============================================================================
+  build-and-test:
+    name: 🔨 Build y Test
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      
+      - name: 📋 Mostrar información del ambiente
+        run: |
+          echo "🔧 Información del Build:"
+          echo "Node.js: $(node --version)"
+          echo "npm: $(npm --version)"
+          echo "Ambiente: ${{ needs.prepare.outputs.environment }}"
+          echo "Directorio: $(pwd)"
+      
+      - name: 📦 Instalar dependencias
+        working-directory: ./frontend
+        run: |
+          echo "📦 Instalando dependencias..."
+          npm ci --prefer-offline --no-audit
+          
+          echo "📊 Información de dependencias:"
+          npm list --depth=0
+      
+      - name: 🧪 Ejecutar tests
+        if: inputs.skip_tests != true
+        working-directory: ./frontend
+        run: |
+          echo "🧪 Ejecutando tests..."
+          npm test -- --coverage --watchAll=false --passWithNoTests
+      
+      - name: 🔍 Lint y verificaciones
+        working-directory: ./frontend
+        run: |
+          echo "🔍 Verificando código..."
+          # Si existe ESLint, ejecutarlo
+          if npm list eslint &>/dev/null; then
+            npm run lint --if-present || echo "⚠️ ESLint no configurado"
+          fi
+          
+          # Verificar TypeScript si está configurado
+          if [ -f "tsconfig.json" ]; then
+            echo "🔍 Verificando TypeScript..."
+            npx tsc --noEmit || echo "⚠️ TypeScript check falló"
+          fi
+      
+      - name: 🏗️ Build aplicación
+        working-directory: ./frontend
+        env:
+          CI: true
+          GENERATE_SOURCEMAP: false
+          NODE_ENV: production
+        run: |
+          echo "🏗️ Construyendo aplicación..."
+          npm run build
+          
+          echo "📊 Información del build:"
+          du -sh build/
+          ls -la build/
+          
+          # Verificar archivos críticos
+          if [ ! -f "build/index.html" ]; then
+            echo "❌ Error: index.html no encontrado"
+            exit 1
+          fi
+          
+          echo "✅ Build completado exitosamente"
+      
+      - name: 📤 Subir artefactos de build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-${{ needs.prepare.outputs.environment }}
+          path: frontend/build/
+          retention-days: 7
+
+  # =============================================================================
+  # Job de Despliegue
+  # =============================================================================
+  deploy:
+    name: 🚀 Desplegar a AWS
+    runs-on: ubuntu-latest
+    needs: [prepare, build-and-test]
+    if: needs.prepare.outputs.should_deploy == 'true'
+    environment: ${{ needs.prepare.outputs.environment }}
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+      
+      - name: 📤 Descargar artefactos de build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-${{ needs.prepare.outputs.environment }}
+          path: frontend/build/
+      
+      - name: ⚙️ Configurar AWS CLI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-FrontendDeploy
+      
+      - name: ✅ Verificar conexión AWS
+        run: |
+          echo "🔍 Verificando conexión a AWS..."
+          aws sts get-caller-identity
+          echo "🌍 Región activa: $(aws configure get region)"
+      
+      - name: 🏗️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+          terraform_wrapper: false
+      
+      - name: 📊 Obtener información de infraestructura
+        id: infra
+        working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
+        run: |
+          echo "📋 Obteniendo información de la infraestructura..."
+          
+          # Inicializar Terraform
+          terraform init -backend-config="bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}"
+          
+          # Obtener outputs
+          S3_BUCKET=$(terraform output -raw frontend_bucket_name)
+          CLOUDFRONT_ID=$(terraform output -raw frontend_cloudfront_distribution_id)
+          API_URL=$(terraform output -raw api_gateway_url)
+          FRONTEND_URL=$(terraform output -raw frontend_url)
+          
+          echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
+          echo "cloudfront_id=$CLOUDFRONT_ID" >> $GITHUB_OUTPUT
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          
+          echo "✅ Información obtenida:"
+          echo "  📦 S3 Bucket: $S3_BUCKET"
+          echo "  📡 CloudFront ID: $CLOUDFRONT_ID"
+          echo "  🌐 Frontend URL: $FRONTEND_URL"
+          echo "  🔗 API URL: $API_URL"
+      
+      - name: 📝 Configurar variables de entorno para build
+        working-directory: ./frontend
+        run: |
+          echo "📝 Configurando .env.production..."
+          cat > .env.production << EOF
+          REACT_APP_API_URL=${{ steps.infra.outputs.api_url }}
+          REACT_APP_ENVIRONMENT=${{ needs.prepare.outputs.environment }}
+          REACT_APP_FRONTEND_URL=${{ steps.infra.outputs.frontend_url }}
+          GENERATE_SOURCEMAP=false
+          PUBLIC_URL=/
+          EOF
+          
+          echo "✅ Variables configuradas:"
+          cat .env.production
+      
+      - name: ☁️ Sincronizar con S3
+        run: |
+          echo "☁️ Subiendo archivos a S3..."
+          
+          # Sincronizar archivos con headers optimizados
+          aws s3 sync frontend/build/ s3://${{ steps.infra.outputs.s3_bucket }}/ \
+            --delete \
+            --exact-timestamps \
+            --metadata-directive REPLACE \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "*.html" \
+            --exclude "*.json"
+          
+          # Subir archivos HTML con cache corto
+          aws s3 sync frontend/build/ s3://${{ steps.infra.outputs.s3_bucket }}/ \
+            --exclude "*" \
+            --include "*.html" \
+            --include "*.json" \
+            --metadata-directive REPLACE \
+            --cache-control "public,max-age=0,must-revalidate"
+          
+          echo "✅ Archivos sincronizados con S3"
+      
+      - name: 🔄 Invalidar caché de CloudFront
+        id: invalidation
+        run: |
+          echo "🔄 Invalidando caché de CloudFront..."
+          
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.infra.outputs.cloudfront_id }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          
+          echo "invalidation_id=$INVALIDATION_ID" >> $GITHUB_OUTPUT
+          echo "✅ Invalidación iniciada: $INVALIDATION_ID"
+      
+      - name: ⏳ Esperar invalidación (opcional)
+        if: needs.prepare.outputs.environment == 'prod'
+        run: |
+          echo "⏳ Esperando que complete la invalidación..."
+          aws cloudfront wait invalidation-completed \
+            --distribution-id ${{ steps.infra.outputs.cloudfront_id }} \
+            --id ${{ steps.invalidation.outputs.invalidation_id }}
+          echo "✅ Invalidación completada"
+      
+      - name: 🧪 Verificar despliegue
+        run: |
+          echo "🧪 Verificando despliegue..."
+          
+          # Esperar un poco para propagación
+          sleep 30
+          
+          # Verificar que el sitio responde
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.infra.outputs.frontend_url }}" || echo "000")
+          
+          if [[ "$HTTP_STATUS" == "200" ]]; then
+            echo "✅ Sitio respondiendo correctamente (HTTP $HTTP_STATUS)"
+          else
+            echo "⚠️ Sitio respondió con HTTP $HTTP_STATUS"
+          fi
+      
+      - name: 📊 Mostrar resumen del despliegue
+        run: |
+          echo "🎉 ¡DESPLIEGUE COMPLETADO!"
+          echo "========================="
+          echo ""
+          echo "📊 Información del Despliegue:"
+          echo "🏷️  Ambiente: ${{ needs.prepare.outputs.environment }}"
+          echo "🌐 Frontend URL: ${{ steps.infra.outputs.frontend_url }}"
+          echo "🔗 API URL: ${{ steps.infra.outputs.api_url }}"
+          echo "📦 S3 Bucket: ${{ steps.infra.outputs.s3_bucket }}"
+          echo "📡 CloudFront ID: ${{ steps.infra.outputs.cloudfront_id }}"
+          echo "🔄 Invalidación ID: ${{ steps.invalidation.outputs.invalidation_id }}"
+          echo ""
+          echo "🔗 Links Útiles:"
+          echo "• Frontend: ${{ steps.infra.outputs.frontend_url }}"
+          echo "• API: ${{ steps.infra.outputs.api_url }}"
+          echo "• CloudFront Console: https://console.aws.amazon.com/cloudfront/home#/distributions/${{ steps.infra.outputs.cloudfront_id }}"
+          echo "• S3 Console: https://s3.console.aws.amazon.com/s3/buckets/${{ steps.infra.outputs.s3_bucket }}"
+
+  # =============================================================================
+  # Job de Notificaciones (opcional)
+  # =============================================================================
+  notify:
+    name: 📢 Notificar Resultado
+    runs-on: ubuntu-latest
+    needs: [prepare, build-and-test, deploy]
+    if: always() && needs.prepare.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: 📢 Resultado del despliegue
+        run: |
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+            echo "🎉 ¡Despliegue exitoso!"
+            echo "estado=success" >> $GITHUB_ENV
+            echo "emoji=🎉" >> $GITHUB_ENV
+            echo "mensaje=Despliegue completado exitosamente" >> $GITHUB_ENV
+          else
+            echo "❌ Despliegue falló"
+            echo "estado=failure" >> $GITHUB_ENV
+            echo "emoji=❌" >> $GITHUB_ENV  
+            echo "mensaje=El despliegue falló" >> $GITHUB_ENV
+          fi
+          
+          echo "📊 Resumen de Jobs:"
+          echo "• Preparación: ${{ needs.prepare.result }}"
+          echo "• Build y Test: ${{ needs.build-and-test.result }}"
+          echo "• Despliegue: ${{ needs.deploy.result }}"
+      
+      # Aquí puedes agregar integraciones con Slack, Discord, etc.
+      - name: 💬 Comentar en PR (si aplica)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const estado = process.env.estado;
+            const emoji = process.env.emoji;
+            const mensaje = process.env.mensaje;
+            
+            const comment = `${emoji} **Frontend Deploy - ${estado.toUpperCase()}**
+            
+            **Ambiente:** ${{ needs.prepare.outputs.environment }}
+            **Estado:** ${mensaje}
+            
+            ${estado === 'success' ? '🔗 **Links:**' : ''}
+            ${estado === 'success' ? '• [Ver Frontend](URL_WILL_BE_ADDED)' : ''}
+            ${estado === 'success' ? '• [Ver API](URL_WILL_BE_ADDED)' : ''}
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

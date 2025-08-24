@@ -1,0 +1,178 @@
+# =============================================================================
+# Workflow Simple para Despliegue de Frontend
+# =============================================================================
+# Version simplificada que usa AWS credentials básicas
+
+name: Simple Frontend Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Ambiente de despliegue'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  AWS_REGION: mx-central-1
+  NODE_VERSION: '18'
+
+jobs:
+  deploy:
+    name: 🚀 Build y Deploy Frontend
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+      
+      - name: ⚙️ Configurar AWS CLI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: 🏗️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+          terraform_wrapper: false
+      
+      - name: 📊 Obtener información de infraestructura
+        id: infra
+        working-directory: ./terraform/environments/${{ inputs.environment }}
+        run: |
+          echo "📋 Inicializando Terraform..."
+          terraform init
+          
+          echo "📊 Obteniendo outputs..."
+          S3_BUCKET=$(terraform output -raw frontend_bucket_name)
+          CLOUDFRONT_ID=$(terraform output -raw frontend_cloudfront_distribution_id)
+          API_URL=$(terraform output -raw api_gateway_url)
+          FRONTEND_URL=$(terraform output -raw frontend_url)
+          
+          echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
+          echo "cloudfront_id=$CLOUDFRONT_ID" >> $GITHUB_OUTPUT
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          
+          echo "✅ Infraestructura encontrada:"
+          echo "  📦 S3: $S3_BUCKET"
+          echo "  📡 CloudFront: $CLOUDFRONT_ID"
+          echo "  🌐 Frontend: $FRONTEND_URL"
+          echo "  🔗 API: $API_URL"
+      
+      - name: 📦 Instalar dependencias
+        working-directory: ./frontend
+        run: |
+          echo "📦 Instalando dependencias..."
+          npm ci
+      
+      - name: 🧪 Ejecutar tests
+        working-directory: ./frontend
+        run: |
+          echo "🧪 Ejecutando tests..."
+          npm test -- --watchAll=false --passWithNoTests
+      
+      - name: 📝 Configurar variables de entorno
+        working-directory: ./frontend
+        run: |
+          echo "📝 Configurando variables de entorno..."
+          cat > .env.production << EOF
+          REACT_APP_API_URL=${{ steps.infra.outputs.api_url }}
+          REACT_APP_ENVIRONMENT=${{ inputs.environment }}
+          REACT_APP_FRONTEND_URL=${{ steps.infra.outputs.frontend_url }}
+          GENERATE_SOURCEMAP=false
+          PUBLIC_URL=/
+          EOF
+          
+          echo "✅ Variables configuradas"
+      
+      - name: 🏗️ Build aplicación
+        working-directory: ./frontend
+        env:
+          CI: true
+        run: |
+          echo "🏗️ Construyendo aplicación..."
+          npm run build
+          
+          echo "📊 Tamaño del build:"
+          du -sh build/
+          
+          echo "✅ Build completado"
+      
+      - name: ☁️ Deploy a S3
+        run: |
+          echo "☁️ Subiendo a S3..."
+          
+          # Subir archivos estáticos con cache largo
+          aws s3 sync frontend/build/ s3://${{ steps.infra.outputs.s3_bucket }}/ \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "*.html" \
+            --exclude "*.json"
+          
+          # Subir HTML/JSON con cache corto
+          aws s3 sync frontend/build/ s3://${{ steps.infra.outputs.s3_bucket }}/ \
+            --exclude "*" \
+            --include "*.html" \
+            --include "*.json" \
+            --cache-control "public,max-age=0,must-revalidate"
+          
+          echo "✅ Archivos subidos a S3"
+      
+      - name: 🔄 Invalidar CloudFront
+        id: invalidation
+        run: |
+          echo "🔄 Invalidando CloudFront..."
+          
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.infra.outputs.cloudfront_id }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          
+          echo "invalidation_id=$INVALIDATION_ID" >> $GITHUB_OUTPUT
+          echo "✅ Invalidación iniciada: $INVALIDATION_ID"
+      
+      - name: 🧪 Verificar despliegue
+        run: |
+          echo "🧪 Verificando despliegue..."
+          sleep 30
+          
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.infra.outputs.frontend_url }}" || echo "000")
+          
+          if [[ "$HTTP_STATUS" == "200" ]]; then
+            echo "✅ Frontend funcionando correctamente"
+          else
+            echo "⚠️ Frontend respondió con código: $HTTP_STATUS"
+          fi
+      
+      - name: 📊 Resumen
+        run: |
+          echo ""
+          echo "🎉 ¡DESPLIEGUE COMPLETADO!"
+          echo "========================="
+          echo ""
+          echo "🏷️  Ambiente: ${{ inputs.environment }}"
+          echo "🌐 Frontend: ${{ steps.infra.outputs.frontend_url }}"
+          echo "🔗 API: ${{ steps.infra.outputs.api_url }}"
+          echo "📦 S3: ${{ steps.infra.outputs.s3_bucket }}"
+          echo "📡 CloudFront: ${{ steps.infra.outputs.cloudfront_id }}"
+          echo "🔄 Invalidación: ${{ steps.invalidation.outputs.invalidation_id }}"
+          echo ""
+          echo "🌐 Accede a tu aplicación en:"
+          echo "${{ steps.infra.outputs.frontend_url }}"

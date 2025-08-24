@@ -221,3 +221,31 @@ variable "cors_allowed_headers" {
     "X-Amz-User-Agent"
   ]
 }
+
+# -----------------------------------------------------------------------------
+# Variables para Frontend y Dominio Personalizado
+# -----------------------------------------------------------------------------
+
+variable "domain_name" {
+  description = "Nombre del dominio personalizado (ejemplo: mifinanzas.com)"
+  type        = string
+  default     = ""
+}
+
+variable "frontend_subdomain" {
+  description = "Subdominio para el frontend (ejemplo: app para app.mifinanzas.com)"
+  type        = string
+  default     = "app"
+}
+
+variable "use_custom_domain" {
+  description = "Usar dominio personalizado en lugar de CloudFront por defecto"
+  type        = bool
+  default     = false
+}
+
+variable "cloudflare_integration" {
+  description = "Usar Cloudflare como proxy (true) o AWS Certificate Manager (false)"
+  type        = bool
+  default     = true
+}

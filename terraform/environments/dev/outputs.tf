@@ -212,3 +212,56 @@ output "dev_deployment_summary" {
     🔗 URLs Completas Disponibles en: terraform output api_endpoints_table
   EOT
 }
+
+# -----------------------------------------------------------------------------
+# Frontend Outputs
+# -----------------------------------------------------------------------------
+
+output "frontend_bucket_name" {
+  description = "Nombre del bucket S3 para el frontend en desarrollo"
+  value       = module.finance_tracker.frontend_bucket_name
+}
+
+output "frontend_url" {
+  description = "URL del frontend en desarrollo"
+  value       = module.finance_tracker.frontend_url
+}
+
+output "frontend_cloudfront_distribution_id" {
+  description = "ID de la distribución CloudFront del frontend en desarrollo"
+  value       = module.finance_tracker.frontend_cloudfront_distribution_id
+}
+
+output "cloudflare_setup_instructions" {
+  description = "Instrucciones para configurar Cloudflare (si aplica)"
+  value       = module.finance_tracker.cloudflare_setup_instructions
+}
+
+output "deployment_info" {
+  description = "Información completa para despliegue del frontend en desarrollo"
+  value = <<EOT
+    
+    🚀 FRONTEND DEPLOYMENT INFO - DESARROLLO
+    ========================================
+    
+    📦 S3 Bucket: ${module.finance_tracker.frontend_bucket_name}
+    🌐 Frontend URL: ${module.finance_tracker.frontend_url}
+    📡 CloudFront ID: ${module.finance_tracker.frontend_cloudfront_distribution_id}
+    🔧 API Backend URL: ${module.finance_tracker.api_gateway_url}
+    
+    📋 Pasos para Desplegar:
+    1. Construir el frontend: cd frontend && npm run build
+    2. Sincronizar con S3: aws s3 sync build/ s3://${module.finance_tracker.frontend_bucket_name} --delete
+    3. Invalidar caché CloudFront: aws cloudfront create-invalidation --distribution-id ${module.finance_tracker.frontend_cloudfront_distribution_id} --paths "/*"
+    
+    🔧 Variables de Entorno para el Frontend:
+    REACT_APP_API_URL=${module.finance_tracker.api_gateway_url}
+    REACT_APP_ENVIRONMENT=dev
+    
+    ⚡ Comandos Útiles:
+    • Ver status CloudFront: aws cloudfront get-distribution --id ${module.finance_tracker.frontend_cloudfront_distribution_id}
+    • Deploy completo: cd frontend && npm run build && aws s3 sync build/ s3://${module.finance_tracker.frontend_bucket_name} --delete && aws cloudfront create-invalidation --distribution-id ${module.finance_tracker.frontend_cloudfront_distribution_id} --paths "/*"
+    
+    🌐 Para dominio personalizado, ver: terraform output cloudflare_setup_instructions
+  EOT
+}
