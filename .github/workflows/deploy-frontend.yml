@@ -17,6 +17,14 @@ on:
   # Trigger manual para deploys on-demand
   workflow_dispatch:
     inputs:
+      action:
+        description: 'Acción a realizar'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - destroy
       environment:
         description: 'Ambiente de despliegue'
         required: true
@@ -35,6 +43,11 @@ on:
         required: false
         default: false
         type: boolean
+      confirm_destroy:
+        description: '⚠️ CONFIRMAR DESTRUCCIÓN (escribir "DESTROY" para confirmar)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -58,6 +71,7 @@ jobs:
   prepare:
     name: 🔍 Preparar y Verificar
     runs-on: ubuntu-latest
+    if: github.event.inputs.action != 'destroy' || github.event.inputs.action == null
     outputs:
       environment: ${{ steps.setup.outputs.environment }}
       should_deploy: ${{ steps.changes.outputs.should_deploy }}
@@ -108,7 +122,7 @@ jobs:
     name: 🔨 Build y Test
     runs-on: ubuntu-latest
     needs: prepare
-    if: needs.prepare.outputs.should_deploy == 'true'
+    if: needs.prepare.outputs.should_deploy == 'true' && (github.event.inputs.action != 'destroy' || github.event.inputs.action == null)
     
     steps:
       - name: 📥 Checkout código
@@ -216,7 +230,7 @@ jobs:
     name: 🚀 Desplegar a AWS
     runs-on: ubuntu-latest
     needs: [prepare, build-and-test]
-    if: needs.prepare.outputs.should_deploy == 'true'
+    if: needs.prepare.outputs.should_deploy == 'true' && (github.event.inputs.action != 'destroy' || github.event.inputs.action == null)
     environment: ${{ needs.prepare.outputs.environment }}
     
     steps:
@@ -440,7 +454,7 @@ jobs:
     name: 📢 Notificar Resultado
     runs-on: ubuntu-latest
     needs: [prepare, build-and-test, deploy]
-    if: always() && needs.prepare.outputs.should_deploy == 'true'
+    if: always() && needs.prepare.outputs.should_deploy == 'true' && (github.event.inputs.action != 'destroy' || github.event.inputs.action == null)
     
     steps:
       - name: 📢 Resultado del despliegue
@@ -488,3 +502,122 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
+
+  # =============================================================================
+  # Job de Destrucción de Infraestructura
+  # =============================================================================
+  destroy:
+    name: 🗑️ Destruir Frontend
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'destroy' && github.event.inputs.confirm_destroy == 'DESTROY'
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+      
+      - name: ⚠️ Verificar confirmación de destrucción
+        run: |
+          if [[ "${{ github.event.inputs.confirm_destroy }}" != "DESTROY" ]]; then
+            echo "❌ ERROR: Para destruir la infraestructura debes escribir 'DESTROY' en el campo de confirmación"
+            echo "🛡️ Esto es una medida de seguridad para evitar destrucciones accidentales"
+            exit 1
+          fi
+          echo "✅ Confirmación de destrucción verificada"
+          echo "⚠️ INICIANDO DESTRUCCIÓN DE INFRAESTRUCTURA DEL FRONTEND"
+          echo "🎯 Ambiente: ${{ github.event.inputs.environment }}"
+      
+      - name: ⚙️ Configurar AWS CLI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: 🔧 Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+      
+      - name: 📂 Navegar a directorio de Terraform
+        working-directory: ./terraform/frontend-only/environments/${{ github.event.inputs.environment }}
+        run: |
+          echo "📂 Trabajando en directorio: $(pwd)"
+          ls -la
+      
+      - name: ⚙️ Inicializar Terraform
+        working-directory: ./terraform/frontend-only/environments/${{ github.event.inputs.environment }}
+        run: |
+          echo "🔧 Inicializando Terraform..."
+          terraform init
+      
+      - name: 📋 Mostrar plan de destrucción
+        working-directory: ./terraform/frontend-only/environments/${{ github.event.inputs.environment }}
+        run: |
+          echo "📋 Generando plan de destrucción..."
+          terraform plan -destroy -detailed-exitcode
+          
+          echo ""
+          echo "⚠️ RECURSOS QUE SERÁN DESTRUIDOS:"
+          echo "=================================="
+          terraform show -json | jq -r '.values.root_module.resources[]? | select(.type == "aws_s3_bucket") | "🗑️ S3 Bucket: " + .values.bucket'
+          terraform show -json | jq -r '.values.root_module.resources[]? | select(.type == "aws_s3_object") | "🗑️ S3 Object: " + .values.key'
+      
+      - name: 🗑️ Destruir infraestructura
+        working-directory: ./terraform/frontend-only/environments/${{ github.event.inputs.environment }}
+        run: |
+          echo "🗑️ INICIANDO DESTRUCCIÓN..."
+          echo "⚠️ Esto eliminará PERMANENTEMENTE toda la infraestructura del frontend"
+          echo ""
+          
+          # Mostrar qué se va a destruir
+          terraform destroy -auto-approve
+          
+          echo ""
+          echo "✅ DESTRUCCIÓN COMPLETADA"
+          echo "========================="
+          echo "🗑️ Toda la infraestructura del frontend ha sido eliminada"
+          echo "💰 Esto evitará costos futuros de AWS"
+          echo "⚠️ Para volver a desplegar, ejecuta este workflow con acción 'deploy'"
+      
+      - name: 📊 Resumen de destrucción
+        run: |
+          echo "📊 RESUMEN DE DESTRUCCIÓN"
+          echo "========================="
+          echo ""
+          echo "✅ Recursos eliminados:"
+          echo "  🗑️ S3 Bucket: finance-tracker.brxvn.xyz"
+          echo "  🗑️ S3 Website Configuration"
+          echo "  🗑️ S3 Bucket Policy"
+          echo "  🗑️ S3 CORS Configuration"
+          echo "  🗑️ Archivos de configuración"
+          echo ""
+          echo "📋 Próximos pasos:"
+          echo "  1. ⚠️ El dominio finance-tracker.brxvn.xyz ya no funcionará"
+          echo "  2. 🔧 Puedes eliminar el CNAME de Cloudflare si quieres"
+          echo "  3. 🚀 Para volver a desplegar, ejecuta este workflow con 'deploy'"
+          echo ""
+          echo "💡 Nota: Esta acción es IRREVERSIBLE"
+
+  # =============================================================================
+  # Job de Verificación de Acción No Válida
+  # =============================================================================
+  invalid_destroy:
+    name: ❌ Destrucción No Confirmada
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'destroy' && github.event.inputs.confirm_destroy != 'DESTROY'
+    
+    steps:
+      - name: ❌ Error de confirmación
+        run: |
+          echo "❌ ERROR: DESTRUCCIÓN NO CONFIRMADA"
+          echo "=================================="
+          echo ""
+          echo "🛡️ Para destruir la infraestructura debes:"
+          echo "  1. Seleccionar acción 'destroy'"
+          echo "  2. Escribir exactamente 'DESTROY' en el campo de confirmación"
+          echo ""
+          echo "⚠️ Esto es una medida de seguridad para evitar eliminaciones accidentales"
+          echo "💡 Si realmente quieres destruir la infraestructura, vuelve a ejecutar el workflow"
+          exit 1
