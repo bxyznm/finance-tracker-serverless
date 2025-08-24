@@ -9,7 +9,8 @@ on:
       - main
     paths:
       - 'backend/**'
-      - '.github/workflows/**'
+      - '.github/workflows/prerelease-deploy.yml'
+      - '.github/workflows/dev-infraestructure.yml'
 
   workflow_dispatch:
 

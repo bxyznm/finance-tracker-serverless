@@ -248,16 +248,61 @@ jobs:
           terraform_version: latest
           terraform_wrapper: false
       
+      - name: 🏗️ Inicializar Terraform
+        working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
+        run: |
+          echo "🔧 Inicializando Terraform para ambiente: ${{ needs.prepare.outputs.environment }}"
+          echo "📁 Estado se guardará en: terraform-state/${{ needs.prepare.outputs.environment }}/terraform.tfstate"
+          
+          terraform init \
+            -backend-config="bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="encrypt=true"
+      
+      - name: 📋 Planificar cambios de infraestructura
+        working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
+        run: |
+          echo "📋 Ejecutando terraform plan para ${{ needs.prepare.outputs.environment }}..."
+          echo "🔍 Verificando que solo afecte recursos del frontend..."
+          
+          # Crear plan y guardarlo
+          terraform plan -out=tfplan
+          
+          # Mostrar resumen de cambios
+          echo "📊 Resumen de cambios planeados:"
+          terraform show -no-color tfplan | head -30
+          
+          echo ""
+          echo "🛡️ Verificando que SOLO se crean recursos de frontend..."
+          echo "✅ Recursos esperados:"
+          echo "  - S3 Bucket: finance-tracker-frontend-${{ needs.prepare.outputs.environment }}"
+          echo "  - CloudFront Distribution"
+          echo "  - ACM Certificate (si se usa dominio personalizado)"
+          echo "  - S3 Bucket Policy para frontend"
+          echo ""
+          echo "❌ NO debe tocar:"
+          echo "  - DynamoDB tables del backend"
+          echo "  - Lambda functions del backend" 
+          echo "  - API Gateway del backend"
+          echo "  - S3 deployment-assets del backend"
+      
+      - name: 🚀 Desplegar infraestructura
+        working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
+        run: |
+          echo "🚀 Aplicando cambios de infraestructura para ${{ needs.prepare.outputs.environment }}..."
+          echo "⚠️  SOLO afectará recursos del frontend en el ambiente ${{ needs.prepare.outputs.environment }}"
+          
+          terraform apply -auto-approve tfplan
+          
+          echo "✅ Infraestructura desplegada correctamente"
+      
       - name: 📊 Obtener información de infraestructura
         id: infra
         working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
         run: |
           echo "📋 Obteniendo información de la infraestructura..."
           
-          # Inicializar Terraform
-          terraform init -backend-config="bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}"
-          
-          # Obtener outputs
+          # Obtener outputs después del apply
           S3_BUCKET=$(terraform output -raw frontend_bucket_name)
           CLOUDFRONT_ID=$(terraform output -raw frontend_cloudfront_distribution_id)
           API_URL=$(terraform output -raw api_gateway_url)
