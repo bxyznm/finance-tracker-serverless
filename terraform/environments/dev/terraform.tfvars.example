@@ -17,6 +17,14 @@ github_token = "ghp_tu_token_de_github"    # Token de GitHub con permisos de rep
 dev_release_tag = ""  # Por ejemplo: "v1.0.0-beta.1"
 
 # -----------------------------------------------------------------------------
+# Variables de Seguridad (REQUERIDAS)
+# -----------------------------------------------------------------------------
+
+# Clave secreta para JWT (IMPORTANTE: cambiar en producción)
+# Debe tener al menos 32 caracteres
+jwt_secret_key = "dev-jwt-secret-key-change-in-production-32chars"
+
+# -----------------------------------------------------------------------------
 # Configuración del Proyecto (OPCIONAL)
 # -----------------------------------------------------------------------------
 

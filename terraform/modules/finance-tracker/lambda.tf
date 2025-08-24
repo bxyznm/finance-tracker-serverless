@@ -96,7 +96,8 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
     "users",
     "transactions",
     "categories",
-    "auth"
+    "auth",
+    "accounts"
   ])
 
   name              = "/aws/lambda/${local.name_prefix}-${each.key}"
@@ -287,6 +288,41 @@ resource "aws_lambda_function" "auth" {
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-auth"
+    Type = "lambda-function"
+  })
+}
+
+# Accounts Function
+resource "aws_lambda_function" "accounts" {
+  function_name = "${local.name_prefix}-accounts"
+  description   = "Account management for Finance Tracker API - ${var.environment}"
+
+  s3_bucket        = aws_s3_bucket.deployment_assets.bucket
+  s3_key           = aws_s3_object.code_zip.key
+  source_code_hash = aws_s3_object.code_zip.etag
+
+  handler     = "handlers.accounts.lambda_handler"
+  runtime     = var.lambda_runtime
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_memory_size
+
+  role = aws_iam_role.lambda_execution_role.arn
+
+  layers = [aws_lambda_layer_version.dependencies.arn]
+
+  environment {
+    variables = merge(local.common_lambda_environment, {
+      JWT_SECRET_KEY = var.jwt_secret_key
+    })
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic_execution,
+    aws_cloudwatch_log_group.lambda_logs
+  ]
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name_prefix}-accounts"
     Type = "lambda-function"
   })
 }

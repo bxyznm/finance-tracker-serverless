@@ -87,6 +87,27 @@ resource "aws_api_gateway_resource" "auth_refresh" {
   path_part   = "refresh"
 }
 
+# Recurso /accounts
+resource "aws_api_gateway_resource" "accounts" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_rest_api.finance_tracker_api.root_resource_id
+  path_part   = "accounts"
+}
+
+# Recurso /accounts/{account_id} para operaciones por ID específico
+resource "aws_api_gateway_resource" "accounts_account_id" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.accounts.id
+  path_part   = "{account_id}"
+}
+
+# Recurso /accounts/{account_id}/balance para actualizar balance
+resource "aws_api_gateway_resource" "accounts_account_id_balance" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.accounts_account_id.id
+  path_part   = "balance"
+}
+
 # -----------------------------------------------------------------------------
 # API Gateway Methods y Integraciones
 # -----------------------------------------------------------------------------
@@ -306,6 +327,118 @@ resource "aws_api_gateway_integration" "auth_refresh_integration" {
 }
 
 # -----------------------------------------------------------------------------
+# Accounts API Methods and Integrations
+# -----------------------------------------------------------------------------
+
+# Accounts - POST /accounts (Create account)
+resource "aws_api_gateway_method" "accounts_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts.id
+  http_method   = "POST"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "accounts_post_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts.id
+  http_method = aws_api_gateway_method.accounts_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.accounts.invoke_arn
+}
+
+# Accounts - GET /accounts (List accounts)
+resource "aws_api_gateway_method" "accounts_get" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts.id
+  http_method   = "GET"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "accounts_get_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts.id
+  http_method = aws_api_gateway_method.accounts_get.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.accounts.invoke_arn
+}
+
+# Account by ID - GET /accounts/{account_id}
+resource "aws_api_gateway_method" "accounts_account_id_get" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts_account_id.id
+  http_method   = "GET"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "accounts_account_id_get_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id.id
+  http_method = aws_api_gateway_method.accounts_account_id_get.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.accounts.invoke_arn
+}
+
+# Account by ID - PUT /accounts/{account_id} (Update account)
+resource "aws_api_gateway_method" "accounts_account_id_put" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts_account_id.id
+  http_method   = "PUT"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "accounts_account_id_put_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id.id
+  http_method = aws_api_gateway_method.accounts_account_id_put.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.accounts.invoke_arn
+}
+
+# Account by ID - DELETE /accounts/{account_id} (Delete account)
+resource "aws_api_gateway_method" "accounts_account_id_delete" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts_account_id.id
+  http_method   = "DELETE"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "accounts_account_id_delete_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id.id
+  http_method = aws_api_gateway_method.accounts_account_id_delete.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.accounts.invoke_arn
+}
+
+# Account Balance - PATCH /accounts/{account_id}/balance (Update balance)
+resource "aws_api_gateway_method" "accounts_account_id_balance_patch" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts_account_id_balance.id
+  http_method   = "PATCH"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "accounts_account_id_balance_patch_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id_balance.id
+  http_method = aws_api_gateway_method.accounts_account_id_balance_patch.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.accounts.invoke_arn
+}
+
+# -----------------------------------------------------------------------------
 # Lambda Permissions para API Gateway
 # -----------------------------------------------------------------------------
 
@@ -341,10 +474,43 @@ resource "aws_lambda_permission" "allow_api_gateway_categories" {
   source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
 }
 
-resource "aws_lambda_permission" "allow_api_gateway_auth" {
+# Lambda Permissions for API Gateway
+resource "aws_lambda_permission" "api_gateway_health" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.health.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "api_gateway_users" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.users.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "api_gateway_auth" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.auth.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "api_gateway_accounts" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.accounts.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "allow_api_gateway_accounts" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.accounts.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
 }
@@ -363,6 +529,12 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
     aws_api_gateway_integration.auth_login_integration,
     aws_api_gateway_integration.auth_register_integration,
     aws_api_gateway_integration.auth_refresh_integration,
+    aws_api_gateway_integration.accounts_post_integration,
+    aws_api_gateway_integration.accounts_get_integration,
+    aws_api_gateway_integration.accounts_account_id_get_integration,
+    aws_api_gateway_integration.accounts_account_id_put_integration,
+    aws_api_gateway_integration.accounts_account_id_delete_integration,
+    aws_api_gateway_integration.accounts_account_id_balance_patch_integration,
     aws_api_gateway_integration.transactions_get_integration,
     aws_api_gateway_integration.transactions_post_integration,
     aws_api_gateway_integration.categories_get_integration,
@@ -380,6 +552,9 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_resource.auth_login.id,
       aws_api_gateway_resource.auth_register.id,
       aws_api_gateway_resource.auth_refresh.id,
+      aws_api_gateway_resource.accounts.id,
+      aws_api_gateway_resource.accounts_account_id.id,
+      aws_api_gateway_resource.accounts_account_id_balance.id,
       aws_api_gateway_resource.transactions.id,
       aws_api_gateway_resource.categories.id,
       aws_api_gateway_method.health_get.id,
@@ -390,6 +565,12 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_method.auth_login_post.id,
       aws_api_gateway_method.auth_register_post.id,
       aws_api_gateway_method.auth_refresh_post.id,
+      aws_api_gateway_method.accounts_post.id,
+      aws_api_gateway_method.accounts_get.id,
+      aws_api_gateway_method.accounts_account_id_get.id,
+      aws_api_gateway_method.accounts_account_id_put.id,
+      aws_api_gateway_method.accounts_account_id_delete.id,
+      aws_api_gateway_method.accounts_account_id_balance_patch.id,
       aws_api_gateway_method.transactions_get.id,
       aws_api_gateway_method.transactions_post.id,
       aws_api_gateway_method.categories_get.id,
@@ -402,6 +583,12 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_integration.auth_login_integration.id,
       aws_api_gateway_integration.auth_register_integration.id,
       aws_api_gateway_integration.auth_refresh_integration.id,
+      aws_api_gateway_integration.accounts_post_integration.id,
+      aws_api_gateway_integration.accounts_get_integration.id,
+      aws_api_gateway_integration.accounts_account_id_get_integration.id,
+      aws_api_gateway_integration.accounts_account_id_put_integration.id,
+      aws_api_gateway_integration.accounts_account_id_delete_integration.id,
+      aws_api_gateway_integration.accounts_account_id_balance_patch_integration.id,
       aws_api_gateway_integration.transactions_get_integration.id,
       aws_api_gateway_integration.transactions_post_integration.id,
       aws_api_gateway_integration.categories_get_integration.id,

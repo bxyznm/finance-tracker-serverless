@@ -97,6 +97,16 @@ variable "cors_allowed_origins" {
 }
 
 # -----------------------------------------------------------------------------
+# Variables de Seguridad  
+# -----------------------------------------------------------------------------
+
+variable "jwt_secret_key" {
+  description = "Clave secreta para JWT authentication. En producción debe ser un secreto seguro."
+  type        = string
+  sensitive   = true
+}
+
+# -----------------------------------------------------------------------------
 # Variables de Tags
 # -----------------------------------------------------------------------------
 

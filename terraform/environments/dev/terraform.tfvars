@@ -21,6 +21,13 @@ github_owner = "bxyznm"                    # Usuario de GitHub del propietario d
 # dev_release_tag = ""  # Descomenta para usar un tag específico del workflow
 
 # -----------------------------------------------------------------------------
+# Configuración de Seguridad (REQUERIDA)
+# -----------------------------------------------------------------------------
+
+# JWT Secret Key - IMPORTANTE: En producción debe ser un secreto seguro
+jwt_secret_key = "dev-jwt-secret-key-change-this-in-production"
+
+# -----------------------------------------------------------------------------
 # Configuración del Proyecto (OPCIONAL)
 # -----------------------------------------------------------------------------
 

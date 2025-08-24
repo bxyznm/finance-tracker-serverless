@@ -154,6 +154,9 @@ module "finance_tracker" {
   cors_allowed_methods = var.cors_allowed_methods
   cors_allowed_headers = var.cors_allowed_headers
 
+  # Configuración de Seguridad
+  jwt_secret_key = var.jwt_secret_key
+
   # Tags
   common_tags = merge(var.common_tags, local.dev_tags)
 }

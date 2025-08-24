@@ -186,6 +186,17 @@ variable "common_tags" {
 # Variables de Seguridad
 # -----------------------------------------------------------------------------
 
+variable "jwt_secret_key" {
+  description = "Clave secreta para firmado de tokens JWT"
+  type        = string
+  sensitive   = true
+  
+  validation {
+    condition     = length(var.jwt_secret_key) >= 32
+    error_message = "La clave JWT debe tener al menos 32 caracteres para mayor seguridad."
+  }
+}
+
 variable "cors_allowed_origins" {
   description = "Lista de orígenes permitidos para CORS"
   type        = list(string)

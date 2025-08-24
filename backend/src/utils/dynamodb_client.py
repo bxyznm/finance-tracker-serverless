@@ -307,3 +307,215 @@ class DynamoDBClient:
         except ClientError as e:
             logger.error(f"Error temporarily blocking user {user_id}: {e}")
             return False
+
+    # -----------------------------------------------------------------------------
+    # Account Operations
+    # -----------------------------------------------------------------------------
+    
+    def create_account(self, account_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new account for a user
+        
+        Single Table Design for Account:
+        - pk: USER#{user_id}
+        - sk: ACCOUNT#{account_id}  
+        - gsi1_pk: ACCOUNT#{account_id}
+        - gsi1_sk: USER#{user_id}
+        - entity_type: account
+        """
+        try:
+            user_id = account_data['user_id']
+            account_id = account_data['account_id']
+            
+            item = {
+                'pk': f'USER#{user_id}',
+                'sk': f'ACCOUNT#{account_id}',
+                'gsi1_pk': f'ACCOUNT#{account_id}',
+                'gsi1_sk': f'USER#{user_id}',
+                'entity_type': 'account',
+                'user_id': user_id,
+                'account_id': account_id,
+                'name': account_data['name'],
+                'account_type': account_data['account_type'],
+                'bank_name': account_data['bank_name'],
+                'bank_code': account_data.get('bank_code'),
+                'currency': account_data['currency'],
+                'current_balance': account_data.get('initial_balance', 0.0),
+                'is_active': account_data.get('is_active', True),
+                'description': account_data.get('description'),
+                'color': account_data.get('color'),
+                'created_at': account_data['created_at'],
+                'updated_at': account_data['updated_at']
+            }
+            
+            # Use ConditionExpression to avoid duplicates
+            response = self.table.put_item(
+                Item=item,
+                ConditionExpression='attribute_not_exists(pk) AND attribute_not_exists(sk)'
+            )
+            
+            logger.info(f"Account created successfully: {account_id} for user {user_id}")
+            return item
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Account already exists: {account_id}")
+                raise ValueError("Account already exists")
+            else:
+                logger.error(f"Error creating account: {e}")
+                raise
+    
+    def get_account_by_id(self, user_id: str, account_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get account by ID for a specific user
+        """
+        try:
+            response = self.table.get_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'ACCOUNT#{account_id}'
+                }
+            )
+            
+            item = response.get('Item')
+            if item and item.get('entity_type') == 'account':
+                logger.info(f"Account found: {account_id} for user {user_id}")
+                return item
+            else:
+                logger.info(f"Account not found: {account_id} for user {user_id}")
+                return None
+                
+        except ClientError as e:
+            logger.error(f"Error getting account {account_id} for user {user_id}: {e}")
+            raise
+    
+    def list_user_accounts(self, user_id: str, include_inactive: bool = False) -> List[Dict[str, Any]]:
+        """
+        List all accounts for a user
+        """
+        try:
+            # Query all items for user that start with ACCOUNT#
+            response = self.table.query(
+                KeyConditionExpression='pk = :pk AND begins_with(sk, :sk_prefix)',
+                ExpressionAttributeValues={
+                    ':pk': f'USER#{user_id}',
+                    ':sk_prefix': 'ACCOUNT#'
+                }
+            )
+            
+            accounts = response.get('Items', [])
+            
+            # Filter by active status if needed
+            if not include_inactive:
+                accounts = [acc for acc in accounts if acc.get('is_active', True)]
+            
+            logger.info(f"Found {len(accounts)} accounts for user {user_id}")
+            return accounts
+            
+        except ClientError as e:
+            logger.error(f"Error listing accounts for user {user_id}: {e}")
+            raise
+    
+    def update_account(self, user_id: str, account_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update account data
+        """
+        try:
+            # Build expression dynamically
+            update_expression = "SET "
+            expression_values = {}
+            expression_names = {}
+            
+            for field, value in update_data.items():
+                if field not in ['user_id', 'account_id', 'pk', 'sk', 'gsi1_pk', 'gsi1_sk', 'entity_type']:
+                    attr_name = f'#{field}'
+                    attr_value = f':{field}'
+                    update_expression += f'{attr_name} = {attr_value}, '
+                    expression_names[attr_name] = field
+                    expression_values[attr_value] = value
+            
+            # Remove last comma
+            update_expression = update_expression.rstrip(', ')
+            
+            response = self.table.update_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'ACCOUNT#{account_id}'
+                },
+                UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
+                ExpressionAttributeValues=expression_values,
+                ReturnValues='ALL_NEW',
+                ConditionExpression='attribute_exists(pk) AND attribute_exists(sk)'
+            )
+            
+            logger.info(f"Account updated: {account_id} for user {user_id}")
+            return response['Attributes']
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Account not found for update: {account_id} for user {user_id}")
+                raise ValueError("Account not found")
+            else:
+                logger.error(f"Error updating account {account_id} for user {user_id}: {e}")
+                raise
+    
+    def delete_account(self, user_id: str, account_id: str, updated_at: str) -> bool:
+        """
+        Delete account (soft delete - mark as inactive)
+        """
+        try:
+            response = self.table.update_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'ACCOUNT#{account_id}'
+                },
+                UpdateExpression='SET is_active = :inactive, updated_at = :timestamp',
+                ExpressionAttributeValues={
+                    ':inactive': False,
+                    ':timestamp': updated_at
+                },
+                ConditionExpression='attribute_exists(pk) AND attribute_exists(sk)'
+            )
+            
+            logger.info(f"Account deleted (soft delete): {account_id} for user {user_id}")
+            return True
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Account not found for deletion: {account_id} for user {user_id}")
+                return False
+            else:
+                logger.error(f"Error deleting account {account_id} for user {user_id}: {e}")
+                raise
+    
+    def update_account_balance(self, user_id: str, account_id: str, amount: float, updated_at: str) -> Dict[str, Any]:
+        """
+        Update account balance by adding/subtracting amount
+        """
+        try:
+            response = self.table.update_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'ACCOUNT#{account_id}'
+                },
+                UpdateExpression='SET current_balance = current_balance + :amount, updated_at = :timestamp',
+                ExpressionAttributeValues={
+                    ':amount': amount,
+                    ':timestamp': updated_at,
+                    ':active': True
+                },
+                ReturnValues='ALL_NEW',
+                ConditionExpression='attribute_exists(pk) AND attribute_exists(sk) AND is_active = :active'
+            )
+            
+            logger.info(f"Account balance updated: {account_id} for user {user_id}, amount: {amount}")
+            return response['Attributes']
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Account not found or inactive for balance update: {account_id} for user {user_id}")
+                raise ValueError("Account not found or inactive")
+            else:
+                logger.error(f"Error updating balance for account {account_id}, user {user_id}: {e}")
+                raise
