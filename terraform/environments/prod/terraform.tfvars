@@ -14,6 +14,18 @@ github_owner = "bxyznm"                    # Usuario de GitHub del propietario d
 # Para uso local, descomenta y agrega tu token: github_token = "ghp_tu_token_aqui"
 
 # -----------------------------------------------------------------------------
+# Configuración de Seguridad (REQUERIDA)
+# -----------------------------------------------------------------------------
+
+# JWT Secret Key - CRÍTICO: En producción debe ser un secreto fuerte
+# OPCIÓN 1: Especificar aquí (temporal para testing)
+jwt_secret_key = "prod-super-secure-jwt-key-32-characters-minimum-length"
+
+# OPCIÓN 2: Configurar desde variable de entorno (recomendado para producción)
+# export TF_VAR_jwt_secret_key="tu-secreto-super-seguro-aqui"
+# Cuando se use variable de entorno, comentar la línea de arriba
+
+# -----------------------------------------------------------------------------
 # Configuración del Proyecto (OPCIONAL)
 # -----------------------------------------------------------------------------
 

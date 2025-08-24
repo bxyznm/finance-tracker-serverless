@@ -179,7 +179,9 @@ resource "aws_lambda_function" "users" {
   layers = [aws_lambda_layer_version.dependencies.arn]
 
   environment {
-    variables = local.common_lambda_environment
+    variables = merge(local.common_lambda_environment, {
+      JWT_SECRET_KEY = var.jwt_secret_key
+    })
   }
 
   depends_on = [
@@ -212,7 +214,9 @@ resource "aws_lambda_function" "transactions" {
   layers = [aws_lambda_layer_version.dependencies.arn]
 
   environment {
-    variables = local.common_lambda_environment
+    variables = merge(local.common_lambda_environment, {
+      JWT_SECRET_KEY = var.jwt_secret_key
+    })
   }
 
   depends_on = [
@@ -245,7 +249,9 @@ resource "aws_lambda_function" "categories" {
   layers = [aws_lambda_layer_version.dependencies.arn]
 
   environment {
-    variables = local.common_lambda_environment
+    variables = merge(local.common_lambda_environment, {
+      JWT_SECRET_KEY = var.jwt_secret_key
+    })
   }
 
   depends_on = [
