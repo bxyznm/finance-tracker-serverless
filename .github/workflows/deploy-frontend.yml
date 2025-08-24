@@ -249,10 +249,11 @@ jobs:
           terraform_wrapper: false
       
       - name: 🏗️ Inicializar Terraform
-        working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
+        working-directory: ./terraform/frontend-only/environments/${{ needs.prepare.outputs.environment }}
         run: |
-          echo "🔧 Inicializando Terraform para ambiente: ${{ needs.prepare.outputs.environment }}"
-          echo "📁 Estado se guardará en: terraform-state/${{ needs.prepare.outputs.environment }}/terraform.tfstate"
+          echo "🔧 Inicializando Terraform FRONTEND-ONLY para ambiente: ${{ needs.prepare.outputs.environment }}"
+          echo "📁 Estado se guardará en: frontend-only/${{ needs.prepare.outputs.environment }}/terraform.tfstate"
+          echo "🛡️ Completamente separado del backend"
           
           terraform init \
             -backend-config="bucket=${{ secrets.TERRAFORM_STATE_BUCKET }}" \
@@ -260,9 +261,9 @@ jobs:
             -backend-config="encrypt=true"
       
       - name: 📋 Planificar cambios de infraestructura
-        working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
+        working-directory: ./terraform/frontend-only/environments/${{ needs.prepare.outputs.environment }}
         run: |
-          echo "📋 Ejecutando terraform plan para ${{ needs.prepare.outputs.environment }}..."
+          echo "📋 Ejecutando terraform plan para FRONTEND-ONLY ${{ needs.prepare.outputs.environment }}..."
           echo "🔍 Verificando que solo afecte recursos del frontend..."
           
           # Crear plan y guardarlo
@@ -275,10 +276,10 @@ jobs:
           echo ""
           echo "🛡️ Verificando que SOLO se crean recursos de frontend..."
           echo "✅ Recursos esperados:"
-          echo "  - S3 Bucket: finance-tracker-frontend-${{ needs.prepare.outputs.environment }}"
-          echo "  - CloudFront Distribution"
-          echo "  - ACM Certificate (si se usa dominio personalizado)"
+          echo "  - S3 Bucket: finance-tracker-frontend-${{ needs.prepare.outputs.environment }}-{random}"
+          echo "  - CloudFront Distribution" 
           echo "  - S3 Bucket Policy para frontend"
+          echo "  - CloudFront Origin Access Control"
           echo ""
           echo "❌ NO debe tocar:"
           echo "  - DynamoDB tables del backend"
@@ -287,18 +288,19 @@ jobs:
           echo "  - S3 deployment-assets del backend"
       
       - name: 🚀 Desplegar infraestructura
-        working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
+        working-directory: ./terraform/frontend-only/environments/${{ needs.prepare.outputs.environment }}
         run: |
-          echo "🚀 Aplicando cambios de infraestructura para ${{ needs.prepare.outputs.environment }}..."
+          echo "🚀 Aplicando cambios de infraestructura FRONTEND-ONLY para ${{ needs.prepare.outputs.environment }}..."
           echo "⚠️  SOLO afectará recursos del frontend en el ambiente ${{ needs.prepare.outputs.environment }}"
+          echo "🛡️ El backend permanece intacto"
           
           terraform apply -auto-approve tfplan
           
-          echo "✅ Infraestructura desplegada correctamente"
+          echo "✅ Infraestructura de frontend desplegada correctamente"
       
       - name: 📊 Obtener información de infraestructura
         id: infra
-        working-directory: ./terraform/environments/${{ needs.prepare.outputs.environment }}
+        working-directory: ./terraform/frontend-only/environments/${{ needs.prepare.outputs.environment }}
         run: |
           echo "📋 Obteniendo información de la infraestructura..."
           
@@ -313,11 +315,11 @@ jobs:
           echo "api_url=$API_URL" >> $GITHUB_OUTPUT
           echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
           
-          echo "✅ Información obtenida:"
+          echo "✅ Información obtenida del FRONTEND-ONLY:"
           echo "  📦 S3 Bucket: $S3_BUCKET"
           echo "  📡 CloudFront ID: $CLOUDFRONT_ID"
           echo "  🌐 Frontend URL: $FRONTEND_URL"
-          echo "  🔗 API URL: $API_URL"
+          echo "  🔗 API URL (del backend): $API_URL"
       
       - name: 📝 Configurar variables de entorno para build
         working-directory: ./frontend
