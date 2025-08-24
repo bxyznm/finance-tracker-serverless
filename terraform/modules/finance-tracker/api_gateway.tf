@@ -439,44 +439,11 @@ resource "aws_api_gateway_integration" "accounts_account_id_balance_patch_integr
 }
 
 # -----------------------------------------------------------------------------
-# Lambda Permissions para API Gateway
+# Lambda Permissions for API Gateway
 # -----------------------------------------------------------------------------
 
-resource "aws_lambda_permission" "allow_api_gateway_health" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.health.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "allow_api_gateway_users" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.users.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "allow_api_gateway_transactions" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.transactions.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "allow_api_gateway_categories" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.categories.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
-}
-
-# Lambda Permissions for API Gateway
 resource "aws_lambda_permission" "api_gateway_health" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGateway-Health"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.health.function_name
   principal     = "apigateway.amazonaws.com"
@@ -484,7 +451,7 @@ resource "aws_lambda_permission" "api_gateway_health" {
 }
 
 resource "aws_lambda_permission" "api_gateway_users" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGateway-Users"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.users.function_name
   principal     = "apigateway.amazonaws.com"
@@ -492,7 +459,7 @@ resource "aws_lambda_permission" "api_gateway_users" {
 }
 
 resource "aws_lambda_permission" "api_gateway_auth" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGateway-Auth"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.auth.function_name
   principal     = "apigateway.amazonaws.com"
@@ -500,17 +467,25 @@ resource "aws_lambda_permission" "api_gateway_auth" {
 }
 
 resource "aws_lambda_permission" "api_gateway_accounts" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFromAPIGateway-Accounts"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.accounts.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
 }
 
-resource "aws_lambda_permission" "allow_api_gateway_accounts" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+resource "aws_lambda_permission" "api_gateway_transactions" {
+  statement_id  = "AllowExecutionFromAPIGateway-Transactions"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.accounts.function_name
+  function_name = aws_lambda_function.transactions.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "api_gateway_categories" {
+  statement_id  = "AllowExecutionFromAPIGateway-Categories"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.categories.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
 }
