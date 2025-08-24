@@ -340,7 +340,7 @@ jobs:
         run: |
           echo "☁️ Subiendo archivos a S3..."
           
-          # Sincronizar archivos con headers optimizados
+          # Sincronizar archivos estáticos con caché largo (CSS, JS, imágenes)
           aws s3 sync frontend/build/ s3://${{ steps.infra.outputs.s3_bucket }}/ \
             --delete \
             --exact-timestamps \
@@ -349,7 +349,7 @@ jobs:
             --exclude "*.html" \
             --exclude "*.json"
             
-          # Subir archivos HTML con caché corto
+          # Subir archivos HTML y JSON con caché corto
           aws s3 sync frontend/build/ s3://${{ steps.infra.outputs.s3_bucket }}/ \
             --exclude "*" \
             --include "*.html" \
