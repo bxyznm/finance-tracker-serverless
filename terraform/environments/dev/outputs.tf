@@ -222,8 +222,8 @@ output "frontend_bucket_name" {
   value       = module.finance_tracker.frontend_bucket_name
 }
 
-output "frontend_url" {
-  description = "URL del frontend en desarrollo"
-  value       = module.finance_tracker.frontend_url
+output "frontend_website_endpoint" {
+  description = "S3 static website endpoint for the frontend"
+  value       = module.finance_tracker.frontend_website_endpoint
 }
 
