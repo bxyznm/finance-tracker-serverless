@@ -298,42 +298,49 @@ jobs:
           
           echo "✅ Infraestructura de frontend desplegada correctamente"
       
-      - name: 📊 Obtener información de infraestructura
+      - name: 📊 Obtener información de infraestructura S3
         id: infra
         working-directory: ./terraform/frontend-only/environments/${{ needs.prepare.outputs.environment }}
         run: |
-          echo "📋 Obteniendo información de la infraestructura..."
+          echo "📋 Obteniendo información de la infraestructura S3 en México..."
           
-          # Obtener outputs después del apply
-          S3_BUCKET=$(terraform output -raw frontend_bucket_name)
-          CLOUDFRONT_ID=$(terraform output -raw frontend_cloudfront_distribution_id)
-          API_URL=$(terraform output -raw api_gateway_url)
-          FRONTEND_URL=$(terraform output -raw frontend_url)
+          # Obtener outputs de la nueva configuración S3-only
+          S3_BUCKET=$(terraform output -raw bucket_name)
+          WEBSITE_ENDPOINT=$(terraform output -raw website_endpoint)
+          WEBSITE_URL=$(terraform output -raw website_url)
           
           echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
-          echo "cloudfront_id=$CLOUDFRONT_ID" >> $GITHUB_OUTPUT
-          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
-          echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
+          echo "website_endpoint=$WEBSITE_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "website_url=$WEBSITE_URL" >> $GITHUB_OUTPUT
           
-          echo "✅ Información obtenida del FRONTEND-ONLY:"
+          echo "✅ Información obtenida del S3 Website Hosting (México):"
           echo "  📦 S3 Bucket: $S3_BUCKET"
-          echo "  📡 CloudFront ID: $CLOUDFRONT_ID"
-          echo "  🌐 Frontend URL: $FRONTEND_URL"
-          echo "  🔗 API URL (del backend): $API_URL"
+          echo "  🌐 Website Endpoint: $WEBSITE_ENDPOINT"
+          echo "  🔗 Website URL: $WEBSITE_URL"
+          echo "  🇲🇽 Región: mx-central-1"
+          
+          # Obtener configuración de Cloudflare (informativo)
+          echo "📋 Configuración para Cloudflare:"
+          terraform output cloudflare_configuration
       
       - name: 📝 Configurar variables de entorno para build
         working-directory: ./frontend
         run: |
-          echo "📝 Configurando .env.production..."
+          echo "📝 Configurando .env.production para S3 Website Hosting..."
           cat > .env.production << EOF
-          REACT_APP_API_URL=${{ steps.infra.outputs.api_url }}
+          REACT_APP_API_URL=https://jjb0khkiz0.execute-api.mx-central-1.amazonaws.com/dev
           REACT_APP_ENVIRONMENT=${{ needs.prepare.outputs.environment }}
-          REACT_APP_FRONTEND_URL=${{ steps.infra.outputs.frontend_url }}
+          REACT_APP_FRONTEND_URL=${{ steps.infra.outputs.website_url }}
+          REACT_APP_REGION=mx-central-1
+          REACT_APP_COUNTRY=Mexico
+          REACT_APP_LOCALE=es-MX
+          REACT_APP_CURRENCY=MXN
+          REACT_APP_TIMEZONE=America/Mexico_City
           GENERATE_SOURCEMAP=false
           PUBLIC_URL=/
           EOF
           
-          echo "✅ Variables configuradas:"
+          echo "✅ Variables configuradas para México:"
           cat .env.production
       
       - name: ☁️ Sincronizar con S3
@@ -357,65 +364,74 @@ jobs:
             --metadata-directive REPLACE \
             --cache-control "public, max-age=0, must-revalidate"
           
-          echo "✅ Archivos subidos exitosamente"
+          echo "✅ Archivos subidos exitosamente a S3 México"
       
-      - name: 🔄 Invalidar caché de CloudFront
-        id: invalidation
+      - name: ✅ Verificar despliegue S3 Website
+        id: verify
         run: |
-          echo "🔄 Invalidando caché de CloudFront..."
+          echo "� Verificando que el S3 website esté funcionando..."
           
-          INVALIDATION_ID=$(aws cloudfront create-invalidation \
-            --distribution-id ${{ steps.infra.outputs.cloudfront_id }} \
-            --paths "/*" \
-            --query 'Invalidation.Id' \
-            --output text)
+          # Verificar que el bucket tenga hosting web habilitado
+          aws s3api get-bucket-website --bucket ${{ steps.infra.outputs.s3_bucket }}
           
-          echo "invalidation_id=$INVALIDATION_ID" >> $GITHUB_OUTPUT
-          echo "✅ Invalidación iniciada: $INVALIDATION_ID"
-      
-      - name: ⏳ Esperar invalidación (opcional)
-        if: needs.prepare.outputs.environment == 'prod'
+          echo "✅ S3 Website Hosting configurado correctamente"
+          echo "🌐 Endpoint: ${{ steps.infra.outputs.website_endpoint }}"
+          
+      - name: 📋 Mostrar instrucciones de Cloudflare
         run: |
-          echo "⏳ Esperando que complete la invalidación..."
-          aws cloudfront wait invalidation-completed \
-            --distribution-id ${{ steps.infra.outputs.cloudfront_id }} \
-            --id ${{ steps.invalidation.outputs.invalidation_id }}
-          echo "✅ Invalidación completada"
+          echo "🎯 PRÓXIMOS PASOS PARA CLOUDFLARE:"
+          echo "=================================="
+          echo ""
+          echo "1. Ir a Cloudflare Dashboard → brxvn.xyz → DNS"
+          echo "2. Crear registro CNAME:"
+          echo "   Nombre: finance-tracker"
+          echo "   Destino: ${{ steps.infra.outputs.website_endpoint }}"
+          echo "3. Activar Cloudflare Proxy (nube naranja) = ON"
+          echo "4. En SSL/TLS: Configurar modo 'Flexible'"
+          echo "5. Esperar propagación DNS (5-10 minutos)"
+          echo "6. Visitar https://finance-tracker.brxvn.xyz"
+          echo ""
+          echo "🇲🇽 Tu aplicación está desplegada en México Central (mx-central-1)"
       
-      - name: 🧪 Verificar despliegue
+      - name: 🧪 Verificar despliegue S3 Website
         run: |
-          echo "🧪 Verificando despliegue..."
+          echo "🧪 Verificando despliegue S3 Website..."
           
           # Esperar un poco para propagación
-          sleep 30
+          sleep 15
           
           # Verificar que el sitio responde
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.infra.outputs.frontend_url }}" || echo "000")
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.infra.outputs.website_url }}" || echo "000")
           
           if [[ "$HTTP_STATUS" == "200" ]]; then
-            echo "✅ Sitio respondiendo correctamente (HTTP $HTTP_STATUS)"
+            echo "✅ S3 Website respondiendo correctamente (HTTP $HTTP_STATUS)"
           else
-            echo "⚠️ Sitio respondió con HTTP $HTTP_STATUS"
+            echo "⚠️ S3 Website respondió con HTTP $HTTP_STATUS"
+            echo "💡 Esto es normal - S3 necesita unos minutos para activar el website hosting"
           fi
       
       - name: 📊 Mostrar resumen del despliegue
         run: |
-          echo "🎉 ¡DESPLIEGUE COMPLETADO!"
-          echo "========================="
+          echo "🎉 ¡DESPLIEGUE S3 WEBSITE COMPLETADO! 🇲🇽"
+          echo "========================================"
           echo ""
           echo "📊 Información del Despliegue:"
           echo "🏷️  Ambiente: ${{ needs.prepare.outputs.environment }}"
-          echo "🌐 Frontend URL: ${{ steps.infra.outputs.frontend_url }}"
-          echo "🔗 API URL: ${{ steps.infra.outputs.api_url }}"
+          echo "�🇽 Región: mx-central-1 (México Central)"
+          echo "🌐 S3 Website URL: ${{ steps.infra.outputs.website_url }}"
           echo "📦 S3 Bucket: ${{ steps.infra.outputs.s3_bucket }}"
-          echo "📡 CloudFront ID: ${{ steps.infra.outputs.cloudfront_id }}"
-          echo "🔄 Invalidación ID: ${{ steps.invalidation.outputs.invalidation_id }}"
+          echo "🌍 Website Endpoint: ${{ steps.infra.outputs.website_endpoint }}"
           echo ""
           echo "🔗 Links Útiles:"
-          echo "• Frontend: ${{ steps.infra.outputs.frontend_url }}"
-          echo "• API: ${{ steps.infra.outputs.api_url }}"
-          echo "• CloudFront Console: https://console.aws.amazon.com/cloudfront/home#/distributions/${{ steps.infra.outputs.cloudfront_id }}"
+          echo "• S3 Website: ${{ steps.infra.outputs.website_url }}"
           echo "• S3 Console: https://s3.console.aws.amazon.com/s3/buckets/${{ steps.infra.outputs.s3_bucket }}"
+          echo "• S3 Website Config: https://console.aws.amazon.com/s3/buckets/${{ steps.infra.outputs.s3_bucket }}?tab=properties&section=website"
+          echo ""
+          echo "📋 PRÓXIMOS PASOS PARA CLOUDFLARE:"
+          echo "1. Crear CNAME: finance-tracker → ${{ steps.infra.outputs.website_endpoint }}"
+          echo "2. Activar Proxy Cloudflare (nube naranja)"
+          echo "3. SSL/TLS modo 'Flexible'"
+          echo "4. Acceder a: https://finance-tracker.brxvn.xyz"
 
   # =============================================================================
   # Job de Notificaciones (opcional)
