@@ -345,6 +345,29 @@ jobs:
             --delete \
             --exact-timestamps \
             --metadata-directive REPLACE \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.html" \
+            --exclude "*.json"
+            
+          # Subir archivos HTML con caché corto
+          aws s3 sync frontend/build/ s3://${{ steps.infra.outputs.s3_bucket }}/ \
+            --exclude "*" \
+            --include "*.html" \
+            --include "*.json" \
+            --metadata-directive REPLACE \
+            --cache-control "public, max-age=0, must-revalidate"
+          
+          echo "✅ Archivos subidos exitosamente"
+      
+      - name: 🔄 Invalidar caché de CloudFront
+        run: |
+          echo "🔄 Invalidando caché de CloudFront..."
+          
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.infra.outputs.cloudfront_id }} \
+            --paths "/*"
+            
+          echo "✅ Invalidación iniciada"
             --cache-control "public,max-age=31536000,immutable" \
             --exclude "*.html" \
             --exclude "*.json"

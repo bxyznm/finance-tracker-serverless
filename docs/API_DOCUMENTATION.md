@@ -1,0 +1,617 @@
+# 📚 API Documentation - Finance Tracker
+
+Documentación completa de todos los endpoints disponibles en el Finance Tracker API.
+
+## 🌐 Base URL
+
+```
+https://api.finance-tracker.tu-dominio.com  # Producción
+https://api-dev.finance-tracker.tu-dominio.com  # Desarrollo
+```
+
+## 🔑 Autenticación
+
+La API utiliza **JWT (JSON Web Tokens)** para autenticación. Incluye el token en el header:
+
+```
+Authorization: Bearer <tu_jwt_token>
+```
+
+---
+
+## 🚀 Endpoints
+
+### 🔐 **Autenticación**
+
+#### **POST** `/auth/login`
+Iniciar sesión de usuario.
+
+**Request Body:**
+```json
+{
+  "email": "usuario@example.com",
+  "password": "mi_password_seguro"
+}
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "user_id": "usr_123456789",
+      "email": "usuario@example.com",
+      "name": "Juan Pérez",
+      "created_at": "2025-01-15T10:30:00Z"
+    }
+  },
+  "message": "Login exitoso"
+}
+```
+
+**Response Error (401):**
+```json
+{
+  "success": false,
+  "error": "INVALID_CREDENTIALS",
+  "message": "Email o contraseña incorrectos"
+}
+```
+
+#### **POST** `/auth/register`
+Registrar nuevo usuario.
+
+**Request Body:**
+```json
+{
+  "email": "nuevo@example.com",
+  "password": "password_seguro_123",
+  "name": "María González"
+}
+```
+
+**Response Success (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "user_id": "usr_987654321",
+      "email": "nuevo@example.com",
+      "name": "María González",
+      "created_at": "2025-01-15T11:00:00Z"
+    }
+  },
+  "message": "Usuario creado exitosamente"
+}
+```
+
+#### **POST** `/auth/refresh`
+Renovar token JWT.
+
+**Headers:**
+```
+Authorization: Bearer <token_actual>
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "nuevo_jwt_token_aqui...",
+    "expires_in": 3600
+  }
+}
+```
+
+---
+
+### 👤 **Usuarios**
+
+#### **GET** `/users/profile`
+Obtener perfil del usuario autenticado.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "user_id": "usr_123456789",
+    "email": "usuario@example.com",
+    "name": "Juan Pérez",
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-20T14:15:00Z",
+    "preferences": {
+      "currency": "MXN",
+      "language": "es",
+      "timezone": "America/Mexico_City"
+    }
+  }
+}
+```
+
+#### **PUT** `/users/profile`
+Actualizar perfil del usuario.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "name": "Juan Carlos Pérez",
+  "preferences": {
+    "currency": "USD",
+    "language": "en"
+  }
+}
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "user_id": "usr_123456789",
+    "name": "Juan Carlos Pérez",
+    "preferences": {
+      "currency": "USD",
+      "language": "en",
+      "timezone": "America/Mexico_City"
+    }
+  },
+  "message": "Perfil actualizado exitosamente"
+}
+```
+
+---
+
+### 💰 **Cuentas Financieras**
+
+#### **GET** `/accounts`
+Obtener todas las cuentas del usuario.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+- `type` (opcional): Filtrar por tipo (`bank`, `credit_card`, `savings`, `investment`)
+- `status` (opcional): Filtrar por estado (`active`, `inactive`)
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "account_id": "acc_123456789",
+      "name": "Cuenta Corriente BBVA",
+      "type": "bank",
+      "currency": "MXN",
+      "balance": 15750.50,
+      "status": "active",
+      "created_at": "2025-01-10T09:00:00Z",
+      "updated_at": "2025-01-20T16:30:00Z"
+    },
+    {
+      "account_id": "acc_987654321",
+      "name": "Tarjeta Crédito Banamex",
+      "type": "credit_card",
+      "currency": "MXN",
+      "balance": -3250.75,
+      "credit_limit": 50000.00,
+      "status": "active",
+      "created_at": "2025-01-12T14:20:00Z",
+      "updated_at": "2025-01-19T11:45:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 2,
+    "page": 1,
+    "per_page": 10
+  }
+}
+```
+
+#### **POST** `/accounts`
+Crear nueva cuenta financiera.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "name": "Cuenta de Ahorros Santander",
+  "type": "savings",
+  "currency": "MXN",
+  "initial_balance": 5000.00,
+  "description": "Cuenta para emergencias"
+}
+```
+
+**Response Success (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "account_id": "acc_555666777",
+    "name": "Cuenta de Ahorros Santander",
+    "type": "savings",
+    "currency": "MXN",
+    "balance": 5000.00,
+    "status": "active",
+    "description": "Cuenta para emergencias",
+    "created_at": "2025-01-21T10:00:00Z"
+  },
+  "message": "Cuenta creada exitosamente"
+}
+```
+
+#### **GET** `/accounts/{account_id}`
+Obtener detalles de una cuenta específica.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "account_id": "acc_123456789",
+    "name": "Cuenta Corriente BBVA",
+    "type": "bank",
+    "currency": "MXN",
+    "balance": 15750.50,
+    "status": "active",
+    "description": "Cuenta principal para gastos",
+    "created_at": "2025-01-10T09:00:00Z",
+    "updated_at": "2025-01-20T16:30:00Z",
+    "recent_transactions": [
+      {
+        "transaction_id": "txn_111222333",
+        "amount": -350.00,
+        "description": "Compra en Super",
+        "date": "2025-01-20T14:30:00Z"
+      }
+    ]
+  }
+}
+```
+
+#### **PUT** `/accounts/{account_id}`
+Actualizar información de una cuenta.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "name": "Cuenta Corriente BBVA - Principal",
+  "description": "Cuenta principal para gastos diarios",
+  "status": "active"
+}
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "account_id": "acc_123456789",
+    "name": "Cuenta Corriente BBVA - Principal",
+    "description": "Cuenta principal para gastos diarios",
+    "status": "active",
+    "updated_at": "2025-01-21T11:00:00Z"
+  },
+  "message": "Cuenta actualizada exitosamente"
+}
+```
+
+#### **DELETE** `/accounts/{account_id}`
+Eliminar una cuenta (soft delete).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "message": "Cuenta eliminada exitosamente"
+}
+```
+
+---
+
+### 💸 **Transacciones**
+
+#### **GET** `/accounts/{account_id}/transactions`
+Obtener transacciones de una cuenta.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+- `start_date` (opcional): Fecha inicio (YYYY-MM-DD)
+- `end_date` (opcional): Fecha fin (YYYY-MM-DD)
+- `type` (opcional): Tipo de transacción (`income`, `expense`, `transfer`)
+- `category` (opcional): Categoría de la transacción
+- `limit` (opcional): Número de resultados (default: 50, max: 100)
+- `offset` (opcional): Para paginación
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "transaction_id": "txn_111222333",
+      "account_id": "acc_123456789",
+      "amount": -350.00,
+      "type": "expense",
+      "category": "groceries",
+      "description": "Compra en Walmart",
+      "date": "2025-01-20T14:30:00Z",
+      "location": "Walmart Polanco",
+      "created_at": "2025-01-20T14:35:00Z"
+    },
+    {
+      "transaction_id": "txn_444555666",
+      "account_id": "acc_123456789",
+      "amount": 2500.00,
+      "type": "income",
+      "category": "salary",
+      "description": "Salario mensual",
+      "date": "2025-01-15T09:00:00Z",
+      "created_at": "2025-01-15T09:05:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 45,
+    "limit": 50,
+    "offset": 0,
+    "has_more": false
+  }
+}
+```
+
+#### **POST** `/accounts/{account_id}/transactions`
+Crear nueva transacción.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "amount": -150.75,
+  "type": "expense",
+  "category": "restaurant",
+  "description": "Cena en La Casa de Toño",
+  "date": "2025-01-21T20:30:00Z",
+  "location": "Roma Norte"
+}
+```
+
+**Response Success (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "transaction_id": "txn_777888999",
+    "account_id": "acc_123456789",
+    "amount": -150.75,
+    "type": "expense",
+    "category": "restaurant",
+    "description": "Cena en La Casa de Toño",
+    "date": "2025-01-21T20:30:00Z",
+    "location": "Roma Norte",
+    "created_at": "2025-01-21T20:35:00Z",
+    "new_balance": 15599.75
+  },
+  "message": "Transacción creada exitosamente"
+}
+```
+
+---
+
+### 📊 **Reportes y Analytics**
+
+#### **GET** `/reports/summary`
+Obtener resumen financiero del usuario.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+- `period` (opcional): Período de análisis (`week`, `month`, `quarter`, `year`)
+- `start_date` (opcional): Fecha inicio personalizada
+- `end_date` (opcional): Fecha fin personalizada
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "period": {
+      "start_date": "2025-01-01",
+      "end_date": "2025-01-31",
+      "type": "month"
+    },
+    "summary": {
+      "total_balance": 12499.75,
+      "total_income": 8500.00,
+      "total_expenses": -6250.25,
+      "net_flow": 2249.75,
+      "accounts_count": 3,
+      "transactions_count": 47
+    },
+    "by_category": [
+      {
+        "category": "salary",
+        "amount": 7500.00,
+        "type": "income",
+        "percentage": 88.24
+      },
+      {
+        "category": "groceries", 
+        "amount": -2100.50,
+        "type": "expense",
+        "percentage": 33.61
+      }
+    ],
+    "by_account": [
+      {
+        "account_id": "acc_123456789",
+        "name": "Cuenta Corriente BBVA",
+        "balance": 15750.50,
+        "change": +1200.30
+      }
+    ]
+  }
+}
+```
+
+---
+
+### ⚡ **Health Check**
+
+#### **GET** `/health`
+Verificar estado de la API.
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "timestamp": "2025-01-21T12:00:00Z",
+    "version": "1.0.0",
+    "environment": "production",
+    "database": "connected",
+    "uptime": "72h 15m 30s"
+  }
+}
+```
+
+---
+
+## 📋 **Códigos de Error Comunes**
+
+| Código | Descripción |
+|--------|-------------|
+| `INVALID_CREDENTIALS` | Email o contraseña incorrectos |
+| `TOKEN_EXPIRED` | Token JWT expirado |
+| `INVALID_TOKEN` | Token JWT inválido |
+| `USER_NOT_FOUND` | Usuario no encontrado |
+| `ACCOUNT_NOT_FOUND` | Cuenta no encontrada |
+| `INSUFFICIENT_PERMISSIONS` | Sin permisos para realizar la acción |
+| `VALIDATION_ERROR` | Error en validación de datos |
+| `RATE_LIMIT_EXCEEDED` | Límite de requests excedido |
+| `INTERNAL_ERROR` | Error interno del servidor |
+
+## 🔧 **Configuración del Cliente**
+
+### Variables de Entorno para Frontend
+
+```bash
+REACT_APP_API_URL=https://api.finance-tracker.tu-dominio.com
+REACT_APP_ENVIRONMENT=production
+REACT_APP_FRONTEND_URL=https://finance-tracker.tu-dominio.com
+```
+
+### Headers Requeridos
+
+```javascript
+const headers = {
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${jwt_token}`,
+  'X-Client-Version': '1.0.0'
+}
+```
+
+### Manejo de Errores
+
+```javascript
+// Ejemplo de manejo de errores en JavaScript
+try {
+  const response = await fetch('/api/accounts', {
+    headers: headers
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message);
+  }
+  
+  const data = await response.json();
+  return data;
+} catch (error) {
+  console.error('API Error:', error.message);
+  // Manejar error apropiadamente
+}
+```
+
+---
+
+## 🚀 **Ejemplos de Uso**
+
+### Login y obtener cuentas
+
+```javascript
+// 1. Login
+const loginResponse = await fetch('/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    email: 'usuario@example.com',
+    password: 'mi_password'
+  })
+});
+
+const { data: { token } } = await loginResponse.json();
+
+// 2. Obtener cuentas
+const accountsResponse = await fetch('/accounts', {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const accounts = await accountsResponse.json();
+```
+
+---
+
+📝 **Nota**: Esta documentación está en constante actualización. Para la versión más reciente, consulta el repositorio del proyecto.

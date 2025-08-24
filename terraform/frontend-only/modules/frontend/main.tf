@@ -75,18 +75,29 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
   }
 
   error_document {
-    key = "error.html"
+    key = "index.html"  # Cambio crítico: error.html -> index.html
   }
+
+  routing_rules = jsonencode([
+    {
+      Condition = {
+        HttpErrorCodeReturnedEquals = "404"
+      }
+      Redirect = {
+        ReplaceKeyWith = "index.html"
+      }
+    }
+  ])
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
-  # Permitir acceso público para CloudFront
+  # Bloquear todo acceso público - solo CloudFront debe acceder
   block_public_acls       = true
-  block_public_policy     = false
+  block_public_policy     = true
   ignore_public_acls      = true
-  restrict_public_buckets = false
+  restrict_public_buckets = true
 }
 
 # -----------------------------------------------------------------------------
@@ -94,7 +105,8 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 # -----------------------------------------------------------------------------
 
 resource "aws_cloudfront_origin_access_control" "frontend" {
-  name   = "${local.name_prefix}-oac"
+  name                              = "${local.name_prefix}-oac"
+  description                       = "OAC for ${local.name_prefix}"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -113,7 +125,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   default_cache_behavior {
-    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
     target_origin_id       = "S3-${aws_s3_bucket.frontend.bucket}"
     compress               = true
@@ -127,11 +139,32 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
 
     min_ttl     = 0
-    default_ttl = 3600
-    max_ttl     = 86400
+    default_ttl = 86400  # 1 día
+    max_ttl     = 31536000  # 1 año
   }
 
-  # Configuración para SPA (Single Page Application)
+  # Configuración específica para archivos estáticos con caché largo
+  ordered_cache_behavior {
+    path_pattern     = "/static/*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.frontend.bucket}"
+    compress         = true
+    viewer_protocol_policy = "redirect-to-https"
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    min_ttl     = 0
+    default_ttl = 86400
+    max_ttl     = 31536000
+  }
+
+  # Configuración para SPA (Single Page Application) - CRÍTICO
   custom_error_response {
     error_caching_min_ttl = 0
     error_code            = 403
@@ -142,6 +175,14 @@ resource "aws_cloudfront_distribution" "frontend" {
   custom_error_response {
     error_caching_min_ttl = 0
     error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+  }
+
+  # Error de acceso negado también debe redirigir a index.html
+  custom_error_response {
+    error_caching_min_ttl = 0
+    error_code            = 500
     response_code         = 200
     response_page_path    = "/index.html"
   }
@@ -194,6 +235,7 @@ resource "aws_s3_bucket_policy" "frontend" {
   policy = data.aws_iam_policy_document.frontend_policy.json
   
   depends_on = [
-    aws_s3_bucket_public_access_block.frontend
+    aws_s3_bucket_public_access_block.frontend,
+    aws_cloudfront_distribution.frontend
   ]
 }
