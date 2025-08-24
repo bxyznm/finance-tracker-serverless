@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any
 from datetime import datetime
 import secrets
+from decimal import Decimal
 
 from utils.responses import create_response
 from utils.dynamodb_client import DynamoDBClient
@@ -53,7 +54,7 @@ def create_account_handler(event: Dict[str, Any], context: Any, user_data: Token
             'bank_name': account_data.bank_name,
             'bank_code': account_data.bank_code,
             'currency': account_data.currency,
-            'initial_balance': account_data.initial_balance,
+            'initial_balance': Decimal(str(account_data.initial_balance)),
             'is_active': account_data.is_active,
             'description': account_data.description,
             'color': account_data.color,
@@ -341,7 +342,7 @@ def update_balance_handler(event: Dict[str, Any], context: Any, user_data: Token
         updated_account = db_client.update_account_balance(
             user_id, 
             account_id, 
-            balance_data.amount,
+            Decimal(str(balance_data.amount)),
             datetime.now().isoformat()
         )
         
