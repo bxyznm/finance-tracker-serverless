@@ -11,6 +11,7 @@ terraform {
     # El bucket se configurará dinámicamente via -backend-config
     bucket = "finance-tracker-serverless-tfstates"
     key    = "frontend-only/dev/terraform.tfstate"  # ← SEPARADO del backend
+    region = "mx-central-1"  # Región de México
     
     # Configuración de seguridad
     encrypt = true
@@ -32,16 +33,18 @@ terraform {
 # Provider Configuration
 # -----------------------------------------------------------------------------
 
+# Provider principal - mx-central-1 es la región nativa de México
 provider "aws" {
-  region = var.aws_region
+  region = var.aws_region  # mx-central-1
   
   default_tags {
     tags = {
       Project     = "finance-tracker"
       Environment = "dev"
-      Component   = "frontend-only"
+      Component   = "frontend-s3-website"
       ManagedBy   = "terraform"
-      CreatedBy   = "frontend-dev-environment"
+      SSLProvider = "cloudflare"
+      Region      = "mexico-native"
     }
   }
 }
@@ -101,34 +104,34 @@ module "frontend" {
 # Outputs
 # -----------------------------------------------------------------------------
 
-output "frontend_bucket_name" {
-  description = "Nombre del bucket S3 del frontend"
-  value       = module.frontend.frontend_bucket_name
+output "website_endpoint" {
+  description = "🌐 URL del website S3 - USAR ESTA PARA CLOUDFLARE DNS"
+  value       = module.frontend.frontend_website_endpoint
 }
 
-output "frontend_cloudfront_distribution_id" {
-  description = "ID de la distribución CloudFront"
-  value       = module.frontend.frontend_cloudfront_distribution_id
-}
-
-output "frontend_url" {
-  description = "URL del frontend desplegado"
+output "website_url" {
+  description = "URL completa del frontend S3"
   value       = module.frontend.frontend_url
 }
 
-output "api_gateway_url" {
-  description = "URL del API Gateway (del backend)"
-  value       = local.api_gateway_url
+output "bucket_name" {
+  description = "Nombre del bucket S3"
+  value       = module.frontend.frontend_bucket_name
 }
 
-output "deployment_info" {
-  description = "Información de despliegue"
+output "cloudflare_configuration" {
+  description = "📋 INSTRUCCIONES PARA CLOUDFLARE"
+  value       = module.frontend.cloudflare_setup
+}
+
+output "deployment_summary" {
+  description = "📊 RESUMEN DEL DESPLIEGUE"
   value = {
-    message        = "🚀 Frontend desplegado independientemente"
-    environment    = "dev"
-    frontend_url   = module.frontend.frontend_url
-    api_url        = local.api_gateway_url
-    bucket_name    = module.frontend.frontend_bucket_name
-    cloudfront_id  = module.frontend.frontend_cloudfront_distribution_id
+    status          = "✅ S3 Website Hosting creado"
+    website_url     = module.frontend.frontend_url
+    bucket_name     = module.frontend.frontend_bucket_name
+    next_step       = "Configurar CNAME en Cloudflare"
+    target_domain   = "finance-tracker.brxvn.xyz"
+    ssl_provider    = "Cloudflare (gratis)"
   }
 }

@@ -3,9 +3,9 @@
 # =============================================================================
 
 variable "aws_region" {
-  description = "Región de AWS"
+  description = "Región de AWS - México Central"
   type        = string
-  default     = "mx-central-1"
+  default     = "mx-central-1"  # Región de México
 }
 
 variable "backend_state_bucket" {

@@ -1,8 +1,9 @@
 # =============================================================================
-# Módulo Frontend Independiente - Finance Tracker
+# Módulo Frontend S3 Hosting - Finance Tracker México
 # =============================================================================
-# Este módulo maneja SOLO la infraestructura del frontend
-# Separado completamente del backend para deploys independientes
+# Este módulo crea SOLO un bucket S3 con hosting web estático
+# Desplegado en la región mx-central-1 (México Central)
+# Sin CloudFront - Para usar con Cloudflare Proxy
 
 terraform {
   required_version = ">= 1.12.2"
@@ -30,6 +31,9 @@ locals {
     Environment = var.environment
     Component   = "frontend"
     ManagedBy   = "terraform"
+    HostingType = "s3-website"
+    Region      = "mx-central-1"
+    Country     = "Mexico"
   })
 }
 
@@ -42,7 +46,7 @@ resource "random_id" "suffix" {
 }
 
 # -----------------------------------------------------------------------------
-# S3 Bucket para Frontend Hosting
+# S3 Bucket para Frontend Hosting en México
 # -----------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "frontend" {
@@ -50,23 +54,7 @@ resource "aws_s3_bucket" "frontend" {
   tags   = local.common_tags
 }
 
-resource "aws_s3_bucket_versioning" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
+# Configuración de Website
 resource "aws_s3_bucket_website_configuration" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
@@ -75,167 +63,100 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
   }
 
   error_document {
-    key = "index.html"  # Cambio crítico: error.html -> index.html
+    key = "index.html"  # Para SPAs con React Router
   }
-
-  routing_rules = jsonencode([
-    {
-      Condition = {
-        HttpErrorCodeReturnedEquals = "404"
-      }
-      Redirect = {
-        ReplaceKeyWith = "index.html"
-      }
-    }
-  ])
 }
 
+# Configuración de acceso público
 resource "aws_s3_bucket_public_access_block" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
-  # Bloquear todo acceso público - solo CloudFront debe acceder
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
 }
 
-# -----------------------------------------------------------------------------
-# CloudFront Distribution
-# -----------------------------------------------------------------------------
-
-resource "aws_cloudfront_origin_access_control" "frontend" {
-  name                              = "${local.name_prefix}-oac"
-  description                       = "OAC for ${local.name_prefix}"
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}
-
-resource "aws_cloudfront_distribution" "frontend" {
-  enabled             = true
-  is_ipv6_enabled     = true
-  default_root_object = "index.html"
-  comment             = "Frontend distribution for ${var.project_name} ${var.environment}"
-
-  origin {
-    domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
-    origin_id                = "S3-${aws_s3_bucket.frontend.bucket}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
-  }
-
-  default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-${aws_s3_bucket.frontend.bucket}"
-    compress               = true
-    viewer_protocol_policy = "redirect-to-https"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    min_ttl     = 0
-    default_ttl = 86400  # 1 día
-    max_ttl     = 31536000  # 1 año
-  }
-
-  # Configuración específica para archivos estáticos con caché largo
-  ordered_cache_behavior {
-    path_pattern     = "/static/*"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.frontend.bucket}"
-    compress         = true
-    viewer_protocol_policy = "redirect-to-https"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    min_ttl     = 0
-    default_ttl = 86400
-    max_ttl     = 31536000
-  }
-
-  # Configuración para SPA (Single Page Application) - CRÍTICO
-  custom_error_response {
-    error_caching_min_ttl = 0
-    error_code            = 403
-    response_code         = 200
-    response_page_path    = "/index.html"
-  }
-
-  custom_error_response {
-    error_caching_min_ttl = 0
-    error_code            = 404
-    response_code         = 200
-    response_page_path    = "/index.html"
-  }
-
-  # Error de acceso negado también debe redirigir a index.html
-  custom_error_response {
-    error_caching_min_ttl = 0
-    error_code            = 500
-    response_code         = 200
-    response_page_path    = "/index.html"
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
-
-  tags = local.common_tags
-}
-
-# -----------------------------------------------------------------------------
-# S3 Bucket Policy para CloudFront
-# -----------------------------------------------------------------------------
-
-data "aws_iam_policy_document" "frontend_policy" {
-  statement {
-    sid    = "AllowCloudFrontServicePrincipal"
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["cloudfront.amazonaws.com"]
-    }
-
-    actions = [
-      "s3:GetObject"
-    ]
-
-    resources = [
-      "${aws_s3_bucket.frontend.arn}/*"
-    ]
-
-    condition {
-      test     = "StringEquals"
-      variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.frontend.arn]
-    }
-  }
-}
-
+# Policy para acceso público de lectura
 resource "aws_s3_bucket_policy" "frontend" {
   bucket = aws_s3_bucket.frontend.id
-  policy = data.aws_iam_policy_document.frontend_policy.json
+  depends_on = [aws_s3_bucket_public_access_block.frontend]
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.frontend.arn}/*"
+      }
+    ]
+  })
+}
+
+# Versionado del bucket
+resource "aws_s3_bucket_versioning" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Configuración de CORS para permitir requests desde dominios externos
+resource "aws_s3_bucket_cors_configuration" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "HEAD"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
+# -----------------------------------------------------------------------------
+# Crear directorio para templates
+# -----------------------------------------------------------------------------
+
+resource "local_file" "config_template" {
+  filename = "${path.module}/templates/config.js.tpl"
+  content  = <<EOF
+// Configuración automática generada por Terraform
+// Desplegado desde México Central (mx-central-1)
+window.CONFIG = {
+  API_BASE_URL: '$${api_gateway_url}',
+  ENVIRONMENT: '$${environment}',
+  APP_NAME: 'Finance Tracker',
+  VERSION: '1.0.0',
+  // Configuración específica para México
+  LOCALE: 'es-MX',
+  CURRENCY: 'MXN',
+  TIMEZONE: 'America/Mexico_City',
+  REGION: 'mx-central-1',
+  COUNTRY: 'México'
+};
+
+console.log('🇲🇽 Finance Tracker México Config loaded:', window.CONFIG);
+EOF
+}
+
+# -----------------------------------------------------------------------------
+# Archivo de configuración de React (config.js)
+# -----------------------------------------------------------------------------
+
+resource "aws_s3_object" "config_js" {
+  bucket       = aws_s3_bucket.frontend.id
+  key          = "config.js"
+  content_type = "application/javascript"
   
-  depends_on = [
-    aws_s3_bucket_public_access_block.frontend,
-    aws_cloudfront_distribution.frontend
-  ]
+  content = templatefile("${path.module}/templates/config.js.tpl", {
+    api_gateway_url = var.api_gateway_url != "" ? var.api_gateway_url : "https://api.example.com"
+    environment     = var.environment
+  })
+
+  tags = local.common_tags
+  depends_on = [local_file.config_template]
 }
