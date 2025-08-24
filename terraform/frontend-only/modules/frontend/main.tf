@@ -118,17 +118,20 @@ resource "aws_s3_bucket_cors_configuration" "frontend" {
 }
 
 # -----------------------------------------------------------------------------
-# Crear directorio para templates
+# Archivo de configuración de React (config.js)
 # -----------------------------------------------------------------------------
 
-resource "local_file" "config_template" {
-  filename = "${path.module}/templates/config.js.tpl"
-  content  = <<EOF
+resource "aws_s3_object" "config_js" {
+  bucket       = aws_s3_bucket.frontend.id
+  key          = "config.js"
+  content_type = "application/javascript"
+  
+  content = <<EOF
 // Configuración automática generada por Terraform
 // Desplegado desde México Central (mx-central-1)
 window.CONFIG = {
-  API_BASE_URL: '$${api_gateway_url}',
-  ENVIRONMENT: '$${environment}',
+  API_BASE_URL: '${var.api_gateway_url != "" ? var.api_gateway_url : "https://api.example.com"}',
+  ENVIRONMENT: '${var.environment}',
   APP_NAME: 'Finance Tracker',
   VERSION: '1.0.0',
   // Configuración específica para México
@@ -141,22 +144,6 @@ window.CONFIG = {
 
 console.log('🇲🇽 Finance Tracker México Config loaded:', window.CONFIG);
 EOF
-}
-
-# -----------------------------------------------------------------------------
-# Archivo de configuración de React (config.js)
-# -----------------------------------------------------------------------------
-
-resource "aws_s3_object" "config_js" {
-  bucket       = aws_s3_bucket.frontend.id
-  key          = "config.js"
-  content_type = "application/javascript"
-  
-  content = templatefile("${path.module}/templates/config.js.tpl", {
-    api_gateway_url = var.api_gateway_url != "" ? var.api_gateway_url : "https://api.example.com"
-    environment     = var.environment
-  })
 
   tags = local.common_tags
-  depends_on = [local_file.config_template]
 }
