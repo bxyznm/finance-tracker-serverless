@@ -127,8 +127,6 @@ module "finance_tracker" {
   # Variables para frontend y dominio personalizado
   domain_name             = var.domain_name
   frontend_subdomain      = var.frontend_subdomain
-  use_custom_domain       = var.use_custom_domain
-  cloudflare_integration  = var.cloudflare_integration
 
   # Configuración de DynamoDB
   dynamodb_billing_mode         = local.dev_config.dynamodb_billing_mode

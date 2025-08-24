@@ -1,3 +1,7 @@
+output "frontend_website_endpoint" {
+  description = "S3 static website endpoint for the frontend"
+  value       = aws_s3_bucket_website_configuration.frontend_website.website_endpoint
+}
 # =============================================================================
 # Finance Tracker Serverless - Module Outputs
 # =============================================================================

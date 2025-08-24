@@ -1,12 +1,12 @@
 # =============================================================================
-# Frontend Infrastructure - S3 + CloudFront + Custom Domain
+## Frontend Infrastructure - S3 Static Website Only
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # Locals para construcción de nombres
 # -----------------------------------------------------------------------------
 
-// No se requieren locals para dominio personalizado ni SSL, solo S3 y Cloudflare
+// No custom domain, no SSL, only S3 static website hosting
 
 # -----------------------------------------------------------------------------
 # S3 Bucket para hosting del frontend

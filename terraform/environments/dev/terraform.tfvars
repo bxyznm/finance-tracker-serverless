@@ -86,11 +86,7 @@ cors_allowed_origins = ["*"]  # Para desarrollo, en producción debes especifica
 
 # domain_name = "mifinanzas.com"              # Tu dominio principal
 # frontend_subdomain = "app"                  # Subdominio para el frontend (app.mifinanzas.com)
-# use_custom_domain = true                    # Habilitar dominio personalizado
-# cloudflare_integration = true              # true = Cloudflare como proxy, false = AWS Certificate Manager
 
 # EJEMPLO para configurar tu dominio:
 domain_name = "brxvn.xyz"
-frontend_subdomain = "financetracker" 
-use_custom_domain = true
-cloudflare_integration = true
+frontend_subdomain = "financetracker"
