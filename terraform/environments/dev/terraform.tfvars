@@ -18,7 +18,7 @@ github_owner = "bxyznm"                    # Usuario de GitHub del propietario d
 
 # Opcional: Tag específico del prerelease para usar
 # Si se deja vacío o null, usará "local-dev" por defecto
-# dev_release_tag = ""  # Descomenta para usar un tag específico del workflow
+# dev_release_tag = "local-dev"  # Descomenta si tienes un release específico
 
 # -----------------------------------------------------------------------------
 # Configuración de Seguridad (REQUERIDA)

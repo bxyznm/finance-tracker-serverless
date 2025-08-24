@@ -118,8 +118,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+          registry-url: 'https://registry.npmjs.org/'
+      
+      - name: 🔧 Configurar caché npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            frontend/node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+            ${{ runner.os }}-node-
       
       - name: 📋 Mostrar información del ambiente
         run: |
@@ -133,10 +143,20 @@ jobs:
         working-directory: ./frontend
         run: |
           echo "📦 Instalando dependencias..."
-          npm ci --prefer-offline --no-audit
+          echo "Node: $(node --version), npm: $(npm --version)"
+          
+          # Limpiar caché npm si es necesario
+          npm cache clean --force || true
+          
+          # Instalar dependencias
+          if [[ -f "package-lock.json" ]]; then
+            npm ci --prefer-offline --no-audit
+          else
+            npm install --prefer-offline --no-audit
+          fi
           
           echo "📊 Información de dependencias:"
-          npm list --depth=0
+          npm list --depth=0 || true
       
       - name: 🧪 Ejecutar tests
         if: inputs.skip_tests != true

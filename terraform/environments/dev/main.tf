@@ -63,13 +63,8 @@ provider "github" {
 # Data Sources
 # -----------------------------------------------------------------------------
 
-# Obtener el último prerelease para desarrollo
-data "github_release" "latest_prerelease" {
-  repository  = var.github_repository
-  owner       = var.github_owner
-  retrieve_by = "tag"
-  release_tag = var.dev_release_tag
-}
+# Los datos de GitHub release se manejan en el módulo principal
+# No necesitamos data sources aquí para desarrollo local
 
 # Obtener información del caller actual
 data "aws_caller_identity" "current" {}
@@ -128,6 +123,12 @@ module "finance_tracker" {
   github_owner      = var.github_owner
   github_repository = var.github_repository
   dev_release_tag   = var.dev_release_tag
+
+  # Variables para frontend y dominio personalizado
+  domain_name             = var.domain_name
+  frontend_subdomain      = var.frontend_subdomain
+  use_custom_domain       = var.use_custom_domain
+  cloudflare_integration  = var.cloudflare_integration
 
   # Configuración de DynamoDB
   dynamodb_billing_mode         = local.dev_config.dynamodb_billing_mode

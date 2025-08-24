@@ -31,12 +31,40 @@ jobs:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
       
+      - name: 🔍 Verificar estructura del proyecto
+        run: |
+          echo "📁 Verificando estructura del proyecto..."
+          ls -la
+          echo "📁 Contenido de frontend:"
+          ls -la frontend/
+          
+          if [[ ! -f "frontend/package.json" ]]; then
+            echo "❌ Error: frontend/package.json no encontrado"
+            exit 1
+          fi
+          
+          if [[ ! -f "frontend/package-lock.json" ]]; then
+            echo "⚠️ Advertencia: package-lock.json no encontrado, se generará durante npm install"
+          fi
+          
+          echo "✅ Estructura verificada"
+      
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+          registry-url: 'https://registry.npmjs.org/'
+      
+      - name: 🔧 Configurar caché npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            frontend/node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+            ${{ runner.os }}-node-
       
       - name: ⚙️ Configurar AWS CLI
         uses: aws-actions/configure-aws-credentials@v4
@@ -79,7 +107,25 @@ jobs:
         working-directory: ./frontend
         run: |
           echo "📦 Instalando dependencias..."
-          npm ci
+          echo "Node version: $(node --version)"
+          echo "npm version: $(npm --version)"
+          echo "Current directory: $(pwd)"
+          
+          # Limpiar caché npm si es necesario
+          npm cache clean --force || true
+          
+          # Instalar dependencias
+          if [[ -f "package-lock.json" ]]; then
+            echo "📋 Usando package-lock.json existente..."
+            npm ci --prefer-offline --no-audit
+          else
+            echo "📋 Generando nuevo package-lock.json..."
+            npm install --prefer-offline --no-audit
+          fi
+          
+          echo "✅ Dependencias instaladas"
+          echo "📊 Paquetes instalados:"
+          npm list --depth=0 || true
       
       - name: 🧪 Ejecutar tests
         working-directory: ./frontend
