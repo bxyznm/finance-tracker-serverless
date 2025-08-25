@@ -20,33 +20,53 @@ interface CustomTextFieldProps extends Omit<TextFieldProps, 'variant'> {
 const StyledTextField = styled(TextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 12,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: '#2d2d2d',
     transition: 'all 0.2s ease-in-out',
+    
+    '& fieldset': {
+      borderColor: '#2d2d2d',
+    },
     
     '&:hover': {
       '& .MuiOutlinedInput-notchedOutline': {
-        borderColor: theme.palette.primary.main,
+        borderColor: '#6366f1',
       },
     },
     
     '&.Mui-focused': {
       '& .MuiOutlinedInput-notchedOutline': {
-        borderColor: theme.palette.primary.main,
+        borderColor: '#6366f1',
         borderWidth: 2,
       },
     },
     
     '&.Mui-error': {
       '& .MuiOutlinedInput-notchedOutline': {
-        borderColor: theme.palette.error.main,
+        borderColor: '#ef4444',
       },
     },
   },
   
   '& .MuiInputLabel-root': {
     fontWeight: 500,
+    color: '#a0a0a0',
     '&.Mui-focused': {
-      color: theme.palette.primary.main,
+      color: '#6366f1',
+    },
+  },
+  
+  '& .MuiInputBase-input': {
+    color: '#ffffff',
+    '&::placeholder': {
+      color: '#666666',
+      opacity: 1,
+    },
+  },
+  
+  '& .MuiFormHelperText-root': {
+    color: '#a0a0a0',
+    '&.Mui-error': {
+      color: '#ef4444',
     },
   },
 }));
@@ -89,6 +109,13 @@ export const Input: React.FC<CustomTextFieldProps> = ({
                 onClick={handleTogglePasswordVisibility}
                 edge="end"
                 size="small"
+                sx={{
+                  color: '#a0a0a0',
+                  '&:hover': {
+                    color: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  },
+                }}
               >
                 {showPassword ? <VisibilityOff /> : <Visibility />}
               </IconButton>
@@ -101,7 +128,7 @@ export const Input: React.FC<CustomTextFieldProps> = ({
         <Typography 
           variant="caption" 
           sx={{ 
-            color: 'success.main', 
+            color: '#10b981', 
             mt: 0.5, 
             display: 'block',
             fontSize: '0.75rem'

@@ -7,17 +7,11 @@ import {
   RefreshTokenResponse 
 } from '../types/auth';
 import { getUserFromToken, isTokenExpired } from '../utils/jwt';
-
-// Base URL for your serverless backend
-const API_BASE_URL = 'https://jjb0khkiz0.execute-api.mx-central-1.amazonaws.com/dev';
+import { apiConfig } from '../config/api';
 
 // Create axios instance with better timeout and error handling
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 30000, // 30 seconds for serverless cold starts
+  ...apiConfig,
   validateStatus: function (status) {
     return status < 500; // Accept all responses below 500 as valid
   }
@@ -66,12 +60,11 @@ export class AuthService {
   static createAuthenticatedClient() {
     const token = localStorage.getItem('access_token');
     return axios.create({
-      baseURL: API_BASE_URL,
+      ...apiConfig,
       headers: {
-        'Content-Type': 'application/json',
+        ...apiConfig.headers,
         ...(token && { Authorization: `Bearer ${token}` })
       },
-      timeout: 10000,
     });
   }
 

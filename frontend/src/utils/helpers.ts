@@ -13,32 +13,64 @@ export const isValidEmail = (email: string): boolean => {
 /**
  * Validate password strength according to backend requirements
  */
-export const isValidPassword = (password: string): { isValid: boolean; errors: string[] } => {
+export const isValidPassword = (password: string): { 
+  isValid: boolean; 
+  errors: string[]; 
+  score: number;
+  message: string;
+} => {
   const errors: string[] = [];
+  let score = 0;
   
   if (password.length < 8) {
     errors.push('La contraseña debe tener al menos 8 caracteres');
+  } else {
+    score += 1;
   }
   
   if (!/[A-Z]/.test(password)) {
     errors.push('Debe incluir al menos una letra mayúscula');
+  } else {
+    score += 1;
   }
   
   if (!/[a-z]/.test(password)) {
     errors.push('Debe incluir al menos una letra minúscula');
+  } else {
+    score += 1;
   }
   
   if (!/\d/.test(password)) {
     errors.push('Debe incluir al menos un número');
+  } else {
+    score += 1;
   }
   
   if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
     errors.push('Debe incluir al menos un carácter especial (!@#$%^&*(),.?":{}|<>)');
+  } else {
+    score += 1;
   }
+  
+  // Additional score for length
+  if (password.length >= 12) {
+    score += 1;
+  }
+  
+  const messages = [
+    'Muy débil',
+    'Débil', 
+    'Regular',
+    'Buena',
+    'Fuerte',
+    'Muy fuerte'
+  ];
   
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
+    score: Math.min(score, 5),
+    message: messages[Math.min(score, 5)]
   };
 };
 

@@ -22,7 +22,7 @@ const StyledButton = styled(MuiButton)(({ theme }) => ({
   transition: 'all 0.2s ease-in-out',
   
   '&:hover': {
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
     transform: 'translateY(-1px)',
   },
   
@@ -31,8 +31,33 @@ const StyledButton = styled(MuiButton)(({ theme }) => ({
   },
   
   '&.Mui-disabled': {
-    backgroundColor: theme.palette.grey[300],
-    color: theme.palette.grey[500],
+    backgroundColor: '#2d2d2d',
+    color: '#666666',
+  },
+  
+  // Dark theme specific styles
+  '&.MuiButton-contained': {
+    backgroundColor: '#1a1a1a',
+    color: '#ffffff',
+    '&:hover': {
+      backgroundColor: '#2d2d2d',
+    },
+  },
+  
+  '&.MuiButton-outlined': {
+    borderColor: '#2d2d2d',
+    color: '#ffffff',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderColor: '#6366f1',
+    },
+  },
+  
+  '&.MuiButton-text': {
+    color: '#ffffff',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    },
   },
 }));
 

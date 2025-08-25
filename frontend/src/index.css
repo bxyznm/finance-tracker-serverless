@@ -11,12 +11,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8fafc;
   line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 code {
   font-family: 'Fira Code', 'Courier New', monospace;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #2d2d2d;
 }
 
 /* Smooth scrolling */
@@ -42,20 +47,94 @@ a {
   min-height: 100vh;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar for dark theme */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #1a1a1a;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: #2d2d2d;
+  border-radius: 4px;
+  border: 1px solid #1a1a1a;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #6366f1;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2d2d2d #1a1a1a;
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(99, 102, 241, 0.3);
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background-color: rgba(99, 102, 241, 0.3);
+  color: #ffffff;
+}
+
+/* Focus styles for accessibility */
+*:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Dark theme specific styles */
+.dark-theme {
+  background-color: #0a0a0a;
+  color: #ffffff;
+}
+
+/* Glass morphism effect for cards */
+.glass-card {
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(45, 45, 45, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%);
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #6366f1 100%);
+}
+
+/* Text utilities */
+.text-primary {
+  color: #ffffff;
+}
+
+.text-secondary {
+  color: #a0a0a0;
+}
+
+.text-muted {
+  color: #666666;
+}
+
+.text-accent {
+  color: #6366f1;
+}
+
+/* Border utilities */
+.border-dark {
+  border-color: #2d2d2d;
+}
+
+.border-accent {
+  border-color: #6366f1;
 }

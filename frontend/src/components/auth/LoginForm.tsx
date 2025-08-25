@@ -18,6 +18,7 @@ import { Button, Input } from '../ui';
 import { useLogin } from '../../hooks';
 import { LoginRequest } from '../../types';
 import { isValidEmail } from '../../utils';
+import { useTheme as useCustomTheme } from '../../context/ThemeContext';
 
 // Validation schema
 const loginSchema = yup.object({
@@ -35,6 +36,7 @@ const loginSchema = yup.object({
 
 const LoginForm: React.FC = () => {
   const theme = useTheme();
+  const { mode } = useCustomTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { login, isLoading, error, clearError } = useLogin();
 
@@ -89,7 +91,9 @@ const LoginForm: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 50%, ${theme.palette.primary.dark} 100%)`,
+        background: mode === 'light' 
+          ? `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 50%, ${theme.palette.primary.dark} 100%)`
+          : `linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%, #0a0a0a 100%)`,
         padding: theme.spacing(2),
         position: 'relative',
         overflow: 'hidden',
@@ -100,7 +104,17 @@ const LoginForm: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KPGcgZmlsbD0iIzAwMCIgZmlsbC1vcGFjaXR5PSIwLjA1Ij4KPGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPgo8L2c+CjwvZz4KPC9zdmc+")',
+          background: 'radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%)',
+          pointerEvents: 'none'
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KPGcgZmlsbD0iIzY2NjY2NiIgZmlsbC1vcGFjaXR5PSIwLjA1Ij4KPGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPgo8L2c+CjwvZz4KPC9zdmc+")',
           opacity: 0.3,
           pointerEvents: 'none'
         }
@@ -112,7 +126,18 @@ const LoginForm: React.FC = () => {
           maxWidth: 400,
           p: { xs: 3, sm: 4 },
           borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          backgroundColor: mode === 'light' 
+            ? 'rgba(255, 255, 255, 0.95)' 
+            : 'rgba(26, 26, 26, 0.9)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: mode === 'light'
+            ? '0 8px 32px rgba(0,0,0,0.12)'
+            : '0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(45, 45, 45, 0.3)',
+          border: mode === 'light' 
+            ? '1px solid rgba(255, 255, 255, 0.3)'
+            : '1px solid rgba(45, 45, 45, 0.2)',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <Box component="form" onSubmit={handleSubmit(onSubmit)}>
@@ -126,17 +151,19 @@ const LoginForm: React.FC = () => {
               component="h1"
               sx={{
                 fontWeight: 700,
-                color: 'primary.main',
                 mb: 1,
-                fontSize: { xs: '1.75rem', sm: '2rem' }
+                fontSize: { xs: '1.75rem', sm: '2rem' },
+                color: theme.palette.text.primary,
               }}
             >
               ¡Bienvenido de vuelta! 👋
             </Typography>
             <Typography
               variant="body1"
-              color="text.secondary"
-              sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}
+              sx={{ 
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                color: theme.palette.text.secondary
+              }}
             >
               Ingresa a tu cuenta de Finance Tracker
             </Typography>
@@ -202,7 +229,7 @@ const LoginForm: React.FC = () => {
                 sx={{
                   py: 1.5,
                   fontSize: { xs: '0.9rem', sm: '1rem' },
-                  fontWeight: 600
+                  fontWeight: 600,
                 }}
               >
                 Iniciar Sesión
@@ -215,11 +242,12 @@ const LoginForm: React.FC = () => {
                   component={RouterLink}
                   to="/forgot-password"
                   sx={{
-                    color: 'primary.main',
+                    color: theme.palette.primary.main,
                     textDecoration: 'none',
                     fontWeight: 500,
                     fontSize: { xs: '0.875rem', sm: '0.9rem' },
                     '&:hover': {
+                      color: theme.palette.primary.light,
                       textDecoration: 'underline'
                     }
                   }}
@@ -241,18 +269,21 @@ const LoginForm: React.FC = () => {
             >
               <Typography 
                 variant="body2" 
-                color="text.secondary"
-                sx={{ fontSize: { xs: '0.875rem', sm: '0.9rem' } }}
+                sx={{ 
+                  fontSize: { xs: '0.875rem', sm: '0.9rem' },
+                  color: theme.palette.text.secondary
+                }}
               >
                 ¿No tienes una cuenta?{' '}
                 <Link
                   component={RouterLink}
                   to="/register"
                   sx={{
-                    color: 'primary.main',
+                    color: theme.palette.primary.main,
                     textDecoration: 'none',
                     fontWeight: 600,
                     '&:hover': {
+                      color: theme.palette.primary.light,
                       textDecoration: 'underline'
                     }
                   }}

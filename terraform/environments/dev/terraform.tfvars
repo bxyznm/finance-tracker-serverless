@@ -68,7 +68,13 @@ cors_allowed_headers = [
   "X-Amz-User-Agent"
 ]
 
-cors_allowed_origins = ["*"]  # Para desarrollo, en producción debes especificar dominios específicos
+cors_allowed_origins = [
+  "*",
+  "http://localhost:3000",
+  "https://localhost:3000", 
+  "https://finance-tracker.brxvn.xyz",
+  "https://financetracker.brxvn.xyz"
+]  # Para desarrollo, incluye localhost y dominios de producción
 
 # -----------------------------------------------------------------------------
 # S3 Configuration
