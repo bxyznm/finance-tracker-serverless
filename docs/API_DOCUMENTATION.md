@@ -1,53 +1,130 @@
 # 📚 API Documentation - Finance Tracker
 
-Documentación completa de todos los endpoints disponibles en el Finance Tracker API.
+Documentación completa y actualizada de todos los endpoints disponibles en el Finance Tracker API.
 
-## 🌐 Base URL
+## 🌐 **Base URL Actual**
 
+### **Producción (Actual)**
 ```
-https://api.finance-tracker.tu-dominio.com  # Producción
-https://api-dev.finance-tracker.tu-dominio.com  # Desarrollo
+Base URL: https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev
+Health Check: https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/health
+Status: ✅ EN LÍNEA Y FUNCIONANDO
 ```
 
-## 🔑 Autenticación
+### **Información de la API**
+- **Región**: Mexico Central (mx-central-1)  
+- **Protocolo**: HTTPS (TLS 1.2+)
+- **Formato**: JSON únicamente
+- **Encoding**: UTF-8
+- **Rate Limiting**: 1000 requests/minuto por IP
+- **CORS**: Habilitado para https://finance-tracker.brxvn.xyz
 
-La API utiliza **JWT (JSON Web Tokens)** para autenticación. Incluye el token en el header:
+## 🔑 **Sistema de Autenticación JWT**
 
+La API utiliza **JWT (JSON Web Tokens)** con patrón access/refresh token.
+
+### **Headers de Autenticación**
+```http
+Authorization: Bearer <access_token>
+Content-Type: application/json
 ```
-Authorization: Bearer <tu_jwt_token>
+
+### **Token Lifecycle**
+- **Access Token**: Válido por 1 hora, contiene permisos y user_id
+- **Refresh Token**: Válido por 7 días, solo para renovar access_token
+- **Renovación**: Automática via `/auth/refresh` endpoint
+
+---
+
+## 🚀 **Endpoints Disponibles**
+
+### � **Health Check** (Público)
+
+#### **GET** `/health`
+Verificar estado de la API y conectividad.
+
+**Request:**
+```bash
+curl https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/health
+```
+
+**Response Success (200):**
+```json
+{
+  "status": "healthy",
+  "message": "Finance Tracker API is running", 
+  "timestamp": "2025-09-02T05:24:12.087300+00:00",
+  "version": "1.0.0",
+  "environment": "dev"
+}
 ```
 
 ---
 
-## 🚀 Endpoints
+### �🔐 **Autenticación** (Público)
 
-### 🔐 **Autenticación**
-
-#### **POST** `/auth/login`
-Iniciar sesión de usuario.
+#### **POST** `/auth/register`
+Registrar nuevo usuario en el sistema.
 
 **Request Body:**
 ```json
 {
-  "email": "usuario@example.com",
-  "password": "mi_password_seguro"
+  "name": "Juan Pérez",
+  "email": "juan.perez@gmail.com",
+  "password": "MiPassword123!",
+  "currency": "MXN"
+}
+```
+
+**Response Success (201):**
+```json
+{
+  "message": "Usuario creado exitosamente",
+  "user": {
+    "user_id": "usr_abc123def456",
+    "name": "Juan Pérez", 
+    "email": "juan.perez@gmail.com",
+    "currency": "MXN",
+    "is_active": true,
+    "created_at": "2025-09-02T10:30:00.000Z"
+  },
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Validaciones:**
+- Email debe ser válido y único
+- Password mínimo 8 caracteres, al menos 1 mayúscula, 1 número
+- Name máximo 100 caracteres
+- Currency debe ser código ISO válido (MXN, USD, EUR, etc.)
+
+#### **POST** `/auth/login`
+Iniciar sesión de usuario existente.
+
+**Request Body:**
+```json
+{
+  "email": "juan.perez@gmail.com",
+  "password": "MiPassword123!"
 }
 ```
 
 **Response Success (200):**
 ```json
 {
-  "success": true,
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "user_id": "usr_123456789",
-      "email": "usuario@example.com",
-      "name": "Juan Pérez",
-      "created_at": "2025-01-15T10:30:00Z"
-    }
+  "message": "Login exitoso", 
+  "user": {
+    "user_id": "usr_abc123def456",
+    "name": "Juan Pérez",
+    "email": "juan.perez@gmail.com", 
+    "currency": "MXN",
+    "last_login": "2025-09-02T10:45:00.000Z"
   },
-  "message": "Login exitoso"
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
 }
 ```
 

@@ -101,8 +101,9 @@ frontend_subdomain = "financetracker"
 # Configuración de Datadog (OPCIONAL)
 # -----------------------------------------------------------------------------
 
-# Habilitar Datadog para observabilidad
-datadog_enabled = true
+# Temporalmente deshabilitado debido a permisos cross-region
+# Los layers de Datadog en us-east-1 requieren permisos especiales desde mx-central-1
+datadog_enabled = false
 # NOTA: datadog_api_key se debe configurar como secret en GitHub Actions
 # No incluir claves API directamente en el código
 # datadog_api_key = "CONFIGURAR_EN_GITHUB_SECRETS"  # Usa TF_VAR_datadog_api_key

@@ -342,7 +342,7 @@ jobs:
         run: |
           echo "📝 Configurando .env.production para S3 Website Hosting..."
           cat > .env.production << EOF
-          REACT_APP_API_URL=https://jjb0khkiz0.execute-api.mx-central-1.amazonaws.com/dev
+          REACT_APP_API_URL=https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev
           REACT_APP_ENVIRONMENT=${{ needs.prepare.outputs.environment }}
           REACT_APP_FRONTEND_URL=${{ steps.infra.outputs.website_url }}
           REACT_APP_REGION=mx-central-1

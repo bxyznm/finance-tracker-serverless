@@ -1,53 +1,65 @@
 # 🌐 Frontend Configuration Guide
 
-Guía completa para configurar y desplegar el frontend del Finance Tracker.
+Guía completa para configurar, desarrollar y desplegar el frontend del Finance Tracker.
 
-## 🏗️ Arquitectura
+## 🏗️ **Arquitectura de Frontend**
 
 ```
-Frontend (React + TypeScript)
-    ↓
-CloudFront CDN
-    ↓
-S3 Bucket (Static Hosting)
-    ↓
-API Gateway (Backend)
-    ↓
-Lambda Functions
-    ↓
-DynamoDB
+Usuario (Browser)
+    ↓ HTTPS
+Cloudflare CDN (Global)
+    ↓ TLS/SSL
+S3 Bucket (Static Website) 
+    ↓ CORS + JWT
+API Gateway (sjlc3gosfe)
+    ↓ Lambda Invoke  
+6 Lambda Functions (Python)
+    ↓ AWS SDK
+DynamoDB (Single Table)
 ```
 
-## 🔧 Configuración Local
+## 🔧 **Setup y Desarrollo Local**
 
-### 1. **Instalar Dependencias**
+### 1. **📦 Instalación de Dependencias**
 
 ```bash
 cd frontend
-npm install
+npm install                # Instalar todas las dependencias
+npm audit fix              # Arreglar vulnerabilidades (opcional)
 ```
 
-### 2. **Configurar Variables de Entorno**
+### 2. **⚙️ Configuración de Variables de Entorno**
 
-Crear `.env.local` para desarrollo:
-
+#### **Desarrollo Local** (`.env.local`)
 ```bash
-# Backend API
-REACT_APP_API_URL=https://your-api-gateway-url.execute-api.mx-central-1.amazonaws.com/dev
+# Backend API (Endpoint actual en funcionamiento)
+REACT_APP_API_URL=https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev
 REACT_APP_ENVIRONMENT=development
 
-# Frontend URL (para callbacks y CORS)
+# Frontend URL (para CORS y callbacks)
 REACT_APP_FRONTEND_URL=http://localhost:3000
 
-# Configuración de build
+# Configuración regional
+REACT_APP_REGION=mx-central-1
+REACT_APP_COUNTRY=Mexico
+REACT_APP_LOCALE=es-MX
+
+# Build configuration
 GENERATE_SOURCEMAP=true
 PUBLIC_URL=/
+TSC_COMPILE_ON_ERROR=false
 ```
 
-Crear `.env.production` para producción:
-
+#### **Producción** (`.env.production` - Auto-generado por CI/CD)
 ```bash
-# Backend API (se configura automáticamente por Terraform)
+# Backend API (Se configura automáticamente via GitHub Actions)
+REACT_APP_API_URL=https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev
+REACT_APP_ENVIRONMENT=production
+REACT_APP_FRONTEND_URL=https://finance-tracker.brxvn.xyz
+REACT_APP_REGION=mx-central-1
+REACT_APP_COUNTRY=Mexico
+REACT_APP_LOCALE=es-MX
+```
 REACT_APP_API_URL=https://your-api-gateway-url.execute-api.mx-central-1.amazonaws.com/prod
 REACT_APP_ENVIRONMENT=production
 

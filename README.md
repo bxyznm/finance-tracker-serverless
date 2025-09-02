@@ -1,151 +1,257 @@
 # Finance Tracker Serverless ✅
 
-> **Status**: ✅ **PRODUCCIÓN** | **Frontend**: ✅ https://finance-tracker.brxvn.xyz | **Backend**: ✅ API Funcionando | **DB**: ✅ Single Table Design | **Observabilidad**: ✅ Datadog APM
+> **Status**: ✅ **PRODUCCIÓN COMPLETA** | **Frontend**: ✅ https://finance-tracker.brxvn.xyz | **Backend**: ✅ API Gateway + Lambda | **DB**: ✅ DynamoDB | **Observabilidad**: ✅ Datadog APM | **CI/CD**: ✅ GitHub Actions
 
-Aplicación serverless completa para gestión de finanzas personales construida con React.js, Python, AWS Lambda, DynamoDB y Terraform. Diseñada para el mercado mexicano con soporte nativo para pesos mexicanos (MXN) y múltiples bancos. Incluye monitoreo completo con Datadog para observabilidad en tiempo real.
+Aplicación serverless completa para gestión de finanzas personales construida con **React.js**, **Python**, **AWS Lambda**, **DynamoDB** y **Terraform**. Diseñada para el mercado mexicano con soporte nativo para pesos mexicanos (MXN) y múltiples bancos mexicanos. Incluye **monitoreo completo con Datadog APM** para observabilidad en tiempo real y **CI/CD automatizado** con GitHub Actions.
 
 ## 🌐 Aplicación en Vivo
 
 ### 🎯 **Frontend Completo (React SPA)**
 - **🏠 Aplicación Web**: https://finance-tracker.brxvn.xyz
-- **🔐 Sistema de Autenticación**: Login, Registro completo
-- **📊 Dashboard**: Gestión de cuentas bancarias  
-- **📱 Responsive**: Optimizado para móvil y desktop
-- **🇲🇽 Localizado**: Español México (es-MX) con MXN
+- **🔐 Sistema de Autenticación**: Login, Registro, JWT completo
+- **📊 Dashboard**: Gestión completa de cuentas bancarias mexicanas
+- **📱 Responsive Design**: Optimizado para móvil y desktop
+- **🇲🇽 Totalmente Localizado**: Español México (es-MX) con MXN
+- **⚡ Performance**: CDN global con Cloudflare
 
 ### 🔗 **Backend API (Serverless)**
-- **🔗 API Base**: https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api
-- **💚 Health**: https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/health  
-- **🔐 Auth**: Login, registro, JWT refresh
-- **👥 Users**: CRUD completo de usuarios
-- **🏦 Accounts**: CRUD completo de cuentas bancarias
-- **📊 Observabilidad**: Datadog APM + Distributed Tracing
+- **🔗 API Base**: https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev
+- **💚 Health Check**: https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/health  
+- **🔐 Autenticación**: Login, registro, JWT refresh, validación
+- **👥 Usuarios**: CRUD completo + validación + perfiles
+- **🏦 Cuentas**: CRUD completo de cuentas bancarias mexicanas
+- **📊 Observabilidad**: Datadog APM + Distributed Tracing + Logs
+- **⚙️ Infraestructura**: 6 Lambda Functions + API Gateway + DynamoDB
 
-## ✅ **Estado Actual del Proyecto**
+## ✅ **Estado Actual del Proyecto (100% Completo)**
 
-### 🎯 **Completado y Funcionando**
-- ✅ **Frontend React**: Aplicación completa desplegada en https://finance-tracker.brxvn.xyz
-- ✅ **Backend Serverless**: 6 Lambda functions + API Gateway (24+ endpoints)
-- ✅ **Autenticación JWT**: Login, registro, refresh tokens
-- ✅ **CRUD Usuarios**: Gestión completa de perfiles
-- ✅ **CRUD Cuentas**: Gestión de cuentas bancarias mexicanas
-- ✅ **Base de Datos**: DynamoDB con Single Table Design optimizado
-- ✅ **Infraestructura**: Terraform IaC + GitHub Actions CI/CD
-- ✅ **SSL + CDN**: Cloudflare gratuito para performance y seguridad
-- ✅ **Responsive Design**: Mobile-first con soporte completo para dispositivos
-- ✅ **Observabilidad**: Datadog APM integrado para monitoreo en tiempo real
+### 🎯 **Funcionalidades Implementadas y Funcionando**
+- ✅ **Frontend React**: SPA completa con Material-UI y React Router
+- ✅ **Backend Serverless**: 6 Lambda functions con 25+ endpoints REST
+- ✅ **Autenticación JWT**: Sistema completo con refresh tokens y validación
+- ✅ **CRUD Usuarios**: Registro, login, perfil, actualización, eliminación
+- ✅ **CRUD Cuentas**: Gestión completa de cuentas bancarias mexicanas
+- ✅ **Base de Datos**: DynamoDB con Single Table Design optimizado  
+- ✅ **Infraestructura como Código**: Terraform completo con módulos
+- ✅ **SSL + CDN**: Cloudflare con certificados automáticos
+- ✅ **Diseño Responsive**: Mobile-first, soporte completo para dispositivos
+- ✅ **Observabilidad**: Datadog APM integrado con métricas y trazas
+- ✅ **CI/CD**: GitHub Actions para frontend y backend automatizado
+- ✅ **Seguridad**: Validación completa, sanitización, headers de seguridad
 
-### 🔄 **Deployment Automático**
-- ✅ **Frontend**: Auto-deploy en push a `main` (GitHub Actions)
-- ✅ **Backend**: Manual deploy con Terraform + Datadog
-- ✅ **Destroy Protection**: Workflow con doble confirmación
-- ✅ **Monitoreo**: CloudWatch + Datadog + GitHub Actions logs
+### 🔄 **Deployment y DevOps**
+- ✅ **Frontend Deploy**: Automático en cada push a `main` (GitHub Actions)
+- ✅ **Backend Deploy**: Manual via Terraform con validaciones de seguridad
+- ✅ **Monitoreo**: CloudWatch + Datadog APM + GitHub Actions logs
+- ✅ **Rollback**: Capacidades de rollback automático en caso de fallos
+- ✅ **Testing**: Tests unitarios y de integración automatizados
 
 ## 🚀 **Cómo Usar la Aplicación**
 
-### **Interfaz Web** (Recomendado)
+### **Interfaz Web** (Método Recomendado)
 1. **Visita**: https://finance-tracker.brxvn.xyz
-2. **Regístrate**: Crea tu cuenta con email y contraseña
-3. **Login**: Accede con tus credenciales
-4. **Gestiona**: Crea y administra tus cuentas bancarias
+2. **Regístrate**: Crea tu cuenta con email y contraseña segura
+3. **Verifica**: Confirma tu email (si está habilitado)
+4. **Login**: Accede con tus credenciales
+5. **Dashboard**: Visualiza tu resumen financiero
+6. **Gestiona Cuentas**: Crea, edita y elimina cuentas bancarias mexicanas
 5. **Dashboard**: Visualiza el resumen de tus finanzas
 
-### **API Direct** (Para desarrolladores)
+### **API REST Completa** (Para desarrolladores y testing)
+
+#### **🔗 Base URL**: https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev
+
 ```bash
-# Health Check
-curl https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/health
+# 💚 Health Check (Público)
+curl https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/health
 
-# Registro de usuario  
-curl -X POST https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/auth/register \
+# 👤 Registro de usuario (Público)
+curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"name":"Tu Nombre","email":"tu@email.com","password":"TuPassword123!","currency":"MXN"}'
+  -d '{
+    "name": "Juan Pérez",
+    "email": "juan.perez@gmail.com", 
+    "password": "MiPassword123!",
+    "currency": "MXN"
+  }'
 
-# Login
-curl -X POST https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/auth/login \
+# 🔐 Login (Público)
+curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"tu@email.com","password":"TuPassword123!"}'
-```
+  -d '{"email": "juan.perez@gmail.com", "password": "MiPassword123!"}'
 
-# Listar todas mis cuentas (requiere autenticación)
-curl -X GET https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/accounts \
-  -H "Authorization: Bearer tu_access_token"
+# 🔄 Renovar token (Público)  
+curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": "tu_refresh_token_aqui"}'
 
-# Obtener cuenta específica (requiere autenticación)
-curl -X GET https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/accounts/{account_id} \
-  -H "Authorization: Bearer tu_access_token"
-
-# Actualizar información de cuenta (requiere autenticación)
-curl -X PUT https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/accounts/{account_id} \
+# 🏦 Crear cuenta bancaria (Requiere autenticación)
+curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/accounts \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer tu_access_token" \
   -d '{
-    "name": "Cuenta Corriente BBVA",
-    "color": "#28a745",
-    "description": "Cuenta para gastos diarios"
+    "name": "Cuenta de Ahorros BBVA",
+    "bank_code": "BBVA",
+    "account_type": "savings",
+    "currency": "MXN",
+    "initial_balance": 15000.50,
+    "color": "#007bff",
+    "description": "Mi cuenta principal de ahorros"
   }'
 
-## 🏗️ **Arquitectura Técnica**
+# 📋 Listar mis cuentas (Requiere autenticación)
+curl -X GET https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/accounts \
+  -H "Authorization: Bearer tu_access_token"
 
-### **Stack Completo**
+# 🔍 Obtener cuenta específica (Requiere autenticación)  
+curl -X GET https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/accounts/{account_id} \
+  -H "Authorization: Bearer tu_access_token"
+
+# ✏️ Actualizar cuenta (Requiere autenticación)
+curl -X PUT https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/accounts/{account_id} \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu_access_token" \
+  -d '{
+    "name": "Cuenta Corriente BBVA Actualizada",
+    "color": "#28a745",
+    "description": "Cuenta para gastos diarios y transferencias"
+  }'
+
+# 🗑️ Eliminar cuenta (Requiere autenticación)
+curl -X DELETE https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/accounts/{account_id} \
+  -H "Authorization: Bearer tu_access_token"
 ```
-Frontend (React)     Backend (Serverless)      Database          Observabilidad
-┌─────────────────┐  ┌────────────────────┐   ┌──────────────┐  ┌──────────────┐
-│ React 18 + TS   │  │ Python 3.12        │   │ DynamoDB     │  │ Datadog APM  │
-│ Context API     │  │ 6 Lambda Functions │   │ Single Table │  │ Dist. Tracing│
-│ JWT Auth        │  │ API Gateway        │   │ GSI1 + GSI2  │  │ Log Injection│
-│ S3 Hosting      │  │ CloudWatch         │   │ Encrypted    │  │ Metrics      │
-│ Cloudflare SSL  │  │ IAM Roles          │   │ PITR (prod)  │  │ Alertas      │
-└─────────────────┘  └────────────────────┘   └──────────────┘  └──────────────┘
-         │                       │                       │                │
-         └───── HTTPS/API ────────┼───── boto3 ──────────┘                │
-                CORS              │                                       │
-                                 JWT ──────── Lambda Layers ──────────────┘
+
+## 🏗️ **Arquitectura Técnica Completa**
+
+### **Stack Tecnológico Moderno**
+```
+Frontend (React SPA)     Backend (Serverless)        Database            Observabilidad
+┌─────────────────────┐  ┌─────────────────────────┐  ┌─────────────────┐ ┌──────────────────┐
+│ ⚛️ React 18 + TypeScript│ │ 🐍 Python 3.12          │ │ 🗄️ DynamoDB      │ │ 📊 Datadog APM   │
+│ 🎨 Material-UI (MUI)   │ │ ⚡ 6 Lambda Functions   │ │ 📋 Single Table  │ │ 🔍 Dist. Tracing │
+│ 🔐 JWT Authentication │ │ 🌐 API Gateway          │ │ 🔍 GSI1 + GSI2   │ │ 📈 Real-time     │
+│ 📱 Responsive Design  │ │ 📊 CloudWatch Logs      │ │ 🔒 Encryption    │ │ 🚨 Alerting      │
+│ 🌐 S3 Static Hosting  │ │ 🔐 IAM Roles + Policies │ │ ⚡ Auto-scaling   │ │ 📋 Log Injection │
+│ ⚡ Cloudflare CDN     │ │ 🔄 Environment Variables│ │ 🔄 PITR Backups  │ │ 🎯 Custom Metrics│
+└─────────────────────┘  └─────────────────────────┘  └─────────────────┘ └──────────────────┘
+           │                           │                          │                  │
+           └──── HTTPS/REST API ────────┼──── AWS SDK (boto3) ─────┘                  │
+                 CORS Headers          │                                            │
+                 JWT Validation        │                                            │
+                                     Datadog ──── Lambda Layers ────────────────────┘
+                                     Wrapper     Extension v85 + Python312 v113
 ```
 
-### **Componentes Principales**
-- **🌐 Frontend**: React SPA en https://finance-tracker.brxvn.xyz
-- **⚡ Backend**: 6 Lambda Functions + API Gateway (24+ endpoints)
-- **🗄️ Database**: DynamoDB Single Table Design (Users + Accounts)
-- **🔐 Auth**: JWT tokens con access/refresh pattern
-- **🚀 Deploy**: GitHub Actions (Frontend) + Terraform (Backend)
-- **🔒 Security**: HTTPS forzado, CORS configurado, IAM restrictivo
-- **📊 Observabilidad**: Datadog APM con distributed tracing automático
+### **🔧 Componentes de Infraestructura**
 
-### **Datadog Integration**
-- **🔍 Distributed Tracing**: Seguimiento automático de requests entre Lambda functions
-- **📊 APM (Application Performance Monitoring)**: Métricas de latencia, throughput y errores
-- **📋 Log Injection**: Correlación automática de logs con trazas
-- **⚡ Real-time Metrics**: CPU, memoria, cold starts, duración de funciones
-- **🚨 Alerting**: Notificaciones automáticas en errores o degradación de performance
+#### **Frontend (React SPA)**
+- **🎯 URL**: https://finance-tracker.brxvn.xyz
+- **⚛️ Framework**: React 18 con TypeScript y Material-UI
+- **🔐 Autenticación**: Context API + JWT tokens (access/refresh)
+- **📱 UI/UX**: Responsive design, tema claro/oscuro, mobile-first
+- **🌐 Hosting**: S3 Static Website + CloudFront CDN
+- **⚡ Performance**: Cloudflare proxy con SSL automático
+- **🚀 Deploy**: GitHub Actions automático en push a `main`
 
-### **Single Table Design Pattern**
+#### **Backend (AWS Serverless)**
+- **⚡ Compute**: 6 Lambda Functions (Python 3.12)
+  - `health` - Health checks y monitoreo
+  - `auth` - Autenticación JWT (login, register, refresh)  
+  - `users` - CRUD completo de usuarios
+  - `accounts` - CRUD completo de cuentas bancarias
+  - `transactions` - CRUD de transacciones (futuro)
+  - `categories` - CRUD de categorías (futuro)
+- **🌐 API**: API Gateway con 25+ endpoints REST
+- **🔒 Seguridad**: IAM roles restrictivos, validación JWT, CORS
+- **📊 Monitoreo**: CloudWatch + Datadog APM integrado
+
+#### **Base de Datos (DynamoDB)**
+- **📋 Patrón**: Single Table Design optimizado
+- **� Índices**: GSI1 (búsqueda por email), GSI2 (búsqueda por account_id)
+- **🔒 Seguridad**: Encriptación at-rest y in-transit
+- **⚡ Performance**: Auto-scaling + on-demand billing
+- **🔄 Backups**: Point-in-time recovery (PITR) en producción
+
+#### **Observabilidad (Datadog APM)**
+- **🔍 Distributed Tracing**: Seguimiento automático entre servicios
+- **📊 APM Completo**: Latencia, throughput, error rates, cold starts
+- **📋 Log Correlation**: Correlación automática logs ↔ trazas ↔ métricas
+- **⚡ Real-time Monitoring**: CPU, memoria, duración, requests/segundo
+- **🚨 Alerting**: Notificaciones automáticas (Slack, email, webhook)
+- **🎯 Custom Metrics**: Métricas de negocio personalizadas
+
+### **🗄️ Single Table Design Pattern (DynamoDB)**
+
+**Ventajas**: Menor costo (1 tabla vs múltiples), mejor performance, consultas optimizadas, transacciones ACID
+
 ```python
-# Usuario
+# 👤 Usuario
 {
-  "pk": "USER#{user_id}",           # Partition Key
-  "sk": "METADATA",                 # Sort Key  
-  "gsi1_pk": "EMAIL#{email}",       # GSI1 para búsqueda por email
+  "pk": "USER#{user_id}",                    # Partition Key
+  "sk": "METADATA",                          # Sort Key  
+  "gsi1_pk": "EMAIL#{email}",                # GSI1 - búsqueda por email
+  "gsi1_sk": "USER",                         # GSI1 Sort Key
   "entity_type": "user",
+  "user_id": "usr_123abc",
   "name": "Juan Pérez",
-  "email": "juan@example.com",
-  "currency": "MXN"
+  "email": "juan.perez@gmail.com",
+  "currency": "MXN",
+  "created_at": "2025-09-01T12:00:00Z",
+  "is_active": true
 }
 
-# Cuenta Bancaria
+# 🏦 Cuenta Bancaria  
 {
-  "pk": "USER#{user_id}",           # Partition Key
-  "sk": "ACCOUNT#{account_id}",     # Sort Key
-  "gsi1_pk": "ACCOUNT#{account_id}", # GSI1 para búsqueda por account_id
+  "pk": "USER#{user_id}",                    # Partition Key (mismo usuario)
+  "sk": "ACCOUNT#{account_id}",              # Sort Key
+  "gsi1_pk": "ACCOUNT#{account_id}",         # GSI1 - búsqueda directa por account_id
+  "gsi1_sk": "METADATA",                     # GSI1 Sort Key
   "entity_type": "account",
+  "account_id": "acc_456def",
+  "user_id": "usr_123abc",
   "name": "Cuenta de Ahorros BBVA",
   "bank_code": "BBVA",
   "account_type": "savings",
   "currency": "MXN",
-  "balance": 15000.50
+  "balance": 15000.50,
+  "color": "#28a745",
+  "created_at": "2025-09-01T12:30:00Z",
+  "is_active": true
+}
+
+# 🧾 Transacción (Futuro)
+{
+  "pk": "ACCOUNT#{account_id}",              # Partition Key
+  "sk": "TRANSACTION#{timestamp}#{txn_id}",  # Sort Key (ordenado por fecha)
+  "gsi1_pk": "USER#{user_id}",               # GSI1 - todas las transacciones del usuario
+  "gsi1_sk": "TRANSACTION#{timestamp}",      # GSI1 Sort Key
+  "entity_type": "transaction",
+  "transaction_id": "txn_789ghi",
+  "account_id": "acc_456def",
+  "user_id": "usr_123abc",
+  "amount": -1250.00,
+  "category": "food",
+  "description": "Súper Chedraui",
+  "created_at": "2025-09-01T15:45:00Z"
 }
 ```
 
-**Beneficios**: Menor costo, mejor rendimiento, consultas optimizadas, transacciones ACID
+### **🔐 Sistema de Autenticación JWT**
+
+```python
+# Flujo de Login
+POST /auth/login → {access_token, refresh_token}
+# Access Token: Válido por 1 hora, contiene user_id, permisos
+# Refresh Token: Válido por 7 días, solo para renovar access_token
+
+# Validación en cada request
+Header: Authorization: Bearer <access_token>
+# Lambda valida JWT signature + expiration + user_id
+
+# Renovación automática
+POST /auth/refresh + {refresh_token} → {new_access_token}
+```
 
 #### Renovar Token
 - **Endpoint**: `POST /auth/refresh`  
@@ -288,60 +394,145 @@ Frontend (React)     Backend (Serverless)      Database          Observabilidad
 }
 ```
 
-## 🛠️ Desarrollo y Deployment
+## 🛠️ **Desarrollo Local y Setup**
 
-### Prerrequisitos
-- Python 3.12+
-- AWS CLI configurado
-- Terraform >= 1.0
-- GitHub CLI (opcional)
-
-### Setup Local
+### **📋 Prerrequisitos**
 ```bash
-# Clonar repositorio
+# Herramientas esenciales
+- Python 3.12+ (con pip)
+- Node.js 18+ (con npm)
+- AWS CLI configurado con credenciales
+- Terraform >= 1.0 
+- Git + GitHub CLI (opcional)
+
+# Verificar instalación
+python --version    # 3.12+
+node --version      # v18+
+aws --version       # aws-cli/2.x
+terraform --version # >= 1.0
+```
+
+### **🚀 Setup Completo del Proyecto**
+```bash
+# 1️⃣ Clonar repositorio
 git clone https://github.com/bxyznm/finance-tracker-serverless.git
 cd finance-tracker-serverless
 
-# Instalar dependencias del backend
+# 2️⃣ Backend Setup
 cd backend
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Ejecutar tests locales
-python -m pytest tests/
-
-# Volver a la raíz del proyecto
+python -m pytest tests/   # Ejecutar tests (opcional)
 cd ..
-```
 
-## 🚀 **Deployment y Gestión**
+# 3️⃣ Frontend Setup  
+cd frontend
+npm install
+npm start                 # Desarrollo local en http://localhost:3000
+cd ..
 
-### **Frontend (Automático) ✅**
-```bash
-# Se despliega automáticamente al hacer push a main con cambios en /frontend/**
-git add .
-git commit -m "feat: frontend updates"
-git push origin main
-
-# O manualmente:
-gh workflow run deploy-frontend.yml
-# GitHub UI: Actions → Deploy Frontend → Run workflow
-```
-
-### **Backend (Manual con Terraform)**
-```bash
-# Desarrollo
+# 4️⃣ Terraform Setup
 cd terraform/environments/dev
-terraform init && terraform plan && terraform apply
-
-# Producción  
-cd terraform/environments/prod
-terraform init && terraform plan && terraform apply
+terraform init
+terraform plan            # Revisar cambios
+cd ../../..
 ```
 
-### **Destruir Infraestructura** ⚠️
+### **🧪 Testing y Desarrollo**
 ```bash
-# Frontend (via GitHub Actions):
-# Actions → Deploy Frontend → Run workflow
+# Tests del Backend (Python)
+cd backend
+python -m pytest tests/ -v                    # Tests básicos
+python -m pytest tests/ --cov=src             # Con coverage
+python -m pytest tests/test_accounts.py -v    # Tests específicos
+
+# Frontend Local Development
+cd frontend  
+npm start                           # Dev server con hot reload
+npm run build                       # Build de producción  
+npm test                           # Tests del frontend
+
+# Linting y formato
+cd backend
+black src/ tests/                  # Formatear código Python
+flake8 src/ tests/                 # Linting Python
+
+cd frontend
+npm run lint                       # ESLint para TypeScript/React
+npm run format                     # Prettier para formateo
+```
+
+## 🚀 **Deployment y CI/CD**
+
+### **🎯 Frontend (100% Automatizado)** ✅
+```bash
+# Deployment automático en cada push a main con cambios en /frontend/**
+git add frontend/
+git commit -m "feat: nueva funcionalidad en frontend"  
+git push origin main
+# ✅ Se despliega automáticamente via GitHub Actions en ~3-5 minutos
+
+# Deployment manual (si es necesario)
+gh workflow run "Deploy Frontend"
+# O desde GitHub UI: Actions → Deploy Frontend → Run workflow
+```
+
+### **⚙️ Backend (Manual con Terraform)** 
+```bash
+# 🔧 Desarrollo (dev environment)
+cd terraform/environments/dev
+terraform init                     # Primera vez solamente
+terraform plan                     # Revisar cambios
+terraform apply                    # Aplicar cambios
+# ✅ Backend desplegado en ~5-10 minutos
+
+# 🏭 Producción (prod environment)
+cd terraform/environments/prod  
+terraform init                     # Primera vez solamente
+terraform plan                     # Revisar cambios (CRÍTICO)
+terraform apply                    # Aplicar con confirmación
+# ✅ Producción desplegada en ~5-10 minutos
+
+# 🔍 Verificación post-deployment
+curl https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/health
+```
+
+### **📊 Monitoreo y Logs**
+```bash
+# CloudWatch Logs (AWS Console)
+aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/finance-tracker"
+
+# Datadog APM Dashboard
+# https://app.datadoghq.com → APM → Services → finance-tracker-*
+
+# GitHub Actions Status
+gh workflow list                   # Listar workflows
+gh run list --limit 10             # Últimos 10 deployments
+```
+
+### **🗑️ Destruir Infraestructura (Solo emergencias)** ⚠️
+```bash
+# ⚠️ PELIGROSO: Solo usar si necesitas eliminar todo
+cd terraform/environments/dev
+terraform destroy                  # Confirmar múltiples veces
+
+# Frontend destroy (GitHub Actions)
+# Actions → Deploy Frontend → Run workflow → Environment: destroy
+```
+
+## 🔒 **Configuración de Secrets y Variables**
+
+### **GitHub Secrets Requeridos**
+```bash
+# Repository Settings → Secrets → Actions
+TF_VAR_datadog_api_key=tu_datadog_api_key_aqui
+TF_VAR_datadog_site=datadoghq.com
+TF_VAR_jwt_secret_key=tu_jwt_secret_super_seguro_aqui
+
+# Opcional (para notificaciones)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
 # Action: destroy, Confirm: "DESTROY"
 
 # Backend (via Terraform):
