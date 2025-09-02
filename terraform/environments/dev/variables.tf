@@ -48,6 +48,29 @@ variable "dev_release_tag" {
 }
 
 # -----------------------------------------------------------------------------
+# Variables de Datadog
+# -----------------------------------------------------------------------------
+
+variable "datadog_enabled" {
+  description = "Habilitar integración con Datadog para observabilidad"
+  type        = bool
+  default     = false
+}
+
+variable "datadog_api_key" {
+  description = "API Key de Datadog para monitoreo"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "datadog_site" {
+  description = "Sitio de Datadog (datadoghq.com, datadoghq.eu, etc.)"
+  type        = string
+  default     = "datadoghq.com"
+}
+
+# -----------------------------------------------------------------------------
 # Variables de Lambda
 # -----------------------------------------------------------------------------
 

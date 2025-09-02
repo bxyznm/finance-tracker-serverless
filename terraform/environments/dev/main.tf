@@ -156,6 +156,13 @@ module "finance_tracker" {
   # Configuración de Seguridad
   jwt_secret_key = var.jwt_secret_key
 
+  # Configuración de Datadog
+  datadog_enabled    = var.datadog_enabled
+  datadog_api_key    = var.datadog_api_key
+  datadog_site       = var.datadog_site
+  datadog_service_name = "${var.project_name}-${local.environment}"
+  datadog_env        = local.environment
+
   # Tags
   common_tags = merge(var.common_tags, local.dev_tags)
 }

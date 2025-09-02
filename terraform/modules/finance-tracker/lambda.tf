@@ -3,6 +3,31 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
+# Datadog Lambda Layer
+# -----------------------------------------------------------------------------
+
+# Datadog Lambda Extension Layer para Python 3.12
+data "aws_lambda_layer_version" "datadog_extension" {
+  count = var.datadog_enabled ? 1 : 0
+  
+  layer_name = "Datadog-Extension"
+  version    = 65  # Version más reciente para mx-central-1
+  
+  # Si la capa no existe en mx-central-1, usar una región compatible
+  compatible_runtime = var.lambda_runtime
+}
+
+# Datadog Python Layer
+data "aws_lambda_layer_version" "datadog_python" {
+  count = var.datadog_enabled ? 1 : 0
+  
+  layer_name = "Datadog-Python312"
+  version    = 115  # Version más reciente para Python 3.12
+  
+  compatible_runtime = var.lambda_runtime
+}
+
+# -----------------------------------------------------------------------------
 # Lambda Layer para Dependencias
 # -----------------------------------------------------------------------------
 
@@ -124,7 +149,29 @@ locals {
     DYNAMODB_TABLE       = aws_dynamodb_table.main.name  # Single Table Design
     LOG_LEVEL            = var.environment == "prod" ? "INFO" : "DEBUG"
     CORS_ALLOWED_ORIGINS = join(",", var.cors_allowed_origins)
-  }, var.lambda_environment_variables)
+  }, var.lambda_environment_variables, var.datadog_enabled ? {
+    # Datadog Environment Variables
+    DD_API_KEY           = var.datadog_api_key
+    DD_SITE              = var.datadog_site
+    DD_SERVICE           = var.datadog_service_name
+    DD_ENV               = var.datadog_env != "" ? var.datadog_env : var.environment
+    DD_VERSION           = var.dev_release_tag != null ? var.dev_release_tag : (length(data.github_release.finance_tracker) > 0 ? data.github_release.finance_tracker[0].release_tag : "local-dev")
+    DD_FLUSH_TO_LOG      = "true"
+    DD_TRACE_ENABLED     = "true"
+    DD_LOGS_INJECTION    = "true"
+    DD_SERVERLESS_LOGS_ENABLED = "true"
+    DD_CAPTURE_LAMBDA_PAYLOAD = "false"  # Para evitar capturar información sensible
+    DD_LAMBDA_HANDLER    = "handlers.health.lambda_handler"  # Se sobrescribirá en cada función
+  } : {})
+  
+  # Layers comunes - incluye Datadog si está habilitado
+  common_layers = compact(concat(
+    [aws_lambda_layer_version.dependencies.arn],
+    var.datadog_enabled ? [
+      try(data.aws_lambda_layer_version.datadog_extension[0].arn, ""),
+      try(data.aws_lambda_layer_version.datadog_python[0].arn, "")
+    ] : []
+  ))
 }
 
 # Health Check Function
@@ -143,10 +190,12 @@ resource "aws_lambda_function" "health" {
 
   role = aws_iam_role.lambda_execution_role.arn
 
-  layers = [aws_lambda_layer_version.dependencies.arn]
+  layers = local.common_layers
 
   environment {
-    variables = local.common_lambda_environment
+    variables = merge(local.common_lambda_environment, var.datadog_enabled ? {
+      DD_LAMBDA_HANDLER = "handlers.health.lambda_handler"
+    } : {})
   }
 
   depends_on = [
@@ -176,7 +225,7 @@ resource "aws_lambda_function" "users" {
 
   role = aws_iam_role.lambda_execution_role.arn
 
-  layers = [aws_lambda_layer_version.dependencies.arn]
+  layers = local.common_layers
 
   environment {
     variables = merge(local.common_lambda_environment, {
@@ -211,7 +260,7 @@ resource "aws_lambda_function" "transactions" {
 
   role = aws_iam_role.lambda_execution_role.arn
 
-  layers = [aws_lambda_layer_version.dependencies.arn]
+  layers = local.common_layers
 
   environment {
     variables = merge(local.common_lambda_environment, {
@@ -246,7 +295,7 @@ resource "aws_lambda_function" "categories" {
 
   role = aws_iam_role.lambda_execution_role.arn
 
-  layers = [aws_lambda_layer_version.dependencies.arn]
+  layers = local.common_layers
 
   environment {
     variables = merge(local.common_lambda_environment, {
@@ -281,7 +330,7 @@ resource "aws_lambda_function" "auth" {
 
   role = aws_iam_role.lambda_execution_role.arn
 
-  layers = [aws_lambda_layer_version.dependencies.arn]
+  layers = local.common_layers
 
   environment {
     variables = merge(local.common_lambda_environment, {
@@ -316,7 +365,7 @@ resource "aws_lambda_function" "accounts" {
 
   role = aws_iam_role.lambda_execution_role.arn
 
-  layers = [aws_lambda_layer_version.dependencies.arn]
+  layers = local.common_layers
 
   environment {
     variables = merge(local.common_lambda_environment, {

@@ -131,6 +131,9 @@ jobs:
           TF_VAR_github_repository: ${{ github.event.repository.name }}
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
           TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+          TF_VAR_datadog_enabled: true
+          TF_VAR_datadog_api_key: ${{ secrets.DD_API_KEY }}
+          TF_VAR_datadog_site: ${{ secrets.DD_SITE }}
         run: |
           echo "🗑️ Destruyendo infraestructura existente..."
           terraform destroy -auto-approve
@@ -143,6 +146,9 @@ jobs:
           TF_VAR_github_repository: ${{ github.event.repository.name }}
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
           TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+          TF_VAR_datadog_enabled: true
+          TF_VAR_datadog_api_key: ${{ secrets.DD_API_KEY }}
+          TF_VAR_datadog_site: ${{ secrets.DD_SITE }}
         run: terraform plan -out=tfplan
 
       - name: Terraform Deploy
@@ -153,6 +159,9 @@ jobs:
           TF_VAR_github_repository: ${{ github.event.repository.name }}
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
           TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+          TF_VAR_datadog_enabled: true
+          TF_VAR_datadog_api_key: ${{ secrets.DD_API_KEY }}
+          TF_VAR_datadog_site: ${{ secrets.DD_SITE }}
         run: |
           echo "🚀 Desplegando infraestructura..."
           terraform apply -auto-approve tfplan
@@ -165,6 +174,9 @@ jobs:
           TF_VAR_github_repository: ${{ github.event.repository.name }}
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
           TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+          TF_VAR_datadog_enabled: true
+          TF_VAR_datadog_api_key: ${{ secrets.DD_API_KEY }}
+          TF_VAR_datadog_site: ${{ secrets.DD_SITE }}
         run: |
           echo "🗑️ Destruyendo infraestructura..."
           terraform destroy -auto-approve
@@ -197,6 +209,9 @@ jobs:
           TF_VAR_github_repository: ${{ github.event.repository.name }}
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
           TF_VAR_dev_release_tag: ${{ steps.get_release.outputs.release_tag }}
+          TF_VAR_datadog_enabled: true
+          TF_VAR_datadog_api_key: ${{ secrets.DD_API_KEY }}
+          TF_VAR_datadog_site: ${{ secrets.DD_SITE }}
         run: |
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📡 API Endpoints Creados" >> $GITHUB_STEP_SUMMARY

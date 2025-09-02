@@ -127,6 +127,41 @@ variable "lambda_environment_variables" {
 }
 
 # -----------------------------------------------------------------------------
+# Variables de Datadog Observability
+# -----------------------------------------------------------------------------
+
+variable "datadog_enabled" {
+  description = "Habilitar integración con Datadog para observabilidad"
+  type        = bool
+  default     = false
+}
+
+variable "datadog_api_key" {
+  description = "API Key de Datadog para monitoreo"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "datadog_site" {
+  description = "Sitio de Datadog (datadoghq.com, datadoghq.eu, etc.)"
+  type        = string
+  default     = "datadoghq.com"
+}
+
+variable "datadog_service_name" {
+  description = "Nombre del servicio en Datadog"
+  type        = string
+  default     = "finance-tracker"
+}
+
+variable "datadog_env" {
+  description = "Entorno para tags de Datadog"
+  type        = string
+  default     = ""
+}
+
+# -----------------------------------------------------------------------------
 # Variables de API Gateway
 # -----------------------------------------------------------------------------
 

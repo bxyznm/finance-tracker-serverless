@@ -96,3 +96,12 @@ cors_allowed_origins = [
 # EJEMPLO para configurar tu dominio:
 domain_name = "brxvn.xyz"
 frontend_subdomain = "financetracker"
+
+# -----------------------------------------------------------------------------
+# Configuración de Datadog (OPCIONAL)
+# -----------------------------------------------------------------------------
+
+# Habilitar Datadog para observabilidad
+datadog_enabled = true
+datadog_api_key = "3d38ceaa33bcdcc6ad36acc75f049201"
+datadog_site = "datadoghq.com"

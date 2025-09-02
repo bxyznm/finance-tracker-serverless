@@ -1,15 +1,15 @@
 # Finance Tracker Serverless ✅
 
-> **Status**: ✅ **PRODUCCIÓN** | **Frontend**: ✅ https://finance-tracker.brxvn.xyz | **Backend**: ✅ API Funcionando | **DB**: ✅ Single Table Design
+> **Status**: ✅ **PRODUCCIÓN** | **Frontend**: ✅ https://finance-tracker.brxvn.xyz | **Backend**: ✅ API Funcionando | **DB**: ✅ Single Table Design | **Observabilidad**: ✅ Datadog APM
 
-Aplicación serverless completa para gestión de finanzas personales construida con React.js, Python, AWS Lambda, DynamoDB y Terraform. Diseñada para el mercado mexicano con soporte nativo para pesos mexicanos (MXN) y múltiples bancos.
+Aplicación serverless completa para gestión de finanzas personales construida con React.js, Python, AWS Lambda, DynamoDB y Terraform. Diseñada para el mercado mexicano con soporte nativo para pesos mexicanos (MXN) y múltiples bancos. Incluye monitoreo completo con Datadog para observabilidad en tiempo real.
 
 ## 🌐 Aplicación en Vivo
 
 ### 🎯 **Frontend Completo (React SPA)**
 - **🏠 Aplicación Web**: https://finance-tracker.brxvn.xyz
-- **� Sistema de Autenticación**: Login, Registro completo
-- **� Dashboard**: Gestión de cuentas bancarias  
+- **🔐 Sistema de Autenticación**: Login, Registro completo
+- **📊 Dashboard**: Gestión de cuentas bancarias  
 - **📱 Responsive**: Optimizado para móvil y desktop
 - **🇲🇽 Localizado**: Español México (es-MX) con MXN
 
@@ -19,6 +19,7 @@ Aplicación serverless completa para gestión de finanzas personales construida 
 - **🔐 Auth**: Login, registro, JWT refresh
 - **👥 Users**: CRUD completo de usuarios
 - **🏦 Accounts**: CRUD completo de cuentas bancarias
+- **📊 Observabilidad**: Datadog APM + Distributed Tracing
 
 ## ✅ **Estado Actual del Proyecto**
 
@@ -32,12 +33,13 @@ Aplicación serverless completa para gestión de finanzas personales construida 
 - ✅ **Infraestructura**: Terraform IaC + GitHub Actions CI/CD
 - ✅ **SSL + CDN**: Cloudflare gratuito para performance y seguridad
 - ✅ **Responsive Design**: Mobile-first con soporte completo para dispositivos
+- ✅ **Observabilidad**: Datadog APM integrado para monitoreo en tiempo real
 
 ### 🔄 **Deployment Automático**
 - ✅ **Frontend**: Auto-deploy en push a `main` (GitHub Actions)
-- ✅ **Backend**: Manual deploy con Terraform
+- ✅ **Backend**: Manual deploy con Terraform + Datadog
 - ✅ **Destroy Protection**: Workflow con doble confirmación
-- ✅ **Monitoreo**: CloudWatch + GitHub Actions logs
+- ✅ **Monitoreo**: CloudWatch + Datadog + GitHub Actions logs
 
 ## 🚀 **Cómo Usar la Aplicación**
 
@@ -86,18 +88,18 @@ curl -X PUT https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api/accoun
 
 ### **Stack Completo**
 ```
-Frontend (React)     Backend (Serverless)      Database
-┌─────────────────┐  ┌────────────────────┐   ┌──────────────┐
-│ React 18 + TS   │  │ Python 3.12        │   │ DynamoDB     │
-│ Context API     │  │ 6 Lambda Functions │   │ Single Table │
-│ JWT Auth        │  │ API Gateway        │   │ GSI1 + GSI2  │
-│ S3 Hosting      │  │ CloudWatch         │   │ Encrypted    │
-│ Cloudflare SSL  │  │ IAM Roles          │   │ PITR (prod)  │
-└─────────────────┘  └────────────────────┘   └──────────────┘
-         │                       │                       │
-         └───── HTTPS/API ────────┼───── boto3 ──────────┘
-                CORS              │
-                                 JWT
+Frontend (React)     Backend (Serverless)      Database          Observabilidad
+┌─────────────────┐  ┌────────────────────┐   ┌──────────────┐  ┌──────────────┐
+│ React 18 + TS   │  │ Python 3.12        │   │ DynamoDB     │  │ Datadog APM  │
+│ Context API     │  │ 6 Lambda Functions │   │ Single Table │  │ Dist. Tracing│
+│ JWT Auth        │  │ API Gateway        │   │ GSI1 + GSI2  │  │ Log Injection│
+│ S3 Hosting      │  │ CloudWatch         │   │ Encrypted    │  │ Metrics      │
+│ Cloudflare SSL  │  │ IAM Roles          │   │ PITR (prod)  │  │ Alertas      │
+└─────────────────┘  └────────────────────┘   └──────────────┘  └──────────────┘
+         │                       │                       │                │
+         └───── HTTPS/API ────────┼───── boto3 ──────────┘                │
+                CORS              │                                       │
+                                 JWT ──────── Lambda Layers ──────────────┘
 ```
 
 ### **Componentes Principales**
@@ -107,6 +109,14 @@ Frontend (React)     Backend (Serverless)      Database
 - **🔐 Auth**: JWT tokens con access/refresh pattern
 - **🚀 Deploy**: GitHub Actions (Frontend) + Terraform (Backend)
 - **🔒 Security**: HTTPS forzado, CORS configurado, IAM restrictivo
+- **📊 Observabilidad**: Datadog APM con distributed tracing automático
+
+### **Datadog Integration**
+- **🔍 Distributed Tracing**: Seguimiento automático de requests entre Lambda functions
+- **📊 APM (Application Performance Monitoring)**: Métricas de latencia, throughput y errores
+- **📋 Log Injection**: Correlación automática de logs con trazas
+- **⚡ Real-time Metrics**: CPU, memoria, cold starts, duración de funciones
+- **🚨 Alerting**: Notificaciones automáticas en errores o degradación de performance
 
 ### **Single Table Design Pattern**
 ```python
@@ -529,13 +539,47 @@ Total: 16 endpoints funcionales ✅
 - ✅ Email validation dependencies optimizadas
 - ✅ Migración exitosa a Single Table Design
 
-## 🔧 Troubleshooting
+## 🔧 Configuración y Troubleshooting
+
+### **GitHub Secrets Requeridos**
+
+Para que los deployments funcionen correctamente, debes configurar estos secrets en tu repositorio:
+
+**Ubicación**: Settings > Secrets and variables > Actions > Repository secrets
+
+#### Secrets Obligatorios:
+```bash
+# JWT para autenticación
+JWT_SECRET_KEY: "tu-jwt-secret-key-seguro"
+
+# Datadog para observabilidad (Nuevos)
+DD_API_KEY: "tu-datadog-api-key"
+DD_SITE: "datadoghq.com"
+
+# Variables de S3 (si no se configuran automáticamente)
+DEV_S3_BUCKET_SUFFIX: "dev-suffix"
+PROD_S3_BUCKET_SUFFIX: "prod-suffix"
+```
+
+#### Variables de GitHub (opcional):
+- `GITHUB_TOKEN`: Se configura automáticamente por GitHub Actions
+
+### **Verificación de Configuración**
+```bash
+# Verifica que los secrets estén configurados
+# En Actions > Cualquier workflow > Re-run jobs
+# Si faltan secrets, verás errores específicos
+```
 
 ### Problemas Comunes
 
 #### Error: "Could not save S3 bucket suffix"
 - **Causa**: Permisos insuficientes en GitHub Actions
 - **Solución**: Configurar manualmente las variables `DEV_S3_BUCKET_SUFFIX` y `PROD_S3_BUCKET_SUFFIX`
+
+#### Error: "DD_API_KEY not found"
+- **Causa**: Secret de Datadog no configurado
+- **Solución**: Añadir `DD_API_KEY` y `DD_SITE` a GitHub Secrets
 
 #### Error: "ConditionalCheckFailedException"
 - **Causa**: Email duplicado en DynamoDB
