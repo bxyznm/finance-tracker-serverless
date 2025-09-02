@@ -627,6 +627,145 @@ resource "aws_api_gateway_integration" "accounts_account_id_balance_patch_integr
 }
 
 # -----------------------------------------------------------------------------
+# CORS OPTIONS Methods for Accounts Endpoints
+# -----------------------------------------------------------------------------
+
+# CORS Options for Accounts - /accounts
+resource "aws_api_gateway_method" "accounts_options" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "accounts_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts.id
+  http_method = aws_api_gateway_method.accounts_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{ \"statusCode\": 200 }"
+  }
+}
+
+resource "aws_api_gateway_method_response" "accounts_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts.id
+  http_method = aws_api_gateway_method.accounts_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "accounts_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts.id
+  http_method = aws_api_gateway_method.accounts_options.http_method
+  status_code = aws_api_gateway_method_response.accounts_options.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# CORS Options for Accounts by ID - /accounts/{account_id}
+resource "aws_api_gateway_method" "accounts_account_id_options" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts_account_id.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "accounts_account_id_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id.id
+  http_method = aws_api_gateway_method.accounts_account_id_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{ \"statusCode\": 200 }"
+  }
+}
+
+resource "aws_api_gateway_method_response" "accounts_account_id_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id.id
+  http_method = aws_api_gateway_method.accounts_account_id_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "accounts_account_id_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id.id
+  http_method = aws_api_gateway_method.accounts_account_id_options.http_method
+  status_code = aws_api_gateway_method_response.accounts_account_id_options.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# CORS Options for Account Balance - /accounts/{account_id}/balance
+resource "aws_api_gateway_method" "accounts_account_id_balance_options" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.accounts_account_id_balance.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "accounts_account_id_balance_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id_balance.id
+  http_method = aws_api_gateway_method.accounts_account_id_balance_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{ \"statusCode\": 200 }"
+  }
+}
+
+resource "aws_api_gateway_method_response" "accounts_account_id_balance_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id_balance.id
+  http_method = aws_api_gateway_method.accounts_account_id_balance_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "accounts_account_id_balance_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.accounts_account_id_balance.id
+  http_method = aws_api_gateway_method.accounts_account_id_balance_options.http_method
+  status_code = aws_api_gateway_method_response.accounts_account_id_balance_options.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,PATCH,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Lambda Permissions for API Gateway
 # -----------------------------------------------------------------------------
 
@@ -704,6 +843,9 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
     aws_api_gateway_integration.categories_post_integration,
     # CORS OPTIONS integrations
     aws_api_gateway_integration.users_user_id_options,
+    aws_api_gateway_integration.accounts_options,
+    aws_api_gateway_integration.accounts_account_id_options,
+    aws_api_gateway_integration.accounts_account_id_balance_options,
   ]
 
   rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
