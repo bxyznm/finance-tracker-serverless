@@ -170,7 +170,7 @@ locals {
     DD_MERGE_XRAY_TRACES = "false"
     DD_CAPTURE_LAMBDA_PAYLOAD = "false"  # Para evitar capturar información sensible
     AWS_LAMBDA_EXEC_WRAPPER = "/opt/datadog_wrapper"  # Wrapper para instrumentación
-    DD_LAMBDA_HANDLER    = "handlers.health.lambda_handler"  # Se sobrescribirá en cada función
+    # DD_LAMBDA_HANDLER se definirá específicamente en cada función
   } : {})
   
   # Layers comunes - incluye Datadog si está habilitado
@@ -239,7 +239,9 @@ resource "aws_lambda_function" "users" {
   environment {
     variables = merge(local.common_lambda_environment, {
       JWT_SECRET_KEY = var.jwt_secret_key
-    })
+    }, var.datadog_enabled ? {
+      DD_LAMBDA_HANDLER = "handlers.users.lambda_handler"
+    } : {})
   }
 
   depends_on = [
@@ -274,7 +276,9 @@ resource "aws_lambda_function" "transactions" {
   environment {
     variables = merge(local.common_lambda_environment, {
       JWT_SECRET_KEY = var.jwt_secret_key
-    })
+    }, var.datadog_enabled ? {
+      DD_LAMBDA_HANDLER = "handlers.transactions.lambda_handler"
+    } : {})
   }
 
   depends_on = [
@@ -309,7 +313,9 @@ resource "aws_lambda_function" "categories" {
   environment {
     variables = merge(local.common_lambda_environment, {
       JWT_SECRET_KEY = var.jwt_secret_key
-    })
+    }, var.datadog_enabled ? {
+      DD_LAMBDA_HANDLER = "handlers.categories.lambda_handler"
+    } : {})
   }
 
   depends_on = [
@@ -344,7 +350,9 @@ resource "aws_lambda_function" "auth" {
   environment {
     variables = merge(local.common_lambda_environment, {
       JWT_SECRET_KEY = var.jwt_secret_key
-    })
+    }, var.datadog_enabled ? {
+      DD_LAMBDA_HANDLER = "handlers.auth.lambda_handler"
+    } : {})
   }
 
   depends_on = [
@@ -379,7 +387,9 @@ resource "aws_lambda_function" "accounts" {
   environment {
     variables = merge(local.common_lambda_environment, {
       JWT_SECRET_KEY = var.jwt_secret_key
-    })
+    }, var.datadog_enabled ? {
+      DD_LAMBDA_HANDLER = "handlers.accounts.lambda_handler"
+    } : {})
   }
 
   depends_on = [
