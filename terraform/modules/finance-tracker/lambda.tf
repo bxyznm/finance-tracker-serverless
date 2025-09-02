@@ -6,28 +6,26 @@
 # Datadog Lambda Layer
 # -----------------------------------------------------------------------------
 
-# NOTA: Datadog no tiene layers oficiales en mx-central-1
-# Usamos ARNs directos con fallback a us-east-1 donde sí están disponibles
-# Los layers de Datadog son cross-region compatibles
-# Referencias: https://docs.datadoghq.com/serverless/libraries_integrations/layer/
+# ACTUALIZADO: Los layers SÍ están disponibles en mx-central-1
+# Versiones confirmadas desde el CLI de Datadog en Sep 2025
+# References: https://docs.datadoghq.com/serverless/libraries_integrations/layer/
 
-# Mapa de ARNs de Datadog layers por región
-# Datadog no está disponible en mx-central-1, usamos us-east-1 como fallback
+# Mapa de ARNs de Datadog layers por región con versiones correctas
 locals {
-  # Datadog Extension Layer ARNs por región
+  # Datadog Extension Layer ARNs por región (versión 85)
   datadog_extension_arns = {
-    "us-east-1"      = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Extension:65"
-    "us-west-2"      = "arn:aws:lambda:us-west-2:464622532012:layer:Datadog-Extension:65"
-    "eu-west-1"      = "arn:aws:lambda:eu-west-1:464622532012:layer:Datadog-Extension:65"
-    "mx-central-1"   = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Extension:65"  # Fallback a us-east-1
+    "us-east-1"      = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Extension:85"
+    "us-west-2"      = "arn:aws:lambda:us-west-2:464622532012:layer:Datadog-Extension:85"
+    "eu-west-1"      = "arn:aws:lambda:eu-west-1:464622532012:layer:Datadog-Extension:85"
+    "mx-central-1"   = "arn:aws:lambda:mx-central-1:464622532012:layer:Datadog-Extension:85"  # ✅ Disponible nativo
   }
   
-  # Datadog Python Layer ARNs por región
+  # Datadog Python Layer ARNs por región (versión 113)
   datadog_python_arns = {
-    "us-east-1"      = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Python312:115"
-    "us-west-2"      = "arn:aws:lambda:us-west-2:464622532012:layer:Datadog-Python312:115"
-    "eu-west-1"      = "arn:aws:lambda:eu-west-1:464622532012:layer:Datadog-Python312:115"
-    "mx-central-1"   = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Python312:115"  # Fallback a us-east-1
+    "us-east-1"      = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Python312:113"
+    "us-west-2"      = "arn:aws:lambda:us-west-2:464622532012:layer:Datadog-Python312:113"
+    "eu-west-1"      = "arn:aws:lambda:eu-west-1:464622532012:layer:Datadog-Python312:113"
+    "mx-central-1"   = "arn:aws:lambda:mx-central-1:464622532012:layer:Datadog-Python312:113"  # ✅ Disponible nativo
   }
   
   # ARNs específicos para la región actual
@@ -158,7 +156,7 @@ locals {
     LOG_LEVEL            = var.environment == "prod" ? "INFO" : "DEBUG"
     CORS_ALLOWED_ORIGINS = join(",", var.cors_allowed_origins)
   }, var.lambda_environment_variables, var.datadog_enabled ? {
-    # Datadog Environment Variables
+    # Datadog Environment Variables (compatible con CLI de Datadog)
     DD_API_KEY           = var.datadog_api_key
     DD_SITE              = var.datadog_site
     DD_SERVICE           = var.datadog_service_name
@@ -168,7 +166,10 @@ locals {
     DD_TRACE_ENABLED     = "true"
     DD_LOGS_INJECTION    = "true"
     DD_SERVERLESS_LOGS_ENABLED = "true"
+    DD_SERVERLESS_APPSEC_ENABLED = "true"  # Security monitoring
+    DD_MERGE_XRAY_TRACES = "false"
     DD_CAPTURE_LAMBDA_PAYLOAD = "false"  # Para evitar capturar información sensible
+    AWS_LAMBDA_EXEC_WRAPPER = "/opt/datadog_wrapper"  # Wrapper para instrumentación
     DD_LAMBDA_HANDLER    = "handlers.health.lambda_handler"  # Se sobrescribirá en cada función
   } : {})
   
@@ -191,7 +192,7 @@ resource "aws_lambda_function" "health" {
   s3_key           = aws_s3_object.code_zip.key
   source_code_hash = aws_s3_object.code_zip.etag
 
-  handler     = "handlers.health.lambda_handler"
+  handler     = var.datadog_enabled ? "datadog_lambda.handler.handler" : "handlers.health.lambda_handler"
   runtime     = var.lambda_runtime
   timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
@@ -226,7 +227,7 @@ resource "aws_lambda_function" "users" {
   s3_key           = aws_s3_object.code_zip.key
   source_code_hash = aws_s3_object.code_zip.etag
 
-  handler     = "handlers.users.lambda_handler"
+  handler     = var.datadog_enabled ? "datadog_lambda.handler.handler" : "handlers.users.lambda_handler"
   runtime     = var.lambda_runtime
   timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
@@ -261,7 +262,7 @@ resource "aws_lambda_function" "transactions" {
   s3_key           = aws_s3_object.code_zip.key
   source_code_hash = aws_s3_object.code_zip.etag
 
-  handler     = "handlers.transactions.lambda_handler"
+  handler     = var.datadog_enabled ? "datadog_lambda.handler.handler" : "handlers.transactions.lambda_handler"
   runtime     = var.lambda_runtime
   timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
@@ -296,7 +297,7 @@ resource "aws_lambda_function" "categories" {
   s3_key           = aws_s3_object.code_zip.key
   source_code_hash = aws_s3_object.code_zip.etag
 
-  handler     = "handlers.categories.lambda_handler"
+  handler     = var.datadog_enabled ? "datadog_lambda.handler.handler" : "handlers.categories.lambda_handler"
   runtime     = var.lambda_runtime
   timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
@@ -331,7 +332,7 @@ resource "aws_lambda_function" "auth" {
   s3_key           = aws_s3_object.code_zip.key
   source_code_hash = aws_s3_object.code_zip.etag
 
-  handler     = "handlers.auth.lambda_handler"
+  handler     = var.datadog_enabled ? "datadog_lambda.handler.handler" : "handlers.auth.lambda_handler"
   runtime     = var.lambda_runtime
   timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
@@ -366,7 +367,7 @@ resource "aws_lambda_function" "accounts" {
   s3_key           = aws_s3_object.code_zip.key
   source_code_hash = aws_s3_object.code_zip.etag
 
-  handler     = "handlers.accounts.lambda_handler"
+  handler     = var.datadog_enabled ? "datadog_lambda.handler.handler" : "handlers.accounts.lambda_handler"
   runtime     = var.lambda_runtime
   timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
