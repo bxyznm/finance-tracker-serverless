@@ -415,7 +415,7 @@ export const AccountsPage: React.FC = () => {
               Mis Cuentas
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Gestiona todas tus cuentas bancarias y mantén control de tus finanzas
+              Gestiona todas tus cuentas bancarias y mantén el control total de tus finanzas
             </Typography>
           </Box>
 
