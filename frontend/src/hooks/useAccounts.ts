@@ -38,9 +38,11 @@ export const useAccounts = (): UseAccountsReturn => {
       setError(null);
       const response: AccountListResponse = await AccountService.getAccounts();
       
-      setAccounts(response.accounts);
-      setTotalBalance(response.total_balance);
-      setTotalAccounts(response.total_accounts);
+      console.log('useAccounts fetchAccounts response:', response);
+      
+      setAccounts(response.accounts || []);
+      setTotalBalance(response.total_balance_by_currency || {});
+      setTotalAccounts(response.active_count || 0);
     } catch (err: any) {
       console.error('Error fetching accounts:', err);
       setError(err?.response?.data?.message || err?.message || 'Failed to fetch accounts');

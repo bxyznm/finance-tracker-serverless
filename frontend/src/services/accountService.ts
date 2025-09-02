@@ -76,6 +76,8 @@ export class AccountService {
     balanceData: UpdateBalanceRequest
   ): Promise<AccountResponse> {
     try {
+      console.log('AccountService.updateBalance called with:', { accountId, balanceData });
+      
       const response = await ApiClient.makeAuthenticatedRequest<AccountResponse>(
         `/accounts/${accountId}/balance`,
         {
@@ -86,6 +88,7 @@ export class AccountService {
       return response.data;
     } catch (error: any) {
       console.error('Error updating account balance:', error);
+      console.error('Error response:', error.response?.data);
       throw error;
     }
   }
@@ -108,6 +111,11 @@ export class AccountService {
    * Format currency amount for display
    */
   static formatCurrency(amount: number, currency: string): string {
+    // Handle invalid amounts
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      amount = 0;
+    }
+    
     const formatters: Record<string, Intl.NumberFormat> = {
       MXN: new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }),
       USD: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),
