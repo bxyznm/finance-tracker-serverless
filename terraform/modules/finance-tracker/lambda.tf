@@ -6,22 +6,33 @@
 # Datadog Lambda Layer
 # -----------------------------------------------------------------------------
 
-# Datadog Lambda Extension Layer para Python 3.12
-data "aws_lambda_layer_version" "datadog_extension" {
-  count = var.datadog_enabled ? 1 : 0
-  
-  layer_name = "Datadog-Extension"
-  # Sin especificar version, Terraform usará la más reciente disponible
-  compatible_runtime = var.lambda_runtime
-}
+# NOTA: Datadog no tiene layers oficiales en mx-central-1
+# Usamos ARNs directos con fallback a us-east-1 donde sí están disponibles
+# Los layers de Datadog son cross-region compatibles
+# Referencias: https://docs.datadoghq.com/serverless/libraries_integrations/layer/
 
-# Datadog Python Layer  
-data "aws_lambda_layer_version" "datadog_python" {
-  count = var.datadog_enabled ? 1 : 0
+# Mapa de ARNs de Datadog layers por región
+# Datadog no está disponible en mx-central-1, usamos us-east-1 como fallback
+locals {
+  # Datadog Extension Layer ARNs por región
+  datadog_extension_arns = {
+    "us-east-1"      = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Extension:65"
+    "us-west-2"      = "arn:aws:lambda:us-west-2:464622532012:layer:Datadog-Extension:65"
+    "eu-west-1"      = "arn:aws:lambda:eu-west-1:464622532012:layer:Datadog-Extension:65"
+    "mx-central-1"   = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Extension:65"  # Fallback a us-east-1
+  }
   
-  layer_name = "Datadog-Python312"
-  # Sin especificar version, Terraform usará la más reciente disponible
-  compatible_runtime = var.lambda_runtime
+  # Datadog Python Layer ARNs por región
+  datadog_python_arns = {
+    "us-east-1"      = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Python312:115"
+    "us-west-2"      = "arn:aws:lambda:us-west-2:464622532012:layer:Datadog-Python312:115"
+    "eu-west-1"      = "arn:aws:lambda:eu-west-1:464622532012:layer:Datadog-Python312:115"
+    "mx-central-1"   = "arn:aws:lambda:us-east-1:464622532012:layer:Datadog-Python312:115"  # Fallback a us-east-1
+  }
+  
+  # ARNs específicos para la región actual
+  datadog_extension_arn = var.datadog_enabled ? lookup(local.datadog_extension_arns, var.aws_region, local.datadog_extension_arns["us-east-1"]) : ""
+  datadog_python_arn    = var.datadog_enabled ? lookup(local.datadog_python_arns, var.aws_region, local.datadog_python_arns["us-east-1"]) : ""
 }
 
 # -----------------------------------------------------------------------------
@@ -165,8 +176,8 @@ locals {
   common_layers = compact(concat(
     [aws_lambda_layer_version.dependencies.arn],
     var.datadog_enabled ? [
-      try(data.aws_lambda_layer_version.datadog_extension[0].arn, ""),
-      try(data.aws_lambda_layer_version.datadog_python[0].arn, "")
+      local.datadog_extension_arn,
+      local.datadog_python_arn
     ] : []
   ))
 }
