@@ -11,19 +11,16 @@ data "aws_lambda_layer_version" "datadog_extension" {
   count = var.datadog_enabled ? 1 : 0
   
   layer_name = "Datadog-Extension"
-  version    = 65  # Version más reciente para mx-central-1
-  
-  # Si la capa no existe en mx-central-1, usar una región compatible
+  # Sin especificar version, Terraform usará la más reciente disponible
   compatible_runtime = var.lambda_runtime
 }
 
-# Datadog Python Layer
+# Datadog Python Layer  
 data "aws_lambda_layer_version" "datadog_python" {
   count = var.datadog_enabled ? 1 : 0
   
   layer_name = "Datadog-Python312"
-  version    = 115  # Version más reciente para Python 3.12
-  
+  # Sin especificar version, Terraform usará la más reciente disponible
   compatible_runtime = var.lambda_runtime
 }
 
