@@ -552,8 +552,8 @@ Para que los deployments funcionen correctamente, debes configurar estos secrets
 # JWT para autenticación
 JWT_SECRET_KEY: "tu-jwt-secret-key-seguro"
 
-# Datadog para observabilidad (Nuevos)
-DD_API_KEY: "tu-datadog-api-key"
+# Datadog para observabilidad (CRÍTICO: Nunca en código)
+DD_API_KEY: "tu-nueva-datadog-api-key"  # GENERAR NUEVA
 DD_SITE: "datadoghq.com"
 
 # Variables de S3 (si no se configuran automáticamente)

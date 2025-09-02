@@ -103,5 +103,7 @@ frontend_subdomain = "financetracker"
 
 # Habilitar Datadog para observabilidad
 datadog_enabled = true
-datadog_api_key = "3d38ceaa33bcdcc6ad36acc75f049201"
+# NOTA: datadog_api_key se debe configurar como secret en GitHub Actions
+# No incluir claves API directamente en el código
+# datadog_api_key = "CONFIGURAR_EN_GITHUB_SECRETS"  # Usa TF_VAR_datadog_api_key
 datadog_site = "datadoghq.com"
