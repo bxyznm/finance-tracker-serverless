@@ -271,7 +271,6 @@ const CardItem: React.FC<CardItemProps> = ({
 };
 
 const CardsPage: React.FC = () => {
-  const theme = useTheme();
   const { data: cardsData, isLoading, error } = useCards();
   const deleteCardMutation = useDeleteCard();
 
