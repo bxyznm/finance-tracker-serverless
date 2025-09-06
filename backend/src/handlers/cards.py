@@ -586,37 +586,38 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         http_method = event.get('httpMethod')
         path = event.get('path', '').rstrip('/')
-        path_parameters = event.get('pathParameters') or {}
         
-        # Routes mapping
-        if path == '/cards':
-            if http_method == 'POST':
-                return create_card_handler(event, context)
-            elif http_method == 'GET':
-                return get_cards_handler(event, context)
-                
-        elif path.startswith('/cards/') and path_parameters.get('card_id'):
-            card_id = path_parameters['card_id']
-            
-            if path == f'/cards/{card_id}':
-                if http_method == 'GET':
-                    return get_card_handler(event, context)
-                elif http_method == 'PUT':
-                    return update_card_handler(event, context)
-                elif http_method == 'DELETE':
-                    return delete_card_handler(event, context)
-                    
-            elif path == f'/cards/{card_id}/transactions':
-                if http_method == 'POST':
-                    return add_card_transaction_handler(event, context)
-                    
-            elif path == f'/cards/{card_id}/payment':
-                if http_method == 'POST':
-                    return make_card_payment_handler(event, context)
+        # Remove API Gateway stage prefix if present
+        if path.startswith('/api'):
+            path = path[4:]  # Remove '/api'
         
-        # Route not found
-        logger.warning(f"Route not found: {http_method} {path}")
-        return create_response(404, {"error": "Route not found"})
+        # Route to appropriate handler
+        # The @require_auth decorator will handle authentication automatically
+        if path == '/cards' and http_method == 'POST':
+            return create_card_handler(event, context)
+        elif path == '/cards' and http_method == 'GET':
+            return get_cards_handler(event, context)
+        elif path.startswith('/cards/') and http_method == 'GET':
+            # Check if it's a specific card or has additional path segments
+            path_parts = [p for p in path.split('/') if p]  # Remove empty parts
+            if len(path_parts) == 2:  # /cards/{card_id}
+                return get_card_handler(event, context)
+        elif path.startswith('/cards/') and http_method == 'PUT':
+            path_parts = [p for p in path.split('/') if p]
+            if len(path_parts) == 2:  # /cards/{card_id}
+                return update_card_handler(event, context)
+        elif path.startswith('/cards/') and http_method == 'DELETE':
+            path_parts = [p for p in path.split('/') if p]
+            if len(path_parts) == 2:  # /cards/{card_id}
+                return delete_card_handler(event, context)
+        elif path.endswith('/transactions') and http_method == 'POST':
+            return add_card_transaction_handler(event, context)
+        elif path.endswith('/payment') and http_method == 'POST':
+            return make_card_payment_handler(event, context)
+        else:
+            # Route not found
+            logger.warning(f"Route not found: {http_method} {path}")
+            return create_response(404, {"error": "Route not found"})
         
     except Exception as e:
         logger.error(f"Lambda handler error: {str(e)}")
