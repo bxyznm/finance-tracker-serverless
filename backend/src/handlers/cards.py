@@ -107,7 +107,7 @@ def create_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
         
         # Save to database
         db_client = DynamoDBClient()
-        db_client.put_item('Cards', db_data)
+        created_card = db_client.create_card(db_data)
         
         # Calculate additional fields for response
         available_credit = calculate_available_credit(
@@ -171,16 +171,11 @@ def get_cards_handler(event: Dict[str, Any], context: Any, user_data: TokenPaylo
         query_params = event.get('queryStringParameters', {}) or {}
         status_filter = query_params.get('status')
         card_type_filter = query_params.get('type')
+        include_inactive = status_filter == 'inactive' or status_filter is None
         
         # Get cards from database
         db_client = DynamoDBClient()
-        response = db_client.query_items(
-            table_name='Cards',
-            key_condition='user_id = :user_id',
-            expression_attribute_values={':user_id': user_id}
-        )
-        
-        cards = response.get('Items', [])
+        cards = db_client.list_user_cards(user_id, include_inactive=include_inactive)
         
         # Apply filters
         if status_filter:
@@ -283,7 +278,7 @@ def get_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPayloa
         
         # Get card from database
         db_client = DynamoDBClient()
-        card = db_client.get_item('Cards', {'user_id': user_id, 'card_id': card_id})
+        card = db_client.get_card_by_id(user_id, card_id)
         
         if not card:
             return create_response(404, {"error": "Card not found"})
@@ -353,7 +348,7 @@ def update_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
         
         # Get existing card
         db_client = DynamoDBClient()
-        existing_card = db_client.get_item('Cards', {'user_id': user_id, 'card_id': card_id})
+        existing_card = db_client.get_card_by_id(user_id, card_id)
         
         if not existing_card:
             return create_response(404, {"error": "Card not found"})
@@ -387,10 +382,7 @@ def update_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
         update_fields['updated_at'] = datetime.now().isoformat()
         
         # Update in database
-        db_client.update_item('Cards', {'user_id': user_id, 'card_id': card_id}, update_fields)
-        
-        # Get updated card
-        updated_card = db_client.get_item('Cards', {'user_id': user_id, 'card_id': card_id})
+        updated_card = db_client.update_card(user_id, card_id, update_fields)
         
         # Calculate additional fields
         credit_limit = float(updated_card.get('credit_limit', 0)) if updated_card.get('credit_limit') else None
@@ -453,15 +445,15 @@ def delete_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
         card_id = event['pathParameters']['card_id']
         logger.info(f"Deleting card {card_id} for user: {user_id}")
         
-        # Check if card exists
+        # Check if card exists and delete
         db_client = DynamoDBClient()
-        existing_card = db_client.get_item('Cards', {'user_id': user_id, 'card_id': card_id})
+        now = datetime.now().isoformat()
         
-        if not existing_card:
+        # Use soft delete (set status to inactive)
+        success = db_client.delete_card(user_id, card_id, now)
+        
+        if not success:
             return create_response(404, {"error": "Card not found"})
-        
-        # Delete card
-        db_client.delete_item('Cards', {'user_id': user_id, 'card_id': card_id})
         
         logger.info(f"Card deleted successfully: {card_id}")
         return create_response(200, {"message": "Card deleted successfully"})
@@ -489,7 +481,7 @@ def add_card_transaction_handler(event: Dict[str, Any], context: Any, user_data:
         
         # Check if card exists and belongs to user
         db_client = DynamoDBClient()
-        card = db_client.get_item('Cards', {'user_id': user_id, 'card_id': card_id})
+        card = db_client.get_card_by_id(user_id, card_id)
         
         if not card:
             return create_response(404, {"error": "Card not found"})
@@ -510,7 +502,7 @@ def add_card_transaction_handler(event: Dict[str, Any], context: Any, user_data:
             'updated_at': datetime.now().isoformat()
         }
         
-        db_client.update_item('Cards', {'user_id': user_id, 'card_id': card_id}, update_fields)
+        db_client.update_card(user_id, card_id, update_fields)
         
         logger.info(f"Transaction added successfully to card: {card_id}")
         return create_response(200, {
@@ -544,7 +536,7 @@ def make_card_payment_handler(event: Dict[str, Any], context: Any, user_data: To
         
         # Check if card exists and belongs to user
         db_client = DynamoDBClient()
-        card = db_client.get_item('Cards', {'user_id': user_id, 'card_id': card_id})
+        card = db_client.get_card_by_id(user_id, card_id)
         
         if not card:
             return create_response(404, {"error": "Card not found"})
@@ -559,7 +551,7 @@ def make_card_payment_handler(event: Dict[str, Any], context: Any, user_data: To
             'updated_at': datetime.now().isoformat()
         }
         
-        db_client.update_item('Cards', {'user_id': user_id, 'card_id': card_id}, update_fields)
+        db_client.update_card(user_id, card_id, update_fields)
         
         logger.info(f"Payment made successfully for card: {card_id}")
         return create_response(200, {

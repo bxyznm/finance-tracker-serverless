@@ -519,3 +519,189 @@ class DynamoDBClient:
             else:
                 logger.error(f"Error updating balance for account {account_id}, user {user_id}: {e}")
                 raise
+
+    # -------------------------------------------------------------------------
+    # Card Methods
+    # -------------------------------------------------------------------------
+
+    def create_card(self, card_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new card for a user
+        
+        Single Table Design for Card:
+        - pk: USER#{user_id}
+        - sk: CARD#{card_id}  
+        - gsi1_pk: CARD#{card_id}
+        - gsi1_sk: USER#{user_id}
+        - entity_type: card
+        """
+        try:
+            user_id = card_data['user_id']
+            card_id = card_data['card_id']
+            
+            item = {
+                'pk': f'USER#{user_id}',
+                'sk': f'CARD#{card_id}',
+                'gsi1_pk': f'CARD#{card_id}',
+                'gsi1_sk': f'USER#{user_id}',
+                'entity_type': 'card',
+                'user_id': user_id,
+                'card_id': card_id,
+                'name': card_data['name'],
+                'card_type': card_data['card_type'],
+                'card_network': card_data['card_network'],
+                'bank_name': card_data['bank_name'],
+                'last_four_digits': card_data['last_four_digits'],
+                'expiry_month': card_data['expiry_month'],
+                'expiry_year': card_data['expiry_year'],
+                'credit_limit': card_data.get('credit_limit'),
+                'current_balance': card_data.get('current_balance', 0.0),
+                'minimum_payment': card_data.get('minimum_payment'),
+                'payment_due_date': card_data.get('payment_due_date'),
+                'apr': card_data.get('apr'),
+                'annual_fee': card_data.get('annual_fee'),
+                'rewards_program': card_data.get('rewards_program'),
+                'currency': card_data['currency'],
+                'color': card_data.get('color'),
+                'description': card_data.get('description'),
+                'status': card_data.get('status', 'active'),
+                'created_at': card_data['created_at'],
+                'updated_at': card_data['updated_at']
+            }
+            
+            # Put item to DynamoDB
+            self.table.put_item(Item=item)
+            
+            logger.info(f"Card created: {card_id} for user {user_id}")
+            return item
+            
+        except ClientError as e:
+            logger.error(f"Error creating card {card_data.get('card_id')} for user {card_data.get('user_id')}: {e}")
+            raise
+
+    def get_card_by_id(self, user_id: str, card_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a specific card by user_id and card_id
+        """
+        try:
+            response = self.table.get_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'CARD#{card_id}'
+                }
+            )
+            
+            item = response.get('Item')
+            if item and item.get('entity_type') == 'card':
+                logger.info(f"Card found: {card_id} for user {user_id}")
+                return item
+            else:
+                logger.warning(f"Card not found: {card_id} for user {user_id}")
+                return None
+                
+        except ClientError as e:
+            logger.error(f"Error getting card {card_id} for user {user_id}: {e}")
+            raise
+
+    def list_user_cards(self, user_id: str, include_inactive: bool = False) -> List[Dict[str, Any]]:
+        """
+        List all cards for a user
+        """
+        try:
+            query_params = {
+                'KeyConditionExpression': 'pk = :pk AND begins_with(sk, :sk_prefix)',
+                'ExpressionAttributeValues': {
+                    ':pk': f'USER#{user_id}',
+                    ':sk_prefix': 'CARD#'
+                }
+            }
+            
+            if not include_inactive:
+                query_params['FilterExpression'] = '#status = :status'
+                query_params['ExpressionAttributeNames'] = {'#status': 'status'}
+                query_params['ExpressionAttributeValues'][':status'] = 'active'
+            
+            response = self.table.query(**query_params)
+            cards = [item for item in response['Items'] if item.get('entity_type') == 'card']
+            
+            logger.info(f"Found {len(cards)} cards for user {user_id}")
+            return cards
+            
+        except ClientError as e:
+            logger.error(f"Error listing cards for user {user_id}: {e}")
+            raise
+
+    def update_card(self, user_id: str, card_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update a card's information
+        """
+        try:
+            # Build update expression
+            update_expression = "SET "
+            expression_values = {}
+            expression_names = {}
+            
+            for key, value in update_data.items():
+                if key not in ['user_id', 'card_id', 'pk', 'sk', 'entity_type']:
+                    attr_name = f"#{key}"
+                    attr_value = f":{key}"
+                    update_expression += f"{attr_name} = {attr_value}, "
+                    expression_names[attr_name] = key
+                    expression_values[attr_value] = value
+            
+            # Remove trailing comma and space
+            update_expression = update_expression.rstrip(', ')
+            
+            response = self.table.update_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'CARD#{card_id}'
+                },
+                UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_names,
+                ExpressionAttributeValues=expression_values,
+                ConditionExpression='attribute_exists(pk) AND entity_type = :entity_type',
+                ReturnValues='ALL_NEW'
+            )
+            
+            logger.info(f"Card updated: {card_id} for user {user_id}")
+            return response['Attributes']
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Card not found for update: {card_id} for user {user_id}")
+                raise ValueError("Card not found")
+            else:
+                logger.error(f"Error updating card {card_id} for user {user_id}: {e}")
+                raise
+
+    def delete_card(self, user_id: str, card_id: str, updated_at: str) -> bool:
+        """
+        Soft delete a card by setting status to inactive
+        """
+        try:
+            response = self.table.update_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'CARD#{card_id}'
+                },
+                UpdateExpression='SET #status = :status, updated_at = :updated_at',
+                ExpressionAttributeNames={'#status': 'status'},
+                ExpressionAttributeValues={
+                    ':status': 'inactive',
+                    ':updated_at': updated_at
+                },
+                ConditionExpression='attribute_exists(pk) AND entity_type = :entity_type',
+                ReturnValues='ALL_NEW'
+            )
+            
+            logger.info(f"Card deleted (soft): {card_id} for user {user_id}")
+            return True
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Card not found for deletion: {card_id} for user {user_id}")
+                return False
+            else:
+                logger.error(f"Error deleting card {card_id} for user {user_id}: {e}")
+                raise
