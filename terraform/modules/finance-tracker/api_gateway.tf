@@ -108,6 +108,34 @@ resource "aws_api_gateway_resource" "accounts_account_id_balance" {
   path_part   = "balance"
 }
 
+# Recurso /cards
+resource "aws_api_gateway_resource" "cards" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_rest_api.finance_tracker_api.root_resource_id
+  path_part   = "cards"
+}
+
+# Recurso /cards/{card_id} para operaciones por ID específico
+resource "aws_api_gateway_resource" "cards_card_id" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.cards.id
+  path_part   = "{card_id}"
+}
+
+# Recurso /cards/{card_id}/transactions para agregar transacciones
+resource "aws_api_gateway_resource" "cards_card_id_transactions" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.cards_card_id.id
+  path_part   = "transactions"
+}
+
+# Recurso /cards/{card_id}/payment para hacer pagos
+resource "aws_api_gateway_resource" "cards_card_id_payment" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  parent_id   = aws_api_gateway_resource.cards_card_id.id
+  path_part   = "payment"
+}
+
 # -----------------------------------------------------------------------------
 # API Gateway Methods y Integraciones
 # -----------------------------------------------------------------------------
@@ -766,6 +794,320 @@ resource "aws_api_gateway_integration_response" "accounts_account_id_balance_opt
 }
 
 # -----------------------------------------------------------------------------
+# Cards API Methods and Integrations
+# -----------------------------------------------------------------------------
+
+# Cards - POST /cards (Create card)
+resource "aws_api_gateway_method" "cards_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards.id
+  http_method   = "POST"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "cards_post_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards.id
+  http_method = aws_api_gateway_method.cards_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.cards.invoke_arn
+}
+
+# Cards - GET /cards (List cards)
+resource "aws_api_gateway_method" "cards_get" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards.id
+  http_method   = "GET"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "cards_get_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards.id
+  http_method = aws_api_gateway_method.cards_get.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.cards.invoke_arn
+}
+
+# Card by ID - GET /cards/{card_id}
+resource "aws_api_gateway_method" "cards_card_id_get" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards_card_id.id
+  http_method   = "GET"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "cards_card_id_get_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id.id
+  http_method = aws_api_gateway_method.cards_card_id_get.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.cards.invoke_arn
+}
+
+# Card by ID - PUT /cards/{card_id} (Update card)
+resource "aws_api_gateway_method" "cards_card_id_put" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards_card_id.id
+  http_method   = "PUT"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "cards_card_id_put_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id.id
+  http_method = aws_api_gateway_method.cards_card_id_put.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.cards.invoke_arn
+}
+
+# Card by ID - DELETE /cards/{card_id} (Delete card)
+resource "aws_api_gateway_method" "cards_card_id_delete" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards_card_id.id
+  http_method   = "DELETE"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "cards_card_id_delete_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id.id
+  http_method = aws_api_gateway_method.cards_card_id_delete.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.cards.invoke_arn
+}
+
+# Card Transactions - POST /cards/{card_id}/transactions (Add transaction)
+resource "aws_api_gateway_method" "cards_card_id_transactions_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards_card_id_transactions.id
+  http_method   = "POST"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "cards_card_id_transactions_post_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id_transactions.id
+  http_method = aws_api_gateway_method.cards_card_id_transactions_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.cards.invoke_arn
+}
+
+# Card Payment - POST /cards/{card_id}/payment (Make payment)
+resource "aws_api_gateway_method" "cards_card_id_payment_post" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards_card_id_payment.id
+  http_method   = "POST"
+  authorization = "NONE" # JWT handled by Lambda function
+}
+
+resource "aws_api_gateway_integration" "cards_card_id_payment_post_integration" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id_payment.id
+  http_method = aws_api_gateway_method.cards_card_id_payment_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.cards.invoke_arn
+}
+
+# -----------------------------------------------------------------------------
+# CORS OPTIONS Methods for Cards Endpoints
+# -----------------------------------------------------------------------------
+
+# CORS Options for Cards - /cards
+resource "aws_api_gateway_method" "cards_options" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "cards_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards.id
+  http_method = aws_api_gateway_method.cards_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{ \"statusCode\": 200 }"
+  }
+}
+
+resource "aws_api_gateway_method_response" "cards_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards.id
+  http_method = aws_api_gateway_method.cards_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "cards_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards.id
+  http_method = aws_api_gateway_method.cards_options.http_method
+  status_code = aws_api_gateway_method_response.cards_options.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# CORS Options for Cards by ID - /cards/{card_id}
+resource "aws_api_gateway_method" "cards_card_id_options" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards_card_id.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "cards_card_id_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id.id
+  http_method = aws_api_gateway_method.cards_card_id_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{ \"statusCode\": 200 }"
+  }
+}
+
+resource "aws_api_gateway_method_response" "cards_card_id_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id.id
+  http_method = aws_api_gateway_method.cards_card_id_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "cards_card_id_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id.id
+  http_method = aws_api_gateway_method.cards_card_id_options.http_method
+  status_code = aws_api_gateway_method_response.cards_card_id_options.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# CORS Options for Card Transactions - /cards/{card_id}/transactions
+resource "aws_api_gateway_method" "cards_card_id_transactions_options" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards_card_id_transactions.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "cards_card_id_transactions_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id_transactions.id
+  http_method = aws_api_gateway_method.cards_card_id_transactions_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{ \"statusCode\": 200 }"
+  }
+}
+
+resource "aws_api_gateway_method_response" "cards_card_id_transactions_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id_transactions.id
+  http_method = aws_api_gateway_method.cards_card_id_transactions_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "cards_card_id_transactions_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id_transactions.id
+  http_method = aws_api_gateway_method.cards_card_id_transactions_options.http_method
+  status_code = aws_api_gateway_method_response.cards_card_id_transactions_options.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# CORS Options for Card Payment - /cards/{card_id}/payment
+resource "aws_api_gateway_method" "cards_card_id_payment_options" {
+  rest_api_id   = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id   = aws_api_gateway_resource.cards_card_id_payment.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "cards_card_id_payment_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id_payment.id
+  http_method = aws_api_gateway_method.cards_card_id_payment_options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{ \"statusCode\": 200 }"
+  }
+}
+
+resource "aws_api_gateway_method_response" "cards_card_id_payment_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id_payment.id
+  http_method = aws_api_gateway_method.cards_card_id_payment_options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "cards_card_id_payment_options" {
+  rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
+  resource_id = aws_api_gateway_resource.cards_card_id_payment.id
+  http_method = aws_api_gateway_method.cards_card_id_payment_options.http_method
+  status_code = aws_api_gateway_method_response.cards_card_id_payment_options.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Requested-With'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Lambda Permissions for API Gateway
 # -----------------------------------------------------------------------------
 
@@ -817,6 +1159,14 @@ resource "aws_lambda_permission" "api_gateway_categories" {
   source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "api_gateway_cards" {
+  statement_id  = "AllowExecutionFromAPIGateway-Cards"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cards.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.finance_tracker_api.execution_arn}/*/*"
+}
+
 # -----------------------------------------------------------------------------
 # API Gateway Deployment
 # -----------------------------------------------------------------------------
@@ -841,11 +1191,22 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
     aws_api_gateway_integration.transactions_post_integration,
     aws_api_gateway_integration.categories_get_integration,
     aws_api_gateway_integration.categories_post_integration,
+    aws_api_gateway_integration.cards_post_integration,
+    aws_api_gateway_integration.cards_get_integration,
+    aws_api_gateway_integration.cards_card_id_get_integration,
+    aws_api_gateway_integration.cards_card_id_put_integration,
+    aws_api_gateway_integration.cards_card_id_delete_integration,
+    aws_api_gateway_integration.cards_card_id_transactions_post_integration,
+    aws_api_gateway_integration.cards_card_id_payment_post_integration,
     # CORS OPTIONS integrations
     aws_api_gateway_integration.users_user_id_options,
     aws_api_gateway_integration.accounts_options,
     aws_api_gateway_integration.accounts_account_id_options,
     aws_api_gateway_integration.accounts_account_id_balance_options,
+    aws_api_gateway_integration.cards_options,
+    aws_api_gateway_integration.cards_card_id_options,
+    aws_api_gateway_integration.cards_card_id_transactions_options,
+    aws_api_gateway_integration.cards_card_id_payment_options,
   ]
 
   rest_api_id = aws_api_gateway_rest_api.finance_tracker_api.id
@@ -864,6 +1225,10 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_resource.accounts_account_id_balance.id,
       aws_api_gateway_resource.transactions.id,
       aws_api_gateway_resource.categories.id,
+      aws_api_gateway_resource.cards.id,
+      aws_api_gateway_resource.cards_card_id.id,
+      aws_api_gateway_resource.cards_card_id_transactions.id,
+      aws_api_gateway_resource.cards_card_id_payment.id,
       aws_api_gateway_method.health_get.id,
       aws_api_gateway_method.users_get.id,
       aws_api_gateway_method.users_user_id_get.id,
@@ -886,6 +1251,17 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_method.transactions_post.id,
       aws_api_gateway_method.categories_get.id,
       aws_api_gateway_method.categories_post.id,
+      aws_api_gateway_method.cards_post.id,
+      aws_api_gateway_method.cards_get.id,
+      aws_api_gateway_method.cards_card_id_get.id,
+      aws_api_gateway_method.cards_card_id_put.id,
+      aws_api_gateway_method.cards_card_id_delete.id,
+      aws_api_gateway_method.cards_card_id_transactions_post.id,
+      aws_api_gateway_method.cards_card_id_payment_post.id,
+      aws_api_gateway_method.cards_options.id,
+      aws_api_gateway_method.cards_card_id_options.id,
+      aws_api_gateway_method.cards_card_id_transactions_options.id,
+      aws_api_gateway_method.cards_card_id_payment_options.id,
       aws_api_gateway_integration.health_integration.id,
       aws_api_gateway_integration.users_get_integration.id,
       aws_api_gateway_integration.users_user_id_get_integration.id,
@@ -911,6 +1287,17 @@ resource "aws_api_gateway_deployment" "finance_tracker_deployment" {
       aws_api_gateway_integration.transactions_post_integration.id,
       aws_api_gateway_integration.categories_get_integration.id,
       aws_api_gateway_integration.categories_post_integration.id,
+      aws_api_gateway_integration.cards_post_integration.id,
+      aws_api_gateway_integration.cards_get_integration.id,
+      aws_api_gateway_integration.cards_card_id_get_integration.id,
+      aws_api_gateway_integration.cards_card_id_put_integration.id,
+      aws_api_gateway_integration.cards_card_id_delete_integration.id,
+      aws_api_gateway_integration.cards_card_id_transactions_post_integration.id,
+      aws_api_gateway_integration.cards_card_id_payment_post_integration.id,
+      aws_api_gateway_integration.cards_options.id,
+      aws_api_gateway_integration.cards_card_id_options.id,
+      aws_api_gateway_integration.cards_card_id_transactions_options.id,
+      aws_api_gateway_integration.cards_card_id_payment_options.id,
     ]))
   }
 

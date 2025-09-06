@@ -62,6 +62,16 @@ output "lambda_functions" {
       arn           = aws_lambda_function.auth.arn
       invoke_arn    = aws_lambda_function.auth.invoke_arn
     }
+    accounts = {
+      function_name = aws_lambda_function.accounts.function_name
+      arn           = aws_lambda_function.accounts.arn
+      invoke_arn    = aws_lambda_function.accounts.invoke_arn
+    }
+    cards = {
+      function_name = aws_lambda_function.cards.function_name
+      arn           = aws_lambda_function.cards.arn
+      invoke_arn    = aws_lambda_function.cards.invoke_arn
+    }
   }
 }
 

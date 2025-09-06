@@ -10,6 +10,7 @@ import {
   RegisterPage,
   DashboardPage,
   AccountsPage,
+  CardsPage,
   TransactionsPage,
   CategoriesPage,
   ReportsPage,
@@ -50,6 +51,14 @@ const AppContent: React.FC = () => {
             element={
               <ProtectedRoute>
                 <AccountsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/cards" 
+            element={
+              <ProtectedRoute>
+                <CardsPage />
               </ProtectedRoute>
             } 
           />

@@ -16,6 +16,7 @@ import {
 import {
   Dashboard as DashboardIcon,
   AccountBalance as TransactionsIcon,
+  CreditCard,
   Category as CategoriesIcon,
   Settings as SettingsIcon,
   Person as PersonIcon,
@@ -49,6 +50,12 @@ const navigationItems = [
     icon: <TransactionsIcon />,
     path: '/accounts',
     color: '#10b981',
+  },
+  {
+    text: 'Cards',
+    icon: <CreditCard />,
+    path: '/cards',
+    color: '#f59e0b',
   },
   {
     text: 'Transactions',

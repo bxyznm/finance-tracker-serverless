@@ -2,6 +2,7 @@ export { default as LoginPage } from './LoginPage';
 export { default as RegisterPage } from './RegisterPage';
 export { default as DashboardPage } from './DashboardPage';
 export { default as AccountsPage } from './AccountsPage';
+export { default as CardsPage } from './CardsPage';
 export { default as TransactionsPage } from './TransactionsPage';
 export { default as CategoriesPage } from './CategoriesPage';
 export { default as ReportsPage } from './ReportsPage';
