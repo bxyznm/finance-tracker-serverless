@@ -16,6 +16,7 @@ Documentación completa de las rutas y páginas disponibles en el Finance Tracke
 |------|------------|-------------|
 | `/dashboard` | `DashboardPage` | Panel principal del usuario |
 | `/accounts` | `AccountsPage` | Gestión de cuentas financieras |
+| `/cards` | `CardsPage` | Gestión de tarjetas de crédito/débito |
 | `/transactions` | `TransactionsPage` | Historial de transacciones |
 | `/reports` | `ReportsPage` | Reportes y analytics |
 | `/profile` | `ProfilePage` | Configuración de perfil |
@@ -65,6 +66,12 @@ function App() {
           <Route path="/accounts" element={
             <ProtectedRoute>
               <AccountsPage />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/cards" element={
+            <ProtectedRoute>
+              <CardsPage />
             </ProtectedRoute>
           } />
           
@@ -181,6 +188,24 @@ custom_error_response {
   - `POST /accounts` (crear nueva)
   - `PUT /accounts/{id}` (editar)
 
+### **Ruta: `/cards`**
+- **Requiere**: JWT token válido
+- **Muestra**: Lista de tarjetas de crédito y débito
+- **Query params**: `?status=active&type=credit`
+- **APIs llamadas**:
+  - `GET /cards`
+  - `POST /cards` (crear nueva)
+  - `PUT /cards/{id}` (editar)
+  - `DELETE /cards/{id}` (eliminar)
+  - `POST /cards/{id}/transactions` (agregar transacción)
+  - `POST /cards/{id}/payment` (hacer pago)
+- **Características**:
+  - Gestión completa de tarjetas
+  - Cálculos automáticos de crédito disponible
+  - Alertas de fechas de pago
+  - Transacciones y pagos
+  - Visualización con colores personalizados
+
 ### **Ruta: `/transactions`**
 - **Requiere**: JWT token válido
 - **Query params**: `?account_id=123&start_date=2025-01-01`
@@ -262,12 +287,18 @@ useEffect(() => {
 // Lazy loading de páginas
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const AccountsPage = lazy(() => import('./pages/AccountsPage'));
+const CardsPage = lazy(() => import('./pages/CardsPage'));
+const TransactionsPage = lazy(() => import('./pages/TransactionsPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 
 // En App.tsx
 <Suspense fallback={<LoadingSpinner />}>
   <Routes>
     <Route path="/dashboard" element={<DashboardPage />} />
     <Route path="/accounts" element={<AccountsPage />} />
+    <Route path="/cards" element={<CardsPage />} />
+    <Route path="/transactions" element={<TransactionsPage />} />
+    <Route path="/reports" element={<ReportsPage />} />
   </Routes>
 </Suspense>
 ```
@@ -276,10 +307,11 @@ const AccountsPage = lazy(() => import('./pages/AccountsPage'));
 ```tsx
 // Precargar datos críticos
 useEffect(() => {
-  // Preload user profile y accounts en paralelo
+  // Preload user profile, accounts y cards en paralelo
   Promise.all([
     userService.getProfile(),
-    accountsService.getAccounts()
+    accountsService.getAccounts(),
+    cardService.getCards()
   ]);
 }, []);
 ```

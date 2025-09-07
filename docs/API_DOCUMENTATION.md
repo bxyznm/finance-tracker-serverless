@@ -520,7 +520,306 @@ Authorization: Bearer <jwt_token>
 
 ---
 
-### 📊 **Reportes y Analytics**
+### � **Tarjetas de Crédito y Débito**
+
+#### **GET** `/cards`
+Obtener todas las tarjetas del usuario con resumen financiero.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+- `status` (opcional): Filtrar por estado (`active`, `blocked`, `expired`, `cancelled`, `pending`)
+- `type` (opcional): Filtrar por tipo (`credit`, `debit`, `prepaid`, `business`, `rewards`, `store`, `other`)
+
+**Response Success (200):**
+```json
+{
+  "cards": [
+    {
+      "card_id": "card_a1b2c3d4e5f6",
+      "user_id": "user_123456",
+      "name": "Tarjeta Principal BBVA",
+      "card_type": "credit",
+      "card_network": "visa",
+      "bank_name": "BBVA Bancomer",
+      "credit_limit": 50000.00,
+      "current_balance": 12500.50,
+      "available_credit": 37499.50,
+      "minimum_payment": 625.00,
+      "payment_due_date": 15,
+      "cut_off_date": 28,
+      "apr": 24.99,
+      "annual_fee": 550.00,
+      "rewards_program": "Puntos BBVA",
+      "currency": "MXN",
+      "color": "#004481",
+      "description": "Mi tarjeta de crédito principal",
+      "status": "active",
+      "days_until_due": 12,
+      "created_at": "2024-12-07T10:30:00Z",
+      "updated_at": "2024-12-07T10:30:00Z"
+    }
+  ],
+  "total_count": 3,
+  "active_count": 2,
+  "total_debt_by_currency": {
+    "MXN": 15750.25,
+    "USD": 850.00
+  },
+  "total_available_credit": {
+    "MXN": 84249.75,
+    "USD": 4150.00
+  }
+}
+```
+
+#### **POST** `/cards`
+Crear una nueva tarjeta de crédito o débito.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "Tarjeta Principal BBVA",
+  "card_type": "credit",
+  "card_network": "visa",
+  "bank_name": "BBVA Bancomer",
+  "credit_limit": 50000.00,
+  "current_balance": 12500.50,
+  "minimum_payment": 625.00,
+  "payment_due_date": 15,
+  "cut_off_date": 28,
+  "apr": 24.99,
+  "annual_fee": 550.00,
+  "rewards_program": "Puntos BBVA",
+  "currency": "MXN",
+  "color": "#004481",
+  "description": "Mi tarjeta de crédito principal",
+  "status": "active"
+}
+```
+
+**Campos Obligatorios:**
+- `name`: Nombre descriptivo (1-100 caracteres)
+- `card_type`: Tipo de tarjeta
+- `card_network`: Red de pago (visa, mastercard, etc.)
+- `bank_name`: Banco emisor (1-50 caracteres)
+
+**Response Success (201):**
+```json
+{
+  "card": {
+    "card_id": "card_a1b2c3d4e5f6",
+    "user_id": "user_123456",
+    "name": "Tarjeta Principal BBVA",
+    "card_type": "credit",
+    "card_network": "visa",
+    "bank_name": "BBVA Bancomer",
+    "credit_limit": 50000.00,
+    "current_balance": 12500.50,
+    "available_credit": 37499.50,
+    "minimum_payment": 625.00,
+    "payment_due_date": 15,
+    "cut_off_date": 28,
+    "apr": 24.99,
+    "annual_fee": 550.00,
+    "rewards_program": "Puntos BBVA",
+    "currency": "MXN",
+    "color": "#004481",
+    "description": "Mi tarjeta de crédito principal",
+    "status": "active",
+    "days_until_due": 12,
+    "created_at": "2024-12-07T10:30:00Z",
+    "updated_at": "2024-12-07T10:30:00Z"
+  }
+}
+```
+
+#### **GET** `/cards/{card_id}`
+Obtener detalles de una tarjeta específica.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response Success (200):**
+```json
+{
+  "card": {
+    "card_id": "card_a1b2c3d4e5f6",
+    "user_id": "user_123456",
+    "name": "Tarjeta Principal BBVA",
+    "card_type": "credit",
+    "card_network": "visa",
+    "bank_name": "BBVA Bancomer",
+    "credit_limit": 50000.00,
+    "current_balance": 12500.50,
+    "available_credit": 37499.50,
+    "minimum_payment": 625.00,
+    "payment_due_date": 15,
+    "cut_off_date": 28,
+    "apr": 24.99,
+    "annual_fee": 550.00,
+    "rewards_program": "Puntos BBVA",
+    "currency": "MXN",
+    "color": "#004481",
+    "description": "Mi tarjeta de crédito principal",
+    "status": "active",
+    "days_until_due": 12,
+    "created_at": "2024-12-07T10:30:00Z",
+    "updated_at": "2024-12-07T10:30:00Z"
+  }
+}
+```
+
+#### **PUT** `/cards/{card_id}`
+Actualizar información de una tarjeta existente.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body (campos opcionales):**
+```json
+{
+  "name": "Tarjeta BBVA Platinum",
+  "credit_limit": 75000.00,
+  "minimum_payment": 750.00,
+  "payment_due_date": 20,
+  "apr": 22.50,
+  "annual_fee": 0.00,
+  "color": "#003366",
+  "description": "Tarjeta actualizada",
+  "status": "active"
+}
+```
+
+**Response Success (200):**
+```json
+{
+  "card": {
+    "card_id": "card_a1b2c3d4e5f6",
+    "name": "Tarjeta BBVA Platinum",
+    "credit_limit": 75000.00,
+    "current_balance": 12500.50,
+    "available_credit": 62499.50,
+    "updated_at": "2024-12-07T16:45:00Z"
+  }
+}
+```
+
+#### **DELETE** `/cards/{card_id}`
+Eliminar permanentemente una tarjeta.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response Success (200):**
+```json
+{
+  "message": "Card deleted successfully",
+  "card_id": "card_a1b2c3d4e5f6"
+}
+```
+
+#### **POST** `/cards/{card_id}/transactions`
+Agregar una transacción a la tarjeta.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "amount": 1250.75,
+  "description": "Compra en Amazon - Productos de oficina",
+  "transaction_type": "purchase",
+  "transaction_date": "2024-12-07T14:30:00Z"
+}
+```
+
+**Tipos de Transacciones:**
+- `purchase`: Compras y gastos (+)
+- `payment`: Pagos realizados (-)
+- `fee`: Comisiones y cargos (+)
+- `interest`: Intereses generados (+)
+- `cashback`: Reembolsos y recompensas (-)
+- `refund`: Devoluciones (-)
+
+**Response Success (201):**
+```json
+{
+  "message": "Transaction added successfully",
+  "transaction": {
+    "amount": 1250.75,
+    "description": "Compra en Amazon - Productos de oficina",
+    "transaction_type": "purchase",
+    "transaction_date": "2024-12-07T14:30:00Z"
+  },
+  "card": {
+    "card_id": "card_a1b2c3d4e5f6",
+    "current_balance": 13751.25,
+    "available_credit": 36248.75,
+    "updated_at": "2024-12-07T14:30:00Z"
+  }
+}
+```
+
+#### **POST** `/cards/{card_id}/payment`
+Realizar un pago hacia la tarjeta de crédito.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "amount": 2500.00,
+  "payment_date": "2024-12-07T16:00:00Z",
+  "description": "Pago mensual diciembre 2024"
+}
+```
+
+**Response Success (200):**
+```json
+{
+  "message": "Payment processed successfully",
+  "payment": {
+    "amount": 2500.00,
+    "payment_date": "2024-12-07T16:00:00Z",
+    "description": "Pago mensual diciembre 2024"
+  },
+  "card": {
+    "card_id": "card_a1b2c3d4e5f6",
+    "current_balance": 11251.25,
+    "available_credit": 38748.75,
+    "updated_at": "2024-12-07T16:00:00Z"
+  }
+}
+```
+
+---
+
+### �📊 **Reportes y Analytics**
 
 #### **GET** `/reports/summary`
 Obtener resumen financiero del usuario.

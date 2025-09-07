@@ -41,9 +41,9 @@ PROD_S3_BUCKET_SUFFIX
 ## 🏗️ **Infrastructure Overview**
 
 ### **Backend Resources (terraform/environments/)**
-- **6 Lambda Functions**: health, auth, users, accounts + 2 more
-- **API Gateway**: 24+ endpoints with CORS  
-- **DynamoDB**: Single Table Design (Users + Accounts)
+- **6 Lambda Functions**: health, auth, users, accounts, cards, + 1 more
+- **API Gateway**: 30+ endpoints with CORS  
+- **DynamoDB**: Single Table Design (Users + Accounts + Cards)
 - **CloudWatch**: Logging and monitoring
 - **IAM**: Restrictive roles and policies
 
@@ -86,8 +86,9 @@ terraform/
 ```
 
 ### API Gateway ✅ **¡EXPANDIDO!**
-- **REST API**: Con 24+ endpoints para todas las funcionalidades
-- **Endpoints de Cuentas**: 6 endpoints CRUD completos ✅ **¡NUEVO!**
+- **REST API**: Con 30+ endpoints para todas las funcionalidades
+- **Endpoints de Cuentas**: 6 endpoints CRUD completos ✅
+- **Endpoints de Tarjetas**: 8 endpoints CRUD + transacciones + pagos ✅ **¡NUEVO!**
 - **Stage**: Configurado por entorno (dev/prod)
 - **CORS**: Configurado según el entorno
 - **JWT Authentication**: Integrado en todos los endpoints protegidos ✅
@@ -245,6 +246,20 @@ jwt_secret_key = "TuSecretSuperSeguroDeAlMenos32CaracteresParaProduccion123!"
 
 ### Logs de Lambda ✅ **¡ACTUALIZADO!**
 ```bash
+# Development
+aws logs tail /aws/lambda/finance-tracker-dev-health --follow
+aws logs tail /aws/lambda/finance-tracker-dev-auth --follow
+aws logs tail /aws/lambda/finance-tracker-dev-users --follow
+aws logs tail /aws/lambda/finance-tracker-dev-accounts --follow  # ✅
+aws logs tail /aws/lambda/finance-tracker-dev-cards --follow  # ✅ NUEVO
+aws logs tail /aws/lambda/finance-tracker-dev-transactions --follow
+aws logs tail /aws/lambda/finance-tracker-dev-categories --follow
+
+# Production
+aws logs tail /aws/lambda/finance-tracker-prod-accounts --follow  # ✅
+aws logs tail /aws/lambda/finance-tracker-prod-cards --follow  # ✅ NUEVO
+aws logs tail /aws/lambda/finance-tracker-prod-users --follow
+```bash
 # Ver logs en tiempo real - todas las funciones
 aws logs tail /aws/lambda/finance-tracker-dev-health --follow
 aws logs tail /aws/lambda/finance-tracker-dev-auth --follow
@@ -276,7 +291,7 @@ curl -X POST https://[api-id].execute-api.mx-central-1.amazonaws.com/dev/auth/lo
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"TestPass123!"}'
 
-# Probar endpoints de cuentas (requiere JWT) ✅ NUEVO
+# Probar endpoints de cuentas (requiere JWT) ✅
 curl -X GET https://[api-id].execute-api.mx-central-1.amazonaws.com/dev/accounts \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 
@@ -289,6 +304,33 @@ curl -X POST https://[api-id].execute-api.mx-central-1.amazonaws.com/dev/account
     "account_type": "savings",
     "currency": "MXN",
     "initial_balance": 1000.00
+  }'
+
+# Probar endpoints de tarjetas (requiere JWT) ✅ NUEVO
+curl -X GET https://[api-id].execute-api.mx-central-1.amazonaws.com/dev/cards \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+curl -X POST https://[api-id].execute-api.mx-central-1.amazonaws.com/dev/cards \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "name": "Tarjeta BBVA",
+    "card_type": "credit",
+    "card_network": "visa",
+    "bank_name": "BBVA",
+    "credit_limit": 50000.00,
+    "payment_due_date": 15,
+    "currency": "MXN"
+  }'
+
+# Agregar transacción a tarjeta (requiere JWT) ✅ NUEVO
+curl -X POST https://[api-id].execute-api.mx-central-1.amazonaws.com/dev/cards/{card_id}/transactions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "amount": 500.00,
+    "description": "Compra en línea",
+    "transaction_type": "purchase"
   }'
 ```
 
@@ -560,10 +602,13 @@ aws logs delete-log-group --log-group-name /aws/lambda/finance-tracker-dev-healt
 ### Funcionalidades Implementadas ✅
 - **✅ Authentication API**: 3 endpoints (register, login, refresh)
 - **✅ Users API**: 3 endpoints CRUD completos  
-- **✅ Accounts API**: 6 endpoints CRUD completos ✅ **¡NUEVO!**
+- **✅ Accounts API**: 6 endpoints CRUD completos ✅
+- **✅ Cards API**: 8 endpoints CRUD + transacciones + pagos ✅ **¡NUEVO!**
 - **✅ Health Check**: 1 endpoint de monitoreo
 - **✅ Multi-bank Support**: 10+ bancos mexicanos soportados ✅
 - **✅ Multi-currency**: MXN, USD, EUR support ✅
+- **✅ Credit Card Management**: Límites, APR, fechas de pago ✅ **¡NUEVO!**
+- **✅ Transaction Recording**: Compras, pagos, intereses ✅ **¡NUEVO!**
 
 ### Performance y Optimizaciones ✅
 - **✅ Lambda Layer**: Optimizado a 20MB (65% reducción)
@@ -581,6 +626,7 @@ aws logs delete-log-group --log-group-name /aws/lambda/finance-tracker-dev-healt
 ## 🚀 Próximos Pasos
 
 ### Inmediato (Próximas 2 semanas)
+- [x] **Cards API**: ✅ Gestión completa de tarjetas de crédito/débito implementada
 - [ ] **Transactions API**: Gestión de transacciones entre cuentas
 - [ ] **Categories API**: Categorización de gastos e ingresos  
 - [ ] **Reports API**: Generación de reportes financieros

@@ -120,23 +120,34 @@ frontend/
 ├── src/
 │   ├── components/         # Componentes reutilizables
 │   │   ├── auth/          # Componentes de autenticación
+│   │   ├── accounts/      # Componentes de cuentas bancarias
+│   │   ├── cards/         # Componentes de tarjetas ✅ NUEVO
+│   │   ├── layout/        # Componentes de layout
 │   │   └── ui/            # Componentes de UI
 │   ├── context/           # React Context providers
 │   │   ├── AuthContext.tsx
 │   │   └── index.ts
 │   ├── hooks/             # Custom React hooks
 │   │   ├── useAuth.ts
+│   │   ├── useAccounts.ts
+│   │   ├── useCards.ts    # ✅ NUEVO
 │   │   └── useUserProfile.ts
 │   ├── pages/             # Páginas principales
 │   │   ├── LoginPage.tsx
 │   │   ├── RegisterPage.tsx
-│   │   └── DashboardPage.tsx
+│   │   ├── DashboardPage.tsx
+│   │   ├── AccountsPage.tsx
+│   │   └── CardsPage.tsx  # ✅ NUEVO
 │   ├── services/          # Servicios API
 │   │   ├── apiClient.ts   # Cliente HTTP configurado
 │   │   ├── authService.ts # Servicio de autenticación
-│   │   └── userService.ts # Servicio de usuarios
+│   │   ├── userService.ts # Servicio de usuarios
+│   │   ├── accountService.ts # Servicio de cuentas
+│   │   └── cardService.ts # Servicio de tarjetas ✅ NUEVO
 │   ├── types/             # Tipos TypeScript
 │   │   ├── auth.ts
+│   │   ├── account.ts
+│   │   ├── card.ts        # ✅ NUEVO
 │   │   └── index.ts
 │   ├── utils/             # Utilidades
 │   │   ├── helpers.ts

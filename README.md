@@ -31,6 +31,7 @@ Aplicación serverless completa para gestión de finanzas personales construida 
 - ✅ **Autenticación JWT**: Sistema completo con refresh tokens y validación
 - ✅ **CRUD Usuarios**: Registro, login, perfil, actualización, eliminación
 - ✅ **CRUD Cuentas**: Gestión completa de cuentas bancarias mexicanas
+- ✅ **CRUD Tarjetas**: Gestión completa de tarjetas de crédito y débito
 - ✅ **Base de Datos**: DynamoDB con Single Table Design optimizado  
 - ✅ **Infraestructura como Código**: Terraform completo con módulos
 - ✅ **SSL + CDN**: Cloudflare con certificados automáticos
@@ -115,6 +116,47 @@ curl -X PUT https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/accoun
     "name": "Cuenta Corriente BBVA Actualizada",
     "color": "#28a745",
     "description": "Cuenta para gastos diarios y transferencias"
+  }'
+
+# 💳 Crear tarjeta de crédito (Requiere autenticación)
+curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu_access_token" \
+  -d '{
+    "name": "Tarjeta Principal BBVA",
+    "card_type": "credit",
+    "card_network": "visa",
+    "bank_name": "BBVA Bancomer",
+    "credit_limit": 50000.00,
+    "current_balance": 12500.50,
+    "payment_due_date": 15,
+    "cut_off_date": 28,
+    "apr": 24.99,
+    "currency": "MXN",
+    "color": "#004481"
+  }'
+
+# 📋 Listar mis tarjetas (Requiere autenticación)
+curl -X GET https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards \
+  -H "Authorization: Bearer tu_access_token"
+
+# 💰 Agregar transacción a tarjeta (Requiere autenticación)
+curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards/{card_id}/transactions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu_access_token" \
+  -d '{
+    "amount": 1250.75,
+    "description": "Compra en Amazon",
+    "transaction_type": "purchase"
+  }'
+
+# 💸 Hacer pago a tarjeta (Requiere autenticación)
+curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards/{card_id}/payment \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu_access_token" \
+  -d '{
+    "amount": 2500.00,
+    "description": "Pago mensual"
   }'
 
 # 🗑️ Eliminar cuenta (Requiere autenticación)
