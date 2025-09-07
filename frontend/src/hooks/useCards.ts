@@ -184,7 +184,6 @@ export const useCardStats = () => {
       totalDebt: {},
       totalAvailableCredit: {},
       cardsDueSoon: 0,
-      expiredCards: 0,
       isLoading: true,
     };
   }
@@ -193,15 +192,12 @@ export const useCardStats = () => {
     card => card.days_until_due && card.days_until_due <= 7
   ).length;
 
-  const expiredCards = cardsData.cards.filter(card => card.is_expired).length;
-
   return {
     totalCards: cardsData.total_count,
     activeCards: cardsData.active_count,
     totalDebt: cardsData.total_debt_by_currency,
     totalAvailableCredit: cardsData.total_available_credit,
     cardsDueSoon,
-    expiredCards,
     isLoading: false,
   };
 };

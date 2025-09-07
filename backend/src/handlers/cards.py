@@ -189,7 +189,14 @@ def get_cards_handler(event: Dict[str, Any], context: Any, user_data: TokenPaylo
             current_balance = float(card.get('current_balance', 0))
             available_credit = calculate_available_credit(credit_limit or 0, current_balance) if credit_limit else None
             
-            days_due = days_until_payment_due(card.get('payment_due_date'))
+            # Convert payment_due_date from Decimal to int if it exists
+            payment_due_date = card.get('payment_due_date')
+            payment_due_date_int = int(payment_due_date) if payment_due_date is not None else None
+            days_due = days_until_payment_due(payment_due_date_int)
+            
+            # Convert cut_off_date from Decimal to int if it exists
+            cut_off_date = card.get('cut_off_date')
+            cut_off_date_int = int(cut_off_date) if cut_off_date is not None else None
             
             card_response = CardResponse(
                 card_id=card['card_id'],
@@ -202,8 +209,8 @@ def get_cards_handler(event: Dict[str, Any], context: Any, user_data: TokenPaylo
                 current_balance=current_balance,
                 available_credit=available_credit,
                 minimum_payment=float(card.get('minimum_payment')) if card.get('minimum_payment') else None,
-                payment_due_date=card.get('payment_due_date'),
-                cut_off_date=card.get('cut_off_date'),
+                payment_due_date=payment_due_date_int,
+                cut_off_date=cut_off_date_int,
                 apr=float(card.get('apr')) if card.get('apr') else None,
                 annual_fee=float(card.get('annual_fee')) if card.get('annual_fee') else None,
                 rewards_program=card.get('rewards_program'),
@@ -282,7 +289,14 @@ def get_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPayloa
         current_balance = float(card.get('current_balance', 0))
         available_credit = calculate_available_credit(credit_limit or 0, current_balance) if credit_limit else None
         
-        days_due = days_until_payment_due(card.get('payment_due_date'))
+        # Convert payment_due_date from Decimal to int if it exists
+        payment_due_date = card.get('payment_due_date')
+        payment_due_date_int = int(payment_due_date) if payment_due_date is not None else None
+        days_due = days_until_payment_due(payment_due_date_int)
+        
+        # Convert cut_off_date from Decimal to int if it exists
+        cut_off_date = card.get('cut_off_date')
+        cut_off_date_int = int(cut_off_date) if cut_off_date is not None else None
         
         # Prepare response
         response_data = CardResponse(
@@ -296,8 +310,8 @@ def get_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPayloa
             current_balance=current_balance,
             available_credit=available_credit,
             minimum_payment=float(card.get('minimum_payment')) if card.get('minimum_payment') else None,
-            payment_due_date=card.get('payment_due_date'),
-            cut_off_date=card.get('cut_off_date'),
+            payment_due_date=payment_due_date_int,
+            cut_off_date=cut_off_date_int,
             apr=float(card.get('apr')) if card.get('apr') else None,
             annual_fee=float(card.get('annual_fee')) if card.get('annual_fee') else None,
             rewards_program=card.get('rewards_program'),
@@ -379,7 +393,14 @@ def update_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
         current_balance = float(updated_card.get('current_balance', 0))
         available_credit = calculate_available_credit(credit_limit or 0, current_balance) if credit_limit else None
         
-        days_due = days_until_payment_due(updated_card.get('payment_due_date'))
+        # Convert payment_due_date from Decimal to int if it exists
+        payment_due_date = updated_card.get('payment_due_date')
+        payment_due_date_int = int(payment_due_date) if payment_due_date is not None else None
+        days_due = days_until_payment_due(payment_due_date_int)
+        
+        # Convert cut_off_date from Decimal to int if it exists
+        cut_off_date = updated_card.get('cut_off_date')
+        cut_off_date_int = int(cut_off_date) if cut_off_date is not None else None
         
         # Prepare response
         response_data = CardResponse(
@@ -393,8 +414,8 @@ def update_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
             current_balance=current_balance,
             available_credit=available_credit,
             minimum_payment=float(updated_card.get('minimum_payment')) if updated_card.get('minimum_payment') else None,
-            payment_due_date=updated_card.get('payment_due_date'),
-            cut_off_date=updated_card.get('cut_off_date'),
+            payment_due_date=payment_due_date_int,
+            cut_off_date=cut_off_date_int,
             apr=float(updated_card.get('apr')) if updated_card.get('apr') else None,
             annual_fee=float(updated_card.get('annual_fee')) if updated_card.get('annual_fee') else None,
             rewards_program=updated_card.get('rewards_program'),
