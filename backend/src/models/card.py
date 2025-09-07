@@ -55,13 +55,11 @@ class CardCreate(BaseModel):
     card_type: CardType = Field(..., description="Type of card")
     card_network: CardNetwork = Field(..., description="Card network (Visa, Mastercard, etc.)")
     bank_name: str = Field(..., min_length=1, max_length=50, description="Issuing bank name")
-    last_four_digits: str = Field(..., min_length=4, max_length=4, description="Last 4 digits of card number")
-    expiry_month: int = Field(..., ge=1, le=12, description="Expiry month (1-12)")
-    expiry_year: int = Field(..., ge=2024, le=2040, description="Expiry year")
     credit_limit: Optional[float] = Field(None, ge=0, description="Credit limit for credit cards")
     current_balance: float = Field(default=0.0, description="Current balance/debt")
     minimum_payment: Optional[float] = Field(None, ge=0, description="Minimum monthly payment")
     payment_due_date: Optional[int] = Field(None, ge=1, le=31, description="Day of month payment is due")
+    cut_off_date: Optional[int] = Field(None, ge=1, le=31, description="Day of month for statement cut-off")
     apr: Optional[float] = Field(None, ge=0, le=100, description="Annual Percentage Rate")
     annual_fee: Optional[float] = Field(None, ge=0, description="Annual fee amount")
     rewards_program: Optional[str] = Field(None, max_length=100, description="Rewards program name")
@@ -76,13 +74,6 @@ class CardCreate(BaseModel):
         if not v or v.isspace():
             raise ValueError('Card name cannot be empty or only spaces')
         return ' '.join(v.split())
-
-    @field_validator('last_four_digits')
-    @classmethod
-    def validate_last_four_digits(cls, v):
-        if not v.isdigit():
-            raise ValueError('Last four digits must contain only numbers')
-        return v
 
     @field_validator('currency')
     @classmethod
@@ -159,14 +150,12 @@ class CardResponse(BaseModel):
     card_type: CardType = Field(..., description="Type of card")
     card_network: CardNetwork = Field(..., description="Card network")
     bank_name: str = Field(..., description="Issuing bank name")
-    last_four_digits: str = Field(..., description="Last 4 digits of card number")
-    expiry_month: int = Field(..., description="Expiry month")
-    expiry_year: int = Field(..., description="Expiry year")
     credit_limit: Optional[float] = Field(None, description="Credit limit")
     current_balance: float = Field(..., description="Current balance/debt")
     available_credit: Optional[float] = Field(None, description="Available credit (calculated)")
     minimum_payment: Optional[float] = Field(None, description="Minimum monthly payment")
     payment_due_date: Optional[int] = Field(None, description="Day of month payment is due")
+    cut_off_date: Optional[int] = Field(None, description="Day of month for statement cut-off")
     apr: Optional[float] = Field(None, description="Annual Percentage Rate")
     annual_fee: Optional[float] = Field(None, description="Annual fee amount")
     rewards_program: Optional[str] = Field(None, description="Rewards program name")
@@ -174,7 +163,6 @@ class CardResponse(BaseModel):
     color: Optional[str] = Field(None, description="Hex color for UI display")
     description: Optional[str] = Field(None, description="Card description/notes")
     status: CardStatus = Field(..., description="Card status")
-    is_expired: bool = Field(..., description="Whether card is expired")
     days_until_due: Optional[int] = Field(None, description="Days until next payment due")
     created_at: str = Field(..., description="Creation timestamp")
     updated_at: str = Field(..., description="Last update timestamp")

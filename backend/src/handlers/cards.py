@@ -35,12 +35,12 @@ def calculate_available_credit(credit_limit: float, current_balance: float) -> f
         return 0.0
     return max(0.0, credit_limit - current_balance)
 
-def is_card_expired(expiry_month: int, expiry_year: int) -> bool:
-    """Check if card is expired"""
-    today = date.today()
-    expiry_date = date(expiry_year, expiry_month, 1)
-    # Card expires at end of expiry month
-    return today > expiry_date
+# def is_card_expired(expiry_month: int, expiry_year: int) -> bool:
+#     """Check if card is expired"""
+#     today = date.today()
+#     expiry_date = date(expiry_year, expiry_month, 1)
+#     # Card expires at end of expiry month
+#     return today > expiry_date
 
 def days_until_payment_due(payment_due_date: int) -> int:
     """Calculate days until next payment due"""
@@ -87,13 +87,11 @@ def create_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
             'card_type': card_data.card_type,
             'card_network': card_data.card_network,
             'bank_name': card_data.bank_name,
-            'last_four_digits': card_data.last_four_digits,
-            'expiry_month': card_data.expiry_month,
-            'expiry_year': card_data.expiry_year,
             'credit_limit': Decimal(str(card_data.credit_limit)) if card_data.credit_limit else None,
             'current_balance': Decimal(str(card_data.current_balance)),
             'minimum_payment': Decimal(str(card_data.minimum_payment)) if card_data.minimum_payment else None,
             'payment_due_date': card_data.payment_due_date,
+            'cut_off_date': card_data.cut_off_date,
             'apr': Decimal(str(card_data.apr)) if card_data.apr else None,
             'annual_fee': Decimal(str(card_data.annual_fee)) if card_data.annual_fee else None,
             'rewards_program': card_data.rewards_program,
@@ -114,8 +112,7 @@ def create_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
             card_data.credit_limit or 0, 
             card_data.current_balance
         ) if card_data.credit_limit else None
-        
-        is_expired = is_card_expired(card_data.expiry_month, card_data.expiry_year)
+
         days_due = days_until_payment_due(card_data.payment_due_date)
         
         # Prepare response
@@ -126,14 +123,12 @@ def create_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
             card_type=card_data.card_type,
             card_network=card_data.card_network,
             bank_name=card_data.bank_name,
-            last_four_digits=card_data.last_four_digits,
-            expiry_month=card_data.expiry_month,
-            expiry_year=card_data.expiry_year,
             credit_limit=card_data.credit_limit,
             current_balance=card_data.current_balance,
             available_credit=available_credit,
             minimum_payment=card_data.minimum_payment,
             payment_due_date=card_data.payment_due_date,
+            cut_off_date=card_data.cut_off_date,
             apr=card_data.apr,
             annual_fee=card_data.annual_fee,
             rewards_program=card_data.rewards_program,
@@ -141,7 +136,6 @@ def create_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
             color=card_data.color,
             description=card_data.description,
             status=card_data.status,
-            is_expired=is_expired,
             days_until_due=days_due,
             created_at=now,
             updated_at=now
@@ -195,10 +189,6 @@ def get_cards_handler(event: Dict[str, Any], context: Any, user_data: TokenPaylo
             current_balance = float(card.get('current_balance', 0))
             available_credit = calculate_available_credit(credit_limit or 0, current_balance) if credit_limit else None
             
-            is_expired = is_card_expired(
-                int(card.get('expiry_month')),
-                int(card.get('expiry_year'))
-            )
             days_due = days_until_payment_due(card.get('payment_due_date'))
             
             card_response = CardResponse(
@@ -208,14 +198,12 @@ def get_cards_handler(event: Dict[str, Any], context: Any, user_data: TokenPaylo
                 card_type=card['card_type'],
                 card_network=card['card_network'],
                 bank_name=card['bank_name'],
-                last_four_digits=card['last_four_digits'],
-                expiry_month=int(card['expiry_month']),
-                expiry_year=int(card['expiry_year']),
                 credit_limit=credit_limit,
                 current_balance=current_balance,
                 available_credit=available_credit,
                 minimum_payment=float(card.get('minimum_payment')) if card.get('minimum_payment') else None,
                 payment_due_date=card.get('payment_due_date'),
+                cut_off_date=card.get('cut_off_date'),
                 apr=float(card.get('apr')) if card.get('apr') else None,
                 annual_fee=float(card.get('annual_fee')) if card.get('annual_fee') else None,
                 rewards_program=card.get('rewards_program'),
@@ -223,7 +211,6 @@ def get_cards_handler(event: Dict[str, Any], context: Any, user_data: TokenPaylo
                 color=card.get('color'),
                 description=card.get('description'),
                 status=card['status'],
-                is_expired=is_expired,
                 days_until_due=days_due,
                 created_at=card['created_at'],
                 updated_at=card['updated_at']
@@ -273,7 +260,14 @@ def get_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPayloa
     """
     try:
         user_id = user_data.user_id
-        card_id = event['pathParameters']['card_id']
+        
+        # Validate path parameters
+        path_params = event.get('pathParameters', {}) or {}
+        card_id = path_params.get('card_id')
+        
+        if not card_id:
+            return create_response(400, {"error": "Missing required parameter: card_id"})
+            
         logger.info(f"Getting card {card_id} for user: {user_id}")
         
         # Get card from database
@@ -288,10 +282,6 @@ def get_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPayloa
         current_balance = float(card.get('current_balance', 0))
         available_credit = calculate_available_credit(credit_limit or 0, current_balance) if credit_limit else None
         
-        is_expired = is_card_expired(
-            int(card.get('expiry_month')),
-            int(card.get('expiry_year'))
-        )
         days_due = days_until_payment_due(card.get('payment_due_date'))
         
         # Prepare response
@@ -302,14 +292,12 @@ def get_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPayloa
             card_type=card['card_type'],
             card_network=card['card_network'],
             bank_name=card['bank_name'],
-            last_four_digits=card['last_four_digits'],
-            expiry_month=int(card['expiry_month']),
-            expiry_year=int(card['expiry_year']),
             credit_limit=credit_limit,
             current_balance=current_balance,
             available_credit=available_credit,
             minimum_payment=float(card.get('minimum_payment')) if card.get('minimum_payment') else None,
             payment_due_date=card.get('payment_due_date'),
+            cut_off_date=card.get('cut_off_date'),
             apr=float(card.get('apr')) if card.get('apr') else None,
             annual_fee=float(card.get('annual_fee')) if card.get('annual_fee') else None,
             rewards_program=card.get('rewards_program'),
@@ -317,7 +305,6 @@ def get_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPayloa
             color=card.get('color'),
             description=card.get('description'),
             status=card['status'],
-            is_expired=is_expired,
             days_until_due=days_due,
             created_at=card['created_at'],
             updated_at=card['updated_at']
@@ -384,15 +371,14 @@ def update_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
         # Update in database
         updated_card = db_client.update_card(user_id, card_id, update_fields)
         
+        if not updated_card:
+            return create_response(404, {"error": "Card not found"})
+        
         # Calculate additional fields
         credit_limit = float(updated_card.get('credit_limit', 0)) if updated_card.get('credit_limit') else None
         current_balance = float(updated_card.get('current_balance', 0))
         available_credit = calculate_available_credit(credit_limit or 0, current_balance) if credit_limit else None
         
-        is_expired = is_card_expired(
-            int(updated_card.get('expiry_month')),
-            int(updated_card.get('expiry_year'))
-        )
         days_due = days_until_payment_due(updated_card.get('payment_due_date'))
         
         # Prepare response
@@ -403,14 +389,12 @@ def update_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
             card_type=updated_card['card_type'],
             card_network=updated_card['card_network'],
             bank_name=updated_card['bank_name'],
-            last_four_digits=updated_card['last_four_digits'],
-            expiry_month=int(updated_card['expiry_month']),
-            expiry_year=int(updated_card['expiry_year']),
             credit_limit=credit_limit,
             current_balance=current_balance,
             available_credit=available_credit,
             minimum_payment=float(updated_card.get('minimum_payment')) if updated_card.get('minimum_payment') else None,
             payment_due_date=updated_card.get('payment_due_date'),
+            cut_off_date=updated_card.get('cut_off_date'),
             apr=float(updated_card.get('apr')) if updated_card.get('apr') else None,
             annual_fee=float(updated_card.get('annual_fee')) if updated_card.get('annual_fee') else None,
             rewards_program=updated_card.get('rewards_program'),
@@ -418,7 +402,6 @@ def update_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
             color=updated_card.get('color'),
             description=updated_card.get('description'),
             status=updated_card['status'],
-            is_expired=is_expired,
             days_until_due=days_due,
             created_at=updated_card['created_at'],
             updated_at=updated_card['updated_at']

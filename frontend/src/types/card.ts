@@ -53,14 +53,12 @@ export interface Card {
   card_type: CardType;
   card_network: CardNetwork;
   bank_name: string;
-  last_four_digits: string;
-  expiry_month: number;
-  expiry_year: number;
   credit_limit?: number;
   current_balance: number;
   available_credit?: number;
   minimum_payment?: number;
   payment_due_date?: number;
+  cut_off_date?: number;
   apr?: number;
   annual_fee?: number;
   rewards_program?: string;
@@ -68,7 +66,6 @@ export interface Card {
   color?: string;
   description?: string;
   status: CardStatus;
-  is_expired: boolean;
   days_until_due?: number;
   created_at: string;
   updated_at: string;
@@ -80,13 +77,11 @@ export interface CreateCardRequest {
   card_type: CardType;
   card_network: CardNetwork;
   bank_name: string;
-  last_four_digits: string;
-  expiry_month: number;
-  expiry_year: number;
   credit_limit?: number;
   current_balance?: number;
   minimum_payment?: number;
-  payment_due_date?: number;
+  payment_due_date?: number;  // Día del mes para fecha de pago (1-31)
+  cut_off_date?: number;      // Día del mes para fecha de corte (1-31)
   apr?: number;
   annual_fee?: number;
   rewards_program?: string;

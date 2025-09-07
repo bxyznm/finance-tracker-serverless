@@ -10,11 +10,21 @@ import {
   Menu,
   MenuItem,
   Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem as SelectItem,
   useTheme,
   Skeleton,
   Alert,
   Fab,
   Stack,
+  CircularProgress,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -25,11 +35,13 @@ import {
   Payment as PaymentIcon,
   TrendingDown as DebtIcon,
   AccountBalance as BalanceIcon,
+  Close as CloseIcon,
+  Save as SaveIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppLayout } from '../components/layout';
-import { useCards, useDeleteCard } from '../hooks/useCards';
-import { Card as CardType, CardNetwork } from '../types/card';
+import { useCards, useDeleteCard, useCreateCard } from '../hooks/useCards';
+import { Card as CardType, CardNetwork, CardType as CardTypeEnum, CreateCardRequest } from '../types/card';
 
 // Card network icons/colors
 const CARD_NETWORK_CONFIG: Record<CardNetwork, { color: string; icon: string }> = {
@@ -54,13 +66,16 @@ const CARD_TYPE_LABELS = {
   other: 'Otra',
 };
 
-const CARD_STATUS_COLORS = {
-  active: 'success',
-  blocked: 'error',
-  expired: 'error',
-  cancelled: 'default',
-  pending: 'warning',
-} as const;
+const CARD_NETWORK_LABELS = {
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  amex: 'American Express',
+  discover: 'Discover',
+  jcb: 'JCB',
+  unionpay: 'UnionPay',
+  diners: 'Diners Club',
+  other: 'Otra',
+};
 
 const CARD_STATUS_LABELS = {
   active: 'Activa',
@@ -69,6 +84,23 @@ const CARD_STATUS_LABELS = {
   cancelled: 'Cancelada',
   pending: 'Pendiente',
 };
+
+// Dialog types
+type DialogState = 
+  | { type: null }
+  | { type: 'create' }
+  | { type: 'edit'; card: CardType }
+  | { type: 'delete'; card: CardType }
+  | { type: 'transaction'; card: CardType }
+  | { type: 'payment'; card: CardType };
+
+const CARD_STATUS_COLORS = {
+  active: 'success',
+  blocked: 'error',
+  expired: 'error',
+  cancelled: 'default',
+  pending: 'warning',
+} as const;
 
 interface CardMenuProps {
   card: CardType;
@@ -174,10 +206,6 @@ const CardItem: React.FC<CardItemProps> = ({
     }).format(amount);
   };
 
-  const formatCardNumber = (digits: string) => {
-    return `**** **** **** ${digits}`;
-  };
-
   return (
     <motion.div
       layout
@@ -220,18 +248,19 @@ const CardItem: React.FC<CardItemProps> = ({
             />
           </Box>
 
-          <Typography
-            variant="body2"
-            fontFamily="monospace"
-            sx={{ mb: 2, letterSpacing: 1 }}
-          >
-            {formatCardNumber(card.last_four_digits)}
-          </Typography>
-
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="body2" color="text.secondary">
-              Vence: {String(card.expiry_month).padStart(2, '0')}/{card.expiry_year}
-            </Typography>
+            <Box>
+              {card.cut_off_date && (
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Corte: Día {card.cut_off_date}
+                </Typography>
+              )}
+              {card.payment_due_date && (
+                <Typography variant="body2" color="text.secondary">
+                  Pago: Día {card.payment_due_date}
+                </Typography>
+              )}
+            </Box>
             <Chip
               label={CARD_STATUS_LABELS[card.status]}
               color={CARD_STATUS_COLORS[card.status]}
@@ -273,37 +302,84 @@ const CardItem: React.FC<CardItemProps> = ({
 const CardsPage: React.FC = () => {
   const { data: cardsData, isLoading, error } = useCards();
   const deleteCardMutation = useDeleteCard();
+  const createCardMutation = useCreateCard();
 
   // Dialog states
-  const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [dialogState, setDialogState] = useState<DialogState>({ type: null });
+  
+  // Form states for create card
+  const [createForm, setCreateForm] = useState<CreateCardRequest>({
+    name: '',
+    card_type: 'credit',
+    card_network: 'visa',
+    bank_name: '',
+    credit_limit: 0,
+    current_balance: 0,
+    payment_due_date: 15, // Día 15 por defecto
+    cut_off_date: 1,      // Día 1 por defecto
+    status: 'active',
+  });
 
-  const handleEdit = (card: CardType) => {
-    setSelectedCard(card);
-    // TODO: Open edit dialog
+  const resetCreateForm = () => {
+    setCreateForm({
+      name: '',
+      card_type: 'credit',
+      card_network: 'visa',
+      bank_name: '',
+      credit_limit: 0,
+      current_balance: 0,
+      payment_due_date: 15,
+      cut_off_date: 1,
+      status: 'active',
+    });
   };
 
-  const handleDelete = (card: CardType) => {
-    setSelectedCard(card);
-    setDeleteConfirmOpen(true);
+  // Dialog handlers
+  const openCreateDialog = () => {
+    resetCreateForm();
+    setDialogState({ type: 'create' });
   };
 
-  const handleConfirmDelete = () => {
-    if (selectedCard) {
-      deleteCardMutation.mutate(selectedCard.card_id);
-      setDeleteConfirmOpen(false);
-      setSelectedCard(null);
+  const openEditDialog = (card: CardType) => {
+    setDialogState({ type: 'edit', card });
+  };
+
+  const openDeleteDialog = (card: CardType) => {
+    setDialogState({ type: 'delete', card });
+  };
+
+  const openTransactionDialog = (card: CardType) => {
+    setDialogState({ type: 'transaction', card });
+  };
+
+  const openPaymentDialog = (card: CardType) => {
+    setDialogState({ type: 'payment', card });
+  };
+
+  const closeDialog = () => {
+    setDialogState({ type: null });
+  };
+
+  // Form handlers
+  const handleCreateSubmit = () => {
+    if (!createForm.name.trim() || !createForm.bank_name.trim()) {
+      return;
     }
+    
+    createCardMutation.mutate(createForm, {
+      onSuccess: () => {
+        closeDialog();
+        resetCreateForm();
+      }
+    });
   };
 
-  const handleAddTransaction = (card: CardType) => {
-    setSelectedCard(card);
-    // TODO: Open transaction dialog
-  };
-
-  const handleMakePayment = (card: CardType) => {
-    setSelectedCard(card);
-    // TODO: Open payment dialog
+  const handleDeleteConfirm = () => {
+    if (dialogState.type === 'delete') {
+      deleteCardMutation.mutate(dialogState.card.card_id, {
+        onSuccess: () => closeDialog()
+      });
+    }
   };
 
   const totalDebt = cardsData?.total_debt_by_currency?.MXN || 0;
@@ -335,7 +411,7 @@ const CardsPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => {/* TODO: Open create dialog */}}
+            onClick={openCreateDialog}
             sx={{ borderRadius: 2 }}
           >
             Nueva Tarjeta
@@ -436,7 +512,7 @@ const CardsPage: React.FC = () => {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => {/* TODO: Open create dialog */}}
+              onClick={openCreateDialog}
             >
               Agregar Primera Tarjeta
             </Button>
@@ -448,10 +524,10 @@ const CardsPage: React.FC = () => {
                 <CardItem
                   key={card.card_id}
                   card={card}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onAddTransaction={handleAddTransaction}
-                  onMakePayment={handleMakePayment}
+                  onEdit={openEditDialog}
+                  onDelete={openDeleteDialog}
+                  onAddTransaction={openTransactionDialog}
+                  onMakePayment={openPaymentDialog}
                 />
               ))}
             </AnimatePresence>
@@ -461,7 +537,7 @@ const CardsPage: React.FC = () => {
         {/* Floating Action Button */}
         <Fab
           color="primary"
-          onClick={() => {/* TODO: Open create dialog */}}
+          onClick={openCreateDialog}
           sx={{
             position: 'fixed',
             bottom: 24,
@@ -474,9 +550,10 @@ const CardsPage: React.FC = () => {
         </Fab>
 
         {/* Delete Confirmation Dialog */}
+        {/* Delete Confirmation Dialog */}
         <Dialog
-          open={deleteConfirmOpen}
-          onClose={() => setDeleteConfirmOpen(false)}
+          open={dialogState.type === 'delete'}
+          onClose={closeDialog}
           maxWidth="sm"
           fullWidth
         >
@@ -486,22 +563,173 @@ const CardsPage: React.FC = () => {
             </Typography>
             <Typography variant="body1" color="text.secondary" mb={3}>
               Esta acción no se puede deshacer. Se eliminará la tarjeta{' '}
-              <strong>{selectedCard?.name}</strong> permanentemente.
+              <strong>{dialogState.type === 'delete' ? dialogState.card.name : ''}</strong> permanentemente.
             </Typography>
             <Box display="flex" gap={2} justifyContent="flex-end">
-              <Button onClick={() => setDeleteConfirmOpen(false)}>
+              <Button onClick={closeDialog}>
                 Cancelar
               </Button>
               <Button
                 variant="contained"
                 color="error"
-                onClick={handleConfirmDelete}
+                onClick={handleDeleteConfirm}
                 disabled={deleteCardMutation.isPending}
               >
                 {deleteCardMutation.isPending ? 'Eliminando...' : 'Eliminar'}
               </Button>
             </Box>
           </CardContent>
+        </Dialog>
+
+        {/* Create Card Dialog */}
+        <Dialog
+          open={dialogState.type === 'create'}
+          onClose={closeDialog}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            Nueva Tarjeta
+            <IconButton
+              onClick={closeDialog}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={3} sx={{ mt: 1 }}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField
+                  label="Nombre de la tarjeta"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  fullWidth
+                  required
+                  placeholder="Ej: Tarjeta Principal"
+                />
+                <TextField
+                  label="Banco"
+                  value={createForm.bank_name}
+                  onChange={(e) => setCreateForm({ ...createForm, bank_name: e.target.value })}
+                  fullWidth
+                  required
+                  placeholder="Ej: BBVA"
+                />
+              </Stack>
+              
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Tipo de tarjeta</InputLabel>
+                  <Select
+                    value={createForm.card_type}
+                    label="Tipo de tarjeta"
+                    onChange={(e) => setCreateForm({ ...createForm, card_type: e.target.value as CardTypeEnum })}
+                  >
+                    {Object.entries(CARD_TYPE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel>Red de la tarjeta</InputLabel>
+                  <Select
+                    value={createForm.card_network}
+                    label="Red de la tarjeta"
+                    onChange={(e) => setCreateForm({ ...createForm, card_network: e.target.value as CardNetwork })}
+                  >
+                    {Object.entries(CARD_NETWORK_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
+
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField
+                  label="Fecha de corte (día del mes)"
+                  type="number"
+                  value={createForm.cut_off_date || 1}
+                  onChange={(e) => setCreateForm({ ...createForm, cut_off_date: parseInt(e.target.value) || 1 })}
+                  fullWidth
+                  inputProps={{ min: 1, max: 31 }}
+                  helperText="Día del mes cuando se genera el estado de cuenta"
+                />
+                <TextField
+                  label="Fecha de pago (día del mes)"
+                  type="number"
+                  value={createForm.payment_due_date || 15}
+                  onChange={(e) => setCreateForm({ ...createForm, payment_due_date: parseInt(e.target.value) || 15 })}
+                  fullWidth
+                  inputProps={{ min: 1, max: 31 }}
+                  helperText="Día límite para realizar el pago"
+                />
+              </Stack>
+              
+              {createForm.card_type === 'credit' && (
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                  <TextField
+                    label="Límite de crédito"
+                    type="number"
+                    value={createForm.credit_limit}
+                    onChange={(e) => setCreateForm({ ...createForm, credit_limit: parseFloat(e.target.value) || 0 })}
+                    fullWidth
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    }}
+                  />
+                  <TextField
+                    label="Saldo actual"
+                    type="number"
+                    value={createForm.current_balance}
+                    onChange={(e) => setCreateForm({ ...createForm, current_balance: parseFloat(e.target.value) || 0 })}
+                    fullWidth
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    }}
+                  />
+                </Stack>
+              )}
+              
+              <TextField
+                label="Descripción (opcional)"
+                value={createForm.description || ''}
+                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                fullWidth
+                multiline
+                rows={2}
+                placeholder="Información adicional sobre la tarjeta"
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={closeDialog}>
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleCreateSubmit}
+              disabled={createCardMutation.isPending}
+              startIcon={<SaveIcon />}
+            >
+              {createCardMutation.isPending ? (
+                <Box display="flex" alignItems="center" gap={1}>
+                  <CircularProgress size={16} />
+                  Creando...
+                </Box>
+              ) : (
+                'Crear Tarjeta'
+              )}
+            </Button>
+          </DialogActions>
         </Dialog>
       </Box>
     </AppLayout>
