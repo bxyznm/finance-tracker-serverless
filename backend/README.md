@@ -4,7 +4,7 @@
 
 ## 🚀 **API Base URL**
 ```
-https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api
+https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev
 ```
 
 ## 🏗️ **Architecture**
@@ -12,7 +12,7 @@ https://xbp9zivp7c.execute-api.mx-central-1.amazonaws.com/api
 - **⚡ AWS Lambda** (6 functions)
 - **🗄️ DynamoDB** Single Table Design  
 - **🔒 JWT Auth** (access + refresh tokens)
-- **📊 44 Tests** (100% pass rate)
+- **📊 83 Tests** (100% pass rate)
 
 ## 📁 **Project Structure**
 ```
@@ -21,10 +21,14 @@ backend/src/
 │   ├── auth.py        # Register, login, refresh
 │   ├── users.py       # Users CRUD
 │   ├── accounts.py    # Bank accounts CRUD
+│   ├── cards.py       # Credit/debit cards CRUD
+│   ├── transactions.py # ✅ NEW - Transactions CRUD + Analytics
 │   └── health.py      # Health check
 ├── models/            # Pydantic models
 │   ├── user.py        # User data models
-│   └── account.py     # Account data models  
+│   ├── account.py     # Account data models
+│   ├── card.py        # Card data models
+│   └── transaction.py # ✅ NEW - Transaction data models
 └── utils/             # Shared utilities
     ├── jwt_auth.py    # JWT handling
     ├── dynamodb_*.py  # Database patterns
@@ -44,10 +48,12 @@ python -m pytest tests/test_accounts.py -v
 ```
 
 ### **Test Coverage ✅**
-- **44 tests total** (100% pass rate)
+- **83 tests total** (100% pass rate)
 - **Auth**: 6 tests (register, login, JWT)
 - **Users**: 14 tests (CRUD + validations)
 - **Accounts**: 14 tests (CRUD + balance)
+- **Cards**: 27 tests (CRUD + transactions)
+- **Transactions**: 69 tests (models + handlers + database) ✅ NEW
 - **Models**: 30 tests (data validation)
 
 ### **API Endpoints**

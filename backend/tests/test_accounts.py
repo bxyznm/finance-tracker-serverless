@@ -12,6 +12,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
+from utils.jwt_auth import TokenPayload
 from handlers.accounts import (
     create_account_handler,
     list_accounts_handler,
@@ -33,10 +34,15 @@ class TestAccountHandlers:
         self.test_account_id = "acc_test123"
         
         # Mock user data from JWT
-        self.mock_user_data = {
-            'user_id': self.test_user_id,
-            'email': 'test@example.com'
-        }
+        import time
+        current_time = int(time.time())
+        self.mock_user_data = TokenPayload(
+            user_id=self.test_user_id,
+            email='test@example.com',
+            exp=current_time + 1800,  # 30 minutes from now
+            iat=current_time,         # issued now
+            token_type='access'
+        )
         
         # Sample account data
         self.sample_account_data = {

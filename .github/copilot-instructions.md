@@ -11,7 +11,7 @@ This is a **production-ready serverless finance tracker** built for the Mexican 
 ## Key Architecture Patterns
 
 ### Backend: Single Handler per Domain + JWT Middleware
-- Each Lambda function handles **one domain** (auth, users, accounts) with multiple HTTP methods
+- Each Lambda function handles **one domain** (auth, users, accounts, transactions) with multiple HTTP methods
 - JWT auth via `@require_auth` decorator in `utils/jwt_auth.py`
 - All handlers use the pattern: `lambda_handler(event, context)` → route by `path` and `httpMethod`
 
@@ -28,7 +28,9 @@ def lambda_handler(event, context):
 - Access patterns in `backend/src/utils/dynamodb_client.py`:
   - Users: `pk=USER#{user_id}`, `sk=METADATA`
   - Accounts: `pk=USER#{user_id}`, `sk=ACCOUNT#{account_id}`
+  - Transactions: `pk=USER#{user_id}`, `sk=TRANSACTION#{transaction_id}` ✅ NEW
   - GSI1 for email lookups: `gsi1_pk=EMAIL#{email}`
+  - GSI1 for account transactions: `gsi1_pk=ACCOUNT#{account_id}` ✅ NEW
 
 ### Frontend: Context + Service Layer + React Query
 - JWT tokens managed in `AuthContext` (`frontend/src/context/`)
@@ -40,9 +42,10 @@ def lambda_handler(event, context):
 ### Backend Testing
 ```bash
 cd backend
-python -m pytest tests/ -v                    # All tests (44 tests)
+python -m pytest tests/ -v                    # All tests (83 tests) ✅ UPDATED
 python -m pytest tests/test_auth.py -v        # Auth tests only
 python -m pytest tests/test_accounts.py -v    # Accounts tests only
+python -m pytest tests/test_transactions.py -v # Transaction tests only ✅ NEW
 ```
 
 ### Frontend Development  
@@ -78,11 +81,13 @@ return create_response(200, {"message": "Success"})  # Always use this
 All data validation via Pydantic v2 models in `backend/src/models/`:
 - `UserCreate`, `UserLogin` for auth operations
 - `AccountCreate`, `AccountUpdate` for account operations
+- `TransactionCreate`, `TransactionUpdate` for transaction operations ✅ NEW
 - Models include Mexican banking validation (BBVA, Banamex, etc.)
 
 ### Mexican Localization
 - Default currency: MXN (Mexican Peso)
 - Bank codes in `backend/src/models/account.py` for Mexican institutions
+- Transaction categories in `backend/src/models/transaction.py` for Mexican market ✅ NEW
 - UI text in Spanish (`frontend/src/` components)
 
 ## Integration Points
@@ -93,6 +98,7 @@ All data validation via Pydantic v2 models in `backend/src/models/`:
 - `/auth/*` → auth handler (register, login, refresh)
 - `/users/*` → users handler (CRUD operations)  
 - `/accounts/*` → accounts handler (bank account management)
+- `/transactions/*` → transactions handler (transaction management + analytics) ✅ NEW
 
 ### CI/CD Automation
 - **Frontend**: Auto-deploys on pushes to `main` via GitHub Actions → S3 + Cloudflare
@@ -108,5 +114,7 @@ When working on this codebase:
 - Always run backend tests before making changes to handlers
 - Use the existing Pydantic models for validation - don't create raw dictionaries
 - Follow the Single Table Design patterns in DynamoDBClient
+- Keep Mexican banking context (currency=MXN, Spanish UI, local bank codes)
+- JWT tokens are the only authentication method - no sessions or cookies
 - Keep Mexican banking context (currency=MXN, Spanish UI, local bank codes)
 - JWT tokens are the only authentication method - no sessions or cookies

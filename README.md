@@ -32,6 +32,7 @@ Aplicación serverless completa para gestión de finanzas personales construida 
 - ✅ **CRUD Usuarios**: Registro, login, perfil, actualización, eliminación
 - ✅ **CRUD Cuentas**: Gestión completa de cuentas bancarias mexicanas
 - ✅ **CRUD Tarjetas**: Gestión completa de tarjetas de crédito y débito
+- ✅ **CRUD Transacciones**: **NUEVO** - Registro y tracking completo con analytics
 - ✅ **Base de Datos**: DynamoDB con Single Table Design optimizado  
 - ✅ **Infraestructura como Código**: Terraform completo con módulos
 - ✅ **SSL + CDN**: Cloudflare con certificados automáticos
@@ -159,7 +160,31 @@ curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards
     "description": "Pago mensual"
   }'
 
-# 🗑️ Eliminar cuenta (Requiere autenticación)
+# � Crear nueva transacción (Requiere autenticación) ✅ NUEVO
+curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/transactions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu_access_token" \
+  -d '{
+    "account_id": "acc_123456789",
+    "amount": 1250.75,
+    "description": "Pago de nómina",
+    "transaction_type": "income",
+    "category": "salario",
+    "transaction_date": "2025-01-15T10:30:00Z",
+    "reference_number": "REF001",
+    "tags": ["nomina", "trabajo"],
+    "location": "Ciudad de México"
+  }'
+
+# 📋 Listar transacciones con filtros (Requiere autenticación) ✅ NUEVO
+curl -X GET "https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/transactions?account_id=acc_123&transaction_type=expense&category=alimentos&start_date=2025-01-01&end_date=2025-01-31" \
+  -H "Authorization: Bearer tu_access_token"
+
+# 📊 Obtener resumen financiero (Requiere autenticación) ✅ NUEVO
+curl -X GET "https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/transactions/summary?period=month&group_by=category" \
+  -H "Authorization: Bearer tu_access_token"
+
+# �🗑️ Eliminar cuenta (Requiere autenticación)
 curl -X DELETE https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/accounts/{account_id} \
   -H "Authorization: Bearer tu_access_token"
 ```

@@ -7,6 +7,7 @@ import boto3
 import os
 from typing import Dict, Any, Optional, List
 from botocore.exceptions import ClientError
+from decimal import Decimal
 import logging
 
 logger = logging.getLogger(__name__)
@@ -703,3 +704,310 @@ class DynamoDBClient:
             else:
                 logger.error(f"Error deleting card {card_id} for user {user_id}: {e}")
                 raise
+
+    # ===========================
+    # TRANSACTION OPERATIONS
+    # ===========================
+
+    def create_transaction(self, transaction_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new transaction in DynamoDB
+        
+        Single Table Design:
+        - pk: USER#{user_id}
+        - sk: TRANSACTION#{transaction_id}
+        - gsi1_pk: ACCOUNT#{account_id}
+        - gsi1_sk: TRANSACTION#{transaction_date}#{transaction_id}
+        """
+        try:
+            transaction_id = transaction_data['transaction_id']
+            user_id = transaction_data['user_id']
+            account_id = transaction_data['account_id']
+            transaction_date = transaction_data['transaction_date']
+            
+            item = {
+                'pk': f'USER#{user_id}',
+                'sk': f'TRANSACTION#{transaction_id}',
+                'gsi1_pk': f'ACCOUNT#{account_id}',
+                'gsi1_sk': f'TRANSACTION#{transaction_date}#{transaction_id}',
+                'entity_type': 'transaction',
+                'transaction_id': transaction_id,
+                'user_id': user_id,
+                'account_id': account_id,
+                'account_name': transaction_data['account_name'],
+                'amount': Decimal(str(transaction_data['amount'])),
+                'description': transaction_data['description'],
+                'transaction_type': transaction_data['transaction_type'],
+                'category': transaction_data['category'],
+                'status': transaction_data['status'],
+                'transaction_date': transaction_date,
+                'reference_number': transaction_data.get('reference_number'),
+                'notes': transaction_data.get('notes'),
+                'tags': transaction_data.get('tags', []),
+                'location': transaction_data.get('location'),
+                'destination_account_id': transaction_data.get('destination_account_id'),
+                'destination_account_name': transaction_data.get('destination_account_name'),
+                'account_balance_after': Decimal(str(transaction_data['account_balance_after'])),
+                'is_recurring': transaction_data.get('is_recurring', False),
+                'recurring_frequency': transaction_data.get('recurring_frequency'),
+                'created_at': transaction_data['created_at'],
+                'updated_at': transaction_data['updated_at']
+            }
+            
+            # Use ConditionExpression to avoid duplicates
+            response = self.table.put_item(
+                Item=item,
+                ConditionExpression='attribute_not_exists(pk) AND attribute_not_exists(sk)'
+            )
+            
+            logger.info(f"Transaction created successfully: {transaction_id}")
+            
+            # Convert Decimal back to float for response
+            item['amount'] = float(item['amount'])
+            item['account_balance_after'] = float(item['account_balance_after'])
+            
+            return item
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Transaction already exists: {transaction_id}")
+                raise ValueError("Transaction already exists")
+            else:
+                logger.error(f"Error creating transaction: {e}")
+                raise
+
+    def get_transaction_by_id(self, user_id: str, transaction_id: str) -> Optional[Dict[str, Any]]:
+        """Get transaction by ID"""
+        try:
+            response = self.table.get_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'TRANSACTION#{transaction_id}'
+                }
+            )
+            
+            item = response.get('Item')
+            if item:
+                # Convert Decimal to float
+                item['amount'] = float(item['amount'])
+                item['account_balance_after'] = float(item['account_balance_after'])
+                logger.info(f"Transaction found: {transaction_id}")
+                return item
+            else:
+                logger.info(f"Transaction not found: {transaction_id}")
+                return None
+                
+        except ClientError as e:
+            logger.error(f"Error getting transaction {transaction_id}: {e}")
+            raise
+
+    def update_transaction(self, user_id: str, transaction_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update transaction details"""
+        try:
+            # Build update expression dynamically
+            update_expression = "SET updated_at = :updated_at"
+            expression_values = {':updated_at': update_data['updated_at']}
+            expression_names = {}
+            
+            # Add fields to update
+            for key, value in update_data.items():
+                if key != 'updated_at' and value is not None:
+                    if key in ['status']:  # Reserved keywords
+                        attr_name = f'#{key}'
+                        expression_names[attr_name] = key
+                        update_expression += f', {attr_name} = :{key}'
+                    else:
+                        update_expression += f', {key} = :{key}'
+                    expression_values[f':{key}'] = value
+            
+            # Update item
+            response = self.table.update_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'TRANSACTION#{transaction_id}'
+                },
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expression_values,
+                ExpressionAttributeNames=expression_names if expression_names else None,
+                ConditionExpression='attribute_exists(pk)',
+                ReturnValues='ALL_NEW'
+            )
+            
+            updated_item = response['Attributes']
+            
+            # Convert Decimal to float
+            updated_item['amount'] = float(updated_item['amount'])
+            updated_item['account_balance_after'] = float(updated_item['account_balance_after'])
+            
+            logger.info(f"Transaction updated successfully: {transaction_id}")
+            return updated_item
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Transaction not found for update: {transaction_id}")
+                raise ValueError("Transaction not found")
+            else:
+                logger.error(f"Error updating transaction {transaction_id}: {e}")
+                raise
+
+    def delete_transaction(self, user_id: str, transaction_id: str) -> bool:
+        """Delete transaction"""
+        try:
+            self.table.delete_item(
+                Key={
+                    'pk': f'USER#{user_id}',
+                    'sk': f'TRANSACTION#{transaction_id}'
+                },
+                ConditionExpression='attribute_exists(pk)'
+            )
+            
+            logger.info(f"Transaction deleted successfully: {transaction_id}")
+            return True
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+                logger.error(f"Transaction not found for deletion: {transaction_id}")
+                return False
+            else:
+                logger.error(f"Error deleting transaction {transaction_id}: {e}")
+                raise
+
+    def list_user_transactions(self, user_id: str, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        """
+        List user transactions with optional filtering
+        
+        Uses pk = USER#{user_id} and sk begins_with TRANSACTION#
+        For account-specific queries, uses GSI1
+        """
+        try:
+            transactions = []
+            
+            # If filtering by account_id, use GSI1 for better performance
+            if filters and filters.get('account_id'):
+                account_id = filters['account_id']
+                
+                # Query GSI1 for account transactions
+                response = self.table.query(
+                    IndexName='GSI1',
+                    KeyConditionExpression='gsi1_pk = :account_pk',
+                    ExpressionAttributeValues={
+                        ':account_pk': f'ACCOUNT#{account_id}'
+                    },
+                    ScanIndexForward=False  # Most recent first
+                )
+                
+                # Filter by user_id to ensure data isolation
+                for item in response.get('Items', []):
+                    if item.get('user_id') == user_id:
+                        # Convert Decimal to float
+                        item['amount'] = float(item['amount'])
+                        item['account_balance_after'] = float(item['account_balance_after'])
+                        transactions.append(item)
+            
+            else:
+                # Query all user transactions
+                response = self.table.query(
+                    KeyConditionExpression='pk = :user_pk AND begins_with(sk, :transaction_prefix)',
+                    ExpressionAttributeValues={
+                        ':user_pk': f'USER#{user_id}',
+                        ':transaction_prefix': 'TRANSACTION#'
+                    },
+                    ScanIndexForward=False  # Most recent first
+                )
+                
+                for item in response.get('Items', []):
+                    # Convert Decimal to float
+                    item['amount'] = float(item['amount'])
+                    item['account_balance_after'] = float(item['account_balance_after'])
+                    transactions.append(item)
+            
+            # Apply additional filters
+            if filters:
+                transactions = self._filter_transactions(transactions, filters)
+            
+            logger.info(f"Found {len(transactions)} transactions for user: {user_id}")
+            return transactions
+            
+        except ClientError as e:
+            logger.error(f"Error listing transactions for user {user_id}: {e}")
+            raise
+
+    def _filter_transactions(self, transactions: List[Dict[str, Any]], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Apply filters to transaction list"""
+        filtered = transactions
+        
+        # Filter by transaction type
+        if filters.get('transaction_type'):
+            filtered = [t for t in filtered if t['transaction_type'] == filters['transaction_type']]
+        
+        # Filter by category
+        if filters.get('category'):
+            filtered = [t for t in filtered if t['category'] == filters['category']]
+        
+        # Filter by status
+        if filters.get('status'):
+            filtered = [t for t in filtered if t['status'] == filters['status']]
+        
+        # Filter by date range
+        if filters.get('date_from') or filters.get('date_to'):
+            date_from = filters.get('date_from')
+            date_to = filters.get('date_to')
+            
+            filtered_by_date = []
+            for t in filtered:
+                t_date = t['transaction_date']
+                
+                # Check date range
+                if date_from and t_date < date_from:
+                    continue
+                if date_to and t_date > date_to:
+                    continue
+                
+                filtered_by_date.append(t)
+            
+            filtered = filtered_by_date
+        
+        # Filter by amount range
+        if filters.get('amount_min') is not None or filters.get('amount_max') is not None:
+            amount_min = filters.get('amount_min')
+            amount_max = filters.get('amount_max')
+            
+            filtered_by_amount = []
+            for t in filtered:
+                amount = abs(t['amount'])  # Use absolute value for range comparison
+                
+                if amount_min is not None and amount < amount_min:
+                    continue
+                if amount_max is not None and amount > amount_max:
+                    continue
+                
+                filtered_by_amount.append(t)
+            
+            filtered = filtered_by_amount
+        
+        # Filter by search term (description, notes, reference_number)
+        if filters.get('search_term'):
+            search_term = filters['search_term'].lower()
+            filtered_by_search = []
+            
+            for t in filtered:
+                if (search_term in t['description'].lower() or
+                    (t.get('notes') and search_term in t['notes'].lower()) or
+                    (t.get('reference_number') and search_term in t['reference_number'].lower())):
+                    filtered_by_search.append(t)
+            
+            filtered = filtered_by_search
+        
+        # Filter by tags
+        if filters.get('tags'):
+            filter_tags = set(filters['tags'])
+            filtered_by_tags = []
+            
+            for t in filtered:
+                t_tags = set(t.get('tags', []))
+                if filter_tags.intersection(t_tags):  # OR logic
+                    filtered_by_tags.append(t)
+            
+            filtered = filtered_by_tags
+        
+        return filtered

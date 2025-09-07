@@ -38,7 +38,15 @@ Content-Type: application/json
 
 ## 🚀 **Endpoints Disponibles**
 
-### � **Health Check** (Público)
+### **📋 API Overview**
+- **🔐 Authentication**: `/auth/*` - Login, registro, refresh tokens
+- **👤 Users**: `/users/*` - Gestión de perfiles de usuario  
+- **🏦 Accounts**: `/accounts/*` - Cuentas bancarias y balances
+- **💳 Cards**: `/cards/*` - Tarjetas de crédito y débito
+- **💸 Transactions**: `/transactions/*` - **NUEVO** - Registro y tracking de transacciones
+- **❤️ Health**: `/health` - Status de la API
+
+### 🏥 **Health Check** (Público)
 
 #### **GET** `/health`
 Verificar estado de la API y conectividad.
@@ -876,6 +884,325 @@ Authorization: Bearer <jwt_token>
     ]
   }
 }
+```
+
+---
+
+## 💸 **Transactions API** (Nuevo - Registro y Tracking)
+
+Gestión completa de transacciones financieras con categorización mexicana, balance automático y analytics.
+
+#### **POST** `/transactions`
+Crear nueva transacción.
+
+**Headers:**
+```http
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "account_id": "acc_123456789",
+  "amount": 1250.75,
+  "description": "Pago de nómina",
+  "transaction_type": "income",
+  "category": "salario",
+  "transaction_date": "2025-01-15T10:30:00Z",
+  "reference_number": "REF001",
+  "notes": "Pago quincenal",
+  "tags": ["nomina", "trabajo"],
+  "location": "Ciudad de México"
+}
+```
+
+**Response Success (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "transaction_id": "trx_987654321",
+    "account_id": "acc_123456789",
+    "account_name": "Cuenta Corriente BBVA",
+    "amount": 1250.75,
+    "description": "Pago de nómina",
+    "transaction_type": "income",
+    "category": "salario",
+    "status": "completed",
+    "transaction_date": "2025-01-15T10:30:00Z",
+    "reference_number": "REF001",
+    "notes": "Pago quincenal",
+    "tags": ["nomina", "trabajo"],
+    "location": "Ciudad de México",
+    "account_balance_after": 8750.25,
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+#### **GET** `/transactions`
+Listar transacciones con filtros avanzados.
+
+**Query Parameters:**
+- `account_id` (opcional): Filtrar por cuenta específica
+- `transaction_type` (opcional): expense, income, transfer, payment, etc.
+- `category` (opcional): Categoría específica
+- `status` (opcional): completed, pending, cancelled
+- `start_date` (opcional): Fecha inicio (ISO 8601)
+- `end_date` (opcional): Fecha fin (ISO 8601)
+- `min_amount` (opcional): Monto mínimo
+- `max_amount` (opcional): Monto máximo
+- `search` (opcional): Búsqueda en descripción y notas
+- `tags` (opcional): Filtrar por etiquetas (separadas por coma)
+- `page` (opcional): Número de página (default: 1)
+- `per_page` (opcional): Elementos por página (default: 20, max: 100)
+- `sort_by` (opcional): date, amount, description (default: date)
+- `sort_order` (opcional): asc, desc (default: desc)
+
+**Request:**
+```bash
+GET /transactions?account_id=acc_123&transaction_type=expense&category=alimentos&start_date=2025-01-01&end_date=2025-01-31&page=1&per_page=20
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "transaction_id": "trx_987654321",
+        "account_id": "acc_123456789",
+        "account_name": "Cuenta Corriente BBVA",
+        "amount": -450.50,
+        "description": "Supermercado Soriana",
+        "transaction_type": "expense",
+        "category": "alimentos",
+        "status": "completed",
+        "transaction_date": "2025-01-15T14:20:00Z",
+        "reference_number": "TRX4567",
+        "tags": ["comida", "super"],
+        "location": "Monterrey, NL",
+        "account_balance_after": 7299.75,
+        "created_at": "2025-01-15T14:20:00Z",
+        "updated_at": "2025-01-15T14:20:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "per_page": 20,
+      "total": 147,
+      "total_pages": 8,
+      "has_next": true,
+      "has_prev": false
+    },
+    "filters_applied": {
+      "account_id": "acc_123456789",
+      "transaction_type": "expense",
+      "category": "alimentos",
+      "date_range": {
+        "start": "2025-01-01",
+        "end": "2025-01-31"
+      }
+    }
+  }
+}
+```
+
+#### **GET** `/transactions/{transaction_id}`
+Obtener transacción específica.
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "transaction_id": "trx_987654321",
+    "account_id": "acc_123456789",
+    "account_name": "Cuenta Corriente BBVA",
+    "amount": -450.50,
+    "description": "Supermercado Soriana",
+    "transaction_type": "expense",
+    "category": "alimentos",
+    "status": "completed",
+    "transaction_date": "2025-01-15T14:20:00Z",
+    "reference_number": "TRX4567",
+    "notes": "Compra semanal",
+    "tags": ["comida", "super"],
+    "location": "Monterrey, NL",
+    "account_balance_after": 7299.75,
+    "created_at": "2025-01-15T14:20:00Z",
+    "updated_at": "2025-01-15T14:20:00Z"
+  }
+}
+```
+
+#### **PUT** `/transactions/{transaction_id}`
+Actualizar transacción existente.
+
+**Request Body:**
+```json
+{
+  "description": "Supermercado Soriana - Compra familiar",
+  "category": "alimentos",
+  "notes": "Compra mensual completa",
+  "tags": ["comida", "super", "familia"]
+}
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "transaction_id": "trx_987654321",
+    "account_id": "acc_123456789",
+    "account_name": "Cuenta Corriente BBVA",
+    "amount": -450.50,
+    "description": "Supermercado Soriana - Compra familiar",
+    "transaction_type": "expense",
+    "category": "alimentos",
+    "status": "completed",
+    "transaction_date": "2025-01-15T14:20:00Z",
+    "reference_number": "TRX4567",
+    "notes": "Compra mensual completa",
+    "tags": ["comida", "super", "familia"],
+    "location": "Monterrey, NL",
+    "account_balance_after": 7299.75,
+    "created_at": "2025-01-15T14:20:00Z",
+    "updated_at": "2025-01-15T16:45:00Z"
+  }
+}
+```
+
+#### **DELETE** `/transactions/{transaction_id}`
+Eliminar transacción (revierte balance automáticamente).
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "message": "Transacción eliminada exitosamente",
+  "data": {
+    "transaction_id": "trx_987654321",
+    "account_balance_restored": 7750.25
+  }
+}
+```
+
+#### **GET** `/transactions/summary`
+Obtener resumen financiero y analytics.
+
+**Query Parameters:**
+- `period` (opcional): week, month, quarter, year, custom (default: month)
+- `start_date` (opcional): Para period=custom
+- `end_date` (opcional): Para period=custom
+- `account_id` (opcional): Resumen de cuenta específica
+- `group_by` (opcional): category, account, type, date (default: category)
+
+**Request:**
+```bash
+GET /transactions/summary?period=month&group_by=category
+```
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "period": {
+      "type": "month",
+      "start_date": "2025-01-01",
+      "end_date": "2025-01-31",
+      "label": "Enero 2025"
+    },
+    "summary": {
+      "total_income": 8500.00,
+      "total_expenses": -6250.25,
+      "net_flow": 2249.75,
+      "transactions_count": 47,
+      "average_transaction": -132.77,
+      "largest_expense": -1500.00,
+      "largest_income": 7500.00
+    },
+    "by_category": [
+      {
+        "category": "salario",
+        "amount": 7500.00,
+        "count": 2,
+        "type": "income",
+        "percentage": 88.24,
+        "trend": "stable"
+      },
+      {
+        "category": "alimentos",
+        "amount": -2100.50,
+        "count": 15,
+        "type": "expense",
+        "percentage": 33.61,
+        "trend": "increasing"
+      },
+      {
+        "category": "transporte",
+        "amount": -890.75,
+        "count": 8,
+        "type": "expense",
+        "percentage": 14.25,
+        "trend": "stable"
+      }
+    ],
+    "by_account": [
+      {
+        "account_id": "acc_123456789",
+        "account_name": "Cuenta Corriente BBVA",
+        "total_income": 7500.00,
+        "total_expenses": -4200.50,
+        "net_flow": 3299.50,
+        "transactions_count": 28
+      }
+    ],
+    "trends": {
+      "spending_trend": "increasing",
+      "income_trend": "stable",
+      "top_expense_category": "alimentos",
+      "recommendation": "Considera revisar gastos en alimentos"
+    }
+  }
+}
+```
+
+### **Tipos de Transacción Disponibles**
+```
+- expense: Gastos generales
+- income: Ingresos
+- transfer: Transferencias entre cuentas
+- payment: Pagos de servicios
+- deposit: Depósitos
+- withdrawal: Retiros ATM
+- investment: Inversiones
+- loan: Préstamos
+- salary: Salarios
+- bonus: Bonos
+- dividend: Dividendos
+- interest: Intereses
+- fee: Comisiones
+- refund: Reembolsos
+- subscription: Suscripciones
+```
+
+### **Categorías Mexicanas Disponibles**
+```
+Gastos:
+- alimentos, transporte, vivienda, salud, educacion
+- entretenimiento, ropa, servicios, seguros, impuestos
+- restaurantes, gasolina, farmacia, supermercado
+- utilidades, mantenimiento, telefono, internet
+
+Ingresos:
+- salario, freelance, negocio, inversiones, bonus
+- pension, dividendos, intereses, ventas, renta
 ```
 
 ---

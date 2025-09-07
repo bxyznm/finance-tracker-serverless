@@ -86,9 +86,10 @@ terraform/
 ```
 
 ### API Gateway ✅ **¡EXPANDIDO!**
-- **REST API**: Con 30+ endpoints para todas las funcionalidades
+- **REST API**: Con 35+ endpoints para todas las funcionalidades
 - **Endpoints de Cuentas**: 6 endpoints CRUD completos ✅
-- **Endpoints de Tarjetas**: 8 endpoints CRUD + transacciones + pagos ✅ **¡NUEVO!**
+- **Endpoints de Tarjetas**: 8 endpoints CRUD + transacciones + pagos ✅
+- **Endpoints de Transacciones**: 6 endpoints CRUD + analytics ✅ **¡NUEVO!**
 - **Stage**: Configurado por entorno (dev/prod)
 - **CORS**: Configurado según el entorno
 - **JWT Authentication**: Integrado en todos los endpoints protegidos ✅
@@ -619,7 +620,7 @@ aws logs delete-log-group --log-group-name /aws/lambda/finance-tracker-dev-healt
 
 ### Testing y Validation ✅
 - **✅ Terraform Validation**: Sin errores de configuración
-- **✅ 44 Backend Tests**: 100% pass rate
+- **✅ 83 Backend Tests**: 100% pass rate ✅ UPDATED
 - **✅ Infrastructure Tests**: Recursos validados y funcionando
 - **✅ End-to-End Testing**: Todos los endpoints probados manualmente
 
@@ -627,7 +628,7 @@ aws logs delete-log-group --log-group-name /aws/lambda/finance-tracker-dev-healt
 
 ### Inmediato (Próximas 2 semanas)
 - [x] **Cards API**: ✅ Gestión completa de tarjetas de crédito/débito implementada
-- [ ] **Transactions API**: Gestión de transacciones entre cuentas
+- [x] **Transactions API**: ✅ Gestión completa de transacciones con analytics implementada
 - [ ] **Categories API**: Categorización de gastos e ingresos  
 - [ ] **Reports API**: Generación de reportes financieros
 
