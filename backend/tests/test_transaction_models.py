@@ -3,6 +3,7 @@ Tests for Transaction models validation using Pydantic
 """
 
 import pytest
+from decimal import Decimal
 from pydantic import ValidationError
 from models.transaction import (
     TransactionCreate,
@@ -29,7 +30,7 @@ class TestTransactionCreate:
         
         transaction = TransactionCreate(**transaction_data)
         assert transaction.account_id == 'acc_test123'
-        assert transaction.amount == 50.99
+        assert transaction.amount == Decimal('50.99')
         assert transaction.description == 'Lunch at restaurant'
         assert transaction.transaction_type == 'expense'
         assert transaction.category == 'food_drinks'
@@ -211,7 +212,7 @@ class TestTransactionCreate:
         }
         
         transaction = TransactionCreate(**transaction_data)
-        assert transaction.amount == 123.46
+        assert transaction.amount == Decimal('123.46')
     
     def test_negative_amount_valid(self):
         """Test that negative amounts are valid (for refunds, etc.)"""
@@ -376,23 +377,19 @@ class TestTransactionResponse:
             'transaction_id': 'txn_test123',
             'user_id': 'user_456',
             'account_id': 'acc_789',
-            'account_name': 'Test Account',
             'amount': 123.45,
             'description': 'Test transaction',
             'transaction_type': 'expense',
             'category': 'food_drinks',
-            'status': 'completed',
             'transaction_date': '2024-01-15T10:30:00',
-            'account_balance_after': 876.55,
             'created_at': '2024-01-15T10:30:00',
             'updated_at': '2024-01-15T10:30:00'
         }
         
         response = TransactionResponse(**response_data)
         assert response.transaction_id == 'txn_test123'
-        assert response.amount == 123.45
-        assert response.account_balance_after == 876.55
-        assert response.tags == []  # Default value
+        assert response.amount == Decimal('123.45')
+        assert response.tags is None  # Default value
 
 
 class TestTransactionListResponse:

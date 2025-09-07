@@ -77,7 +77,7 @@ def create_transaction_handler(event: Dict[str, Any], context: Any, user_data: T
         transaction_date = transaction_data.transaction_date or now
         
         # Calculate new account balance
-        current_balance = float(account['current_balance'])
+        current_balance = Decimal(str(account['current_balance']))
         transaction_amount = transaction_data.amount
         
         # For expense transactions, make amount negative to subtract from balance
@@ -137,7 +137,7 @@ def create_transaction_handler(event: Dict[str, Any], context: Any, user_data: T
             
             # Generate destination transaction ID
             dest_transaction_id = generate_transaction_id()
-            dest_current_balance = float(destination_account['current_balance'])
+            dest_current_balance = Decimal(str(destination_account['current_balance']))
             dest_new_balance = dest_current_balance + abs(transaction_amount)
             
             # Create destination transaction
@@ -501,8 +501,8 @@ def delete_transaction_handler(event: Dict[str, Any], context: Any, user_data: T
             return create_response(400, {"error": "Associated account not found"})
         
         # Calculate balance reversion
-        transaction_amount = transaction['amount']
-        current_balance = float(account['current_balance'])
+        transaction_amount = Decimal(str(transaction['amount']))
+        current_balance = Decimal(str(account['current_balance']))
         
         # Reverse the transaction effect
         if transaction['transaction_type'] in ['expense', 'fee']:
