@@ -37,7 +37,7 @@ export type PaymentStatus =
   | 'partial'
   | 'cancelled';
 
-export type TransactionType = 
+export type CardTransactionType = 
   | 'purchase'
   | 'payment'
   | 'fee'
@@ -110,7 +110,7 @@ export interface UpdateCardRequest {
 export interface CardTransaction {
   amount: number;
   description: string;
-  transaction_type: TransactionType;
+  transaction_type: CardTransactionType;
   transaction_date?: string;
 }
 
