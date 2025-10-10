@@ -188,6 +188,7 @@ export function useTransactions(options: UseTransactionsOptions = {}): UseTransa
     if (autoLoad) {
       loadTransactions();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Solo ejecutar una vez al montar
 
   return {
