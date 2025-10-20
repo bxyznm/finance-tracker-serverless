@@ -1,8 +1,14 @@
-# Workflow manual para desplegar solo infraestructura de desarrollo
-# No crea releases, solo despliega usando un release existente
+# Workflow para desplegar infraestructura de desarrollo
+# Se dispara automáticamente después de Package Backend o manualmente
 name: Dev Infrastructure Only
 
 on:
+  workflow_run:
+    workflows: ["Package Backend & Create Release"]
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       release_tag:
@@ -34,6 +40,10 @@ env:
 jobs:
   deploy-dev-infrastructure:
     runs-on: ubuntu-latest
+    # Solo ejecutar si fue disparado manualmente O si el workflow anterior fue exitoso
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,9 +51,18 @@ jobs:
       - name: Show deployment info
         run: |
           echo "🏗️ Información del Deployment de Infraestructura Dev:"
-          echo "   Operación: ${{ inputs.operation }}"
+          
+          # Determinar si es automático o manual
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "   🤖 Disparado automáticamente por: Package Backend"
+            echo "   📦 Workflow Run ID: ${{ github.event.workflow_run.id }}"
+          else
+            echo "   👤 Ejecución manual"
+          fi
+          
+          echo "   Operación: ${{ inputs.operation || 'deploy' }}"
           echo "   Release Tag: ${{ inputs.release_tag || 'último pre-release' }}"
-          echo "   Destruir primero: ${{ inputs.destroy_first }}"
+          echo "   Destruir primero: ${{ inputs.destroy_first || 'false' }}"
           echo "   Ejecutado por: ${{ github.actor }}"
 
       - name: Setup Terraform

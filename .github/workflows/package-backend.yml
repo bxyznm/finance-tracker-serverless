@@ -185,9 +185,10 @@ jobs:
           echo "- 📦 \`code.zip\` - Código Lambda" >> $GITHUB_STEP_SUMMARY
           echo "- 📦 \`layer.zip\` - Layer de dependencias" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Próximos pasos:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Ejecutar workflow de deployment de infraestructura" >> $GITHUB_STEP_SUMMARY
-          echo "2. Usar tag \`${{ steps.version.outputs.tag }}\` en el deployment" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚡ Deployment Automático:" >> $GITHUB_STEP_SUMMARY
+          echo "El workflow **Dev Infrastructure Only** se disparará automáticamente." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "💡 **Nota:** Puedes monitorear el progreso en la pestaña Actions." >> $GITHUB_STEP_SUMMARY
 
       - name: No Changes Summary
         if: steps.changes.outputs.has_changes == 'false'
