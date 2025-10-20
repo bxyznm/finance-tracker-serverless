@@ -149,198 +149,128 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      {/* Header de la tabla - solo desktop */}
-      <div className="hidden lg:grid grid-cols-[60px_1fr_160px_200px_150px_140px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-        <div className="text-center">Icon</div>
-        <div>Descripción</div>
-        <div>Categoría</div>
-        <div>Fecha</div>
-        <div className="text-right">Monto</div>
-        <div className="text-center">Acciones</div>
-      </div>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+      {/* Tabla con scroll horizontal en pantallas pequeñas */}
+      <table className="w-full">
+        <thead className="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">Icon</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[200px]">Descripción</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">Categoría</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-48">Fecha</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Monto</th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">Acciones</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {transactions.map((transaction) => {
+            const colors = getTransactionColor(transaction.transaction_type);
+            const isExpanded = expandedTransaction === transaction.transaction_id;
+            const icon = getTransactionIcon(transaction.transaction_type, transaction.category);
+            const isNegative = transaction.amount < 0;
 
-      {/* Filas de transacciones */}
-      <div className="divide-y divide-gray-200">
-        {transactions.map((transaction) => {
-          const colors = getTransactionColor(transaction.transaction_type);
-          const isExpanded = expandedTransaction === transaction.transaction_id;
-          const icon = getTransactionIcon(transaction.transaction_type, transaction.category);
-          const isNegative = transaction.amount < 0;
-
-          return (
-            <div key={transaction.transaction_id} className={`border-l-4 ${colors.border} hover:bg-gray-50 transition-colors`}>
-              {/* Fila principal - Desktop */}
-              <div className="hidden lg:grid grid-cols-[60px_1fr_160px_200px_150px_140px] gap-4 px-4 py-4 items-center">
-                {/* Ícono */}
-                <div className="flex justify-center">
-                  <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center text-xl`}>
-                    {icon}
-                  </div>
-                </div>
-
-                {/* Descripción */}
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm truncate">{transaction.description}</h3>
-                  {transaction.reference_number && (
-                    <p className="text-xs text-gray-400 mt-0.5">Ref: {transaction.reference_number}</p>
-                  )}
-                </div>
-
-                {/* Categoría */}
-                <div>
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
-                    {TRANSACTION_CATEGORY_LABELS[transaction.category]}
-                  </span>
-                </div>
-
-                {/* Fecha */}
-                <div className="text-sm text-gray-700">
-                  {formatDate(transaction.transaction_date)}
-                </div>
-
-                {/* Monto */}
-                <div className="text-right">
-                  <div className={`text-lg font-bold ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-                    {isNegative ? '-' : '+'} {formatCurrency(transaction.amount)}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {TRANSACTION_TYPE_LABELS[transaction.transaction_type]}
-                  </div>
-                </div>
-
-                {/* Acciones */}
-                <div className="flex items-center justify-center gap-1">
-                  {onEditTransaction && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditTransaction(transaction);
-                      }}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Editar"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  )}
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedTransaction(isExpanded ? null : transaction.transaction_id);
-                    }}
-                    className={`p-2 ${isExpanded ? 'text-gray-700 bg-gray-100' : 'text-gray-500 hover:bg-gray-50'} rounded-lg transition-all`}
-                    title={isExpanded ? "Ocultar" : "Ver más"}
-                  >
-                    <svg 
-                      className={`w-5 h-5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {onDeleteTransaction && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm('¿Estás seguro de eliminar esta transacción?')) {
-                          onDeleteTransaction(transaction.transaction_id);
-                        }
-                      }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Eliminar"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Layout móvil */}
-              <div className="lg:hidden px-4 py-4">
-                <div className="flex items-start gap-3">
-                  <div className={`w-12 h-12 rounded-lg ${colors.bg} flex items-center justify-center text-2xl flex-shrink-0`}>
-                    {icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-base truncate">{transaction.description}</h3>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                      <span>{TRANSACTION_CATEGORY_LABELS[transaction.category]}</span>
-                      <span>•</span>
-                      <span>{formatDate(transaction.transaction_date)}</span>
+            return (
+              <React.Fragment key={transaction.transaction_id}>
+                <tr className={`border-l-4 ${colors.border} hover:bg-gray-50 transition-colors`}>
+                  {/* Ícono */}
+                  <td className="px-4 py-4">
+                    <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center text-xl mx-auto`}>
+                      {icon}
                     </div>
-                  </div>
-                  <div className={`text-lg font-bold whitespace-nowrap ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-                    {isNegative ? '-' : '+'} {formatCurrency(transaction.amount)}
-                  </div>
-                </div>
-                
-                {/* Botones móvil */}
-                <div className="flex items-center justify-end gap-1 mt-3">
-                  {onEditTransaction && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditTransaction(transaction);
-                      }}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Editar"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  )}
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedTransaction(isExpanded ? null : transaction.transaction_id);
-                    }}
-                    className={`p-2 ${isExpanded ? 'text-gray-700 bg-gray-100' : 'text-gray-500 hover:bg-gray-50'} rounded-lg transition-all`}
-                    title={isExpanded ? "Ocultar" : "Ver más"}
-                  >
-                    <svg 
-                      className={`w-5 h-5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
+                  </td>
 
-                  {onDeleteTransaction && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm('¿Estás seguro de eliminar esta transacción?')) {
-                          onDeleteTransaction(transaction.transaction_id);
-                        }
-                      }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Eliminar"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
+                  {/* Descripción */}
+                  <td className="px-4 py-4">
+                    <h3 className="font-semibold text-gray-900 text-sm">{transaction.description}</h3>
+                    {transaction.reference_number && (
+                      <p className="text-xs text-gray-400 mt-0.5">Ref: {transaction.reference_number}</p>
+                    )}
+                  </td>
 
-              {/* Detalles expandibles */}
-              {isExpanded && (
-                <div className="px-4 pb-4 pt-0">
-                  <div className={`pt-4 border-t ${colors.border}`}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Categoría */}
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text} whitespace-nowrap`}>
+                      {TRANSACTION_CATEGORY_LABELS[transaction.category]}
+                    </span>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {TRANSACTION_TYPE_LABELS[transaction.transaction_type]}
+                    </div>
+                  </td>
+
+                  {/* Fecha */}
+                  <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                    {formatDate(transaction.transaction_date)}
+                  </td>
+
+                  {/* Monto */}
+                  <td className="px-4 py-4 text-right">
+                    <div className={`text-lg font-bold whitespace-nowrap ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+                      {isNegative ? '-' : '+'} {formatCurrency(transaction.amount)}
+                    </div>
+                  </td>
+
+                  {/* Acciones */}
+                  <td className="px-4 py-4">
+                    <div className="flex items-center justify-center gap-1">
+                      {onEditTransaction && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditTransaction(transaction);
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedTransaction(isExpanded ? null : transaction.transaction_id);
+                        }}
+                        className={`p-2 ${isExpanded ? 'text-gray-700 bg-gray-100' : 'text-gray-500 hover:bg-gray-50'} rounded-lg transition-all`}
+                        title={isExpanded ? "Ocultar" : "Ver más"}
+                      >
+                        <svg 
+                          className={`w-5 h-5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {onDeleteTransaction && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('¿Estás seguro de eliminar esta transacción?')) {
+                              onDeleteTransaction(transaction.transaction_id);
+                            }
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+
+                {/* Fila expandible para detalles */}
+                {isExpanded && (
+                  <tr>
+                    <td colSpan={6} className="px-4 pb-4 pt-0 bg-gray-50">
+                      <div className={`pt-4 border-t-2 ${colors.border}`}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Tags */}
                       {transaction.tags && transaction.tags.length > 0 && (
                         <div className="flex gap-3 items-start">
@@ -439,12 +369,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+                </td>
+              </tr>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
+);
 };
