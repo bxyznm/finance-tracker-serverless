@@ -149,63 +149,86 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   }
 
   return (
-    <div className="space-y-3">
-      {transactions.map((transaction) => {
-        const colors = getTransactionColor(transaction.transaction_type);
-        const isExpanded = expandedTransaction === transaction.transaction_id;
-        const icon = getTransactionIcon(transaction.transaction_type, transaction.category);
-        const isNegative = transaction.amount < 0;
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Header de la tabla */}
+      <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+        <div className="col-span-1">Categoría</div>
+        <div className="col-span-3">Descripción</div>
+        <div className="col-span-2">Tipo</div>
+        <div className="col-span-2">Fecha</div>
+        <div className="col-span-2 text-right">Monto</div>
+        <div className="col-span-2 text-center">Acciones</div>
+      </div>
 
-        return (
-          <div
-            key={transaction.transaction_id}
-            className={`bg-white rounded-lg shadow-sm border-l-4 ${colors.border} hover:shadow-md transition-all duration-200`}
-          >
-            {/* Contenido principal - Layout de una sola línea */}
-            <div className="p-4">
-              <div className="flex items-center gap-4">
-                {/* Ícono */}
-                <div className={`w-12 h-12 rounded-lg ${colors.bg} flex items-center justify-center text-2xl flex-shrink-0`}>
-                  {icon}
-                </div>
+      {/* Filas de transacciones */}
+      <div className="divide-y divide-gray-200">
+        {transactions.map((transaction) => {
+          const colors = getTransactionColor(transaction.transaction_type);
+          const isExpanded = expandedTransaction === transaction.transaction_id;
+          const icon = getTransactionIcon(transaction.transaction_type, transaction.category);
+          const isNegative = transaction.amount < 0;
 
-                {/* Descripción */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-base truncate">
-                    {transaction.description}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-gray-500">
-                      {TRANSACTION_TYPE_LABELS[transaction.transaction_type]}
-                    </span>
-                    {transaction.reference_number && (
-                      <>
-                        <span className="text-gray-300">•</span>
-                        <span className="text-xs text-gray-400">#{transaction.reference_number}</span>
-                      </>
-                    )}
+          return (
+            <div key={transaction.transaction_id} className={`border-l-4 ${colors.border} hover:bg-gray-50 transition-colors`}>
+              {/* Fila principal */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 px-4 py-4 items-center">
+                {/* Ícono - desktop */}
+                <div className="hidden lg:flex col-span-1 justify-center">
+                  <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center text-xl`}>
+                    {icon}
                   </div>
                 </div>
 
-                {/* Categoría */}
-                <div className="hidden md:block flex-shrink-0">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
+                {/* Layout móvil */}
+                <div className="lg:hidden flex items-start gap-3">
+                  <div className={`w-12 h-12 rounded-lg ${colors.bg} flex items-center justify-center text-2xl flex-shrink-0`}>
+                    {icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 text-base truncate">{transaction.description}</h3>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                      <span>{TRANSACTION_CATEGORY_LABELS[transaction.category]}</span>
+                      <span>•</span>
+                      <span>{formatDate(transaction.transaction_date)}</span>
+                    </div>
+                  </div>
+                  <div className={`text-lg font-bold whitespace-nowrap ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+                    {isNegative ? '-' : '+'} {formatCurrency(transaction.amount)}
+                  </div>
+                </div>
+
+                {/* Descripción - desktop */}
+                <div className="hidden lg:block col-span-3">
+                  <h3 className="font-semibold text-gray-900 text-sm truncate">{transaction.description}</h3>
+                  {transaction.reference_number && (
+                    <p className="text-xs text-gray-400 mt-0.5">Ref: {transaction.reference_number}</p>
+                  )}
+                </div>
+
+                {/* Tipo y Categoría - desktop */}
+                <div className="hidden lg:block col-span-2">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
                     {TRANSACTION_CATEGORY_LABELS[transaction.category]}
                   </span>
                 </div>
 
-                {/* Fecha */}
-                <div className="hidden lg:block text-sm text-gray-600 whitespace-nowrap min-w-[180px]">
+                {/* Fecha - desktop */}
+                <div className="hidden lg:block col-span-2 text-sm text-gray-700">
                   {formatDate(transaction.transaction_date)}
                 </div>
 
-                {/* Monto */}
-                <div className={`text-xl font-bold whitespace-nowrap min-w-[130px] text-right ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-                  {isNegative ? '-' : '+'} {formatCurrency(transaction.amount)}
+                {/* Monto - desktop */}
+                <div className="hidden lg:block col-span-2 text-right">
+                  <div className={`text-lg font-bold ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+                    {isNegative ? '-' : '+'} {formatCurrency(transaction.amount)}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {TRANSACTION_TYPE_LABELS[transaction.transaction_type]}
+                  </div>
                 </div>
 
-                {/* Botones de acción */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                {/* Acciones */}
+                <div className="col-span-12 lg:col-span-2 flex items-center justify-end lg:justify-center gap-1">
                   {onEditTransaction && (
                     <button
                       onClick={(e) => {
@@ -258,118 +281,83 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                 </div>
               </div>
 
-              {/* Información adicional en pantallas pequeñas */}
-              <div className="md:hidden mt-3 flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
-                  {TRANSACTION_CATEGORY_LABELS[transaction.category]}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {formatDate(transaction.transaction_date)}
-                </span>
-                {transaction.tags && transaction.tags.length > 0 && (
-                  <>
-                    {transaction.tags.slice(0, 2).map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </>
-                )}
-              </div>
-
-
               {/* Detalles expandibles */}
               {isExpanded && (
-                <div className={`mt-4 pt-4 border-t ${colors.border}`}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Tags */}
-                    {transaction.tags && transaction.tags.length > 0 && (
-                      <div className="flex gap-3 items-start">
-                        <div className="text-xl flex-shrink-0">🏷️</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Etiquetas</div>
-                          <div className="flex flex-wrap gap-1">
-                            {transaction.tags.map((tag, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
+                <div className="px-4 pb-4 pt-0">
+                  <div className={`pt-4 border-t ${colors.border}`}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Tags */}
+                      {transaction.tags && transaction.tags.length > 0 && (
+                        <div className="flex gap-3 items-start">
+                          <div className="text-xl flex-shrink-0">🏷️</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Etiquetas</div>
+                            <div className="flex flex-wrap gap-1">
+                              {transaction.tags.map((tag, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Cuenta */}
-                    {transaction.account_id && (
-                      <div className="flex gap-3 items-start">
-                        <div className="text-xl flex-shrink-0">💳</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cuenta</div>
-                          <p className="text-sm text-gray-700 font-mono break-all">{transaction.account_id}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Notas */}
-                    {transaction.notes && (
-                      <div className="flex gap-3 items-start sm:col-span-2">
-                        <div className="text-xl flex-shrink-0">📝</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notas</div>
-                          <p className="text-sm text-gray-700">{transaction.notes}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Ubicación */}
-                    {transaction.location && (
-                      <div className="flex gap-3 items-start">
-                        <div className="text-xl flex-shrink-0">📍</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ubicación</div>
-                          <p className="text-sm text-gray-700">{transaction.location}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Transferencia */}
-                    {transaction.transaction_type === 'transfer' && transaction.destination_account_id && (
-                      <div className="flex gap-3 items-start">
-                        <div className="text-xl flex-shrink-0">🔄</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cuenta destino</div>
-                          <p className="text-sm text-gray-700 font-mono break-all">{transaction.destination_account_id}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Timestamps */}
-                    <div className="flex gap-3 items-start sm:col-span-2 pt-3 border-t border-gray-200">
-                      <div className="text-xl flex-shrink-0">⏱️</div>
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Creada</div>
-                          <div className="text-sm text-gray-700">
-                            {new Date(transaction.created_at).toLocaleDateString('es-MX', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                      {/* Cuenta */}
+                      {transaction.account_id && (
+                        <div className="flex gap-3 items-start">
+                          <div className="text-xl flex-shrink-0">💳</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cuenta</div>
+                            <p className="text-sm text-gray-700 font-mono break-all">{transaction.account_id}</p>
                           </div>
                         </div>
-                        {transaction.updated_at && (
+                      )}
+
+                      {/* Notas */}
+                      {transaction.notes && (
+                        <div className="flex gap-3 items-start sm:col-span-2">
+                          <div className="text-xl flex-shrink-0">📝</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notas</div>
+                            <p className="text-sm text-gray-700">{transaction.notes}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Ubicación */}
+                      {transaction.location && (
+                        <div className="flex gap-3 items-start">
+                          <div className="text-xl flex-shrink-0">📍</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ubicación</div>
+                            <p className="text-sm text-gray-700">{transaction.location}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Transferencia */}
+                      {transaction.transaction_type === 'transfer' && transaction.destination_account_id && (
+                        <div className="flex gap-3 items-start">
+                          <div className="text-xl flex-shrink-0">🔄</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cuenta destino</div>
+                            <p className="text-sm text-gray-700 font-mono break-all">{transaction.destination_account_id}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Timestamps */}
+                      <div className="flex gap-3 items-start sm:col-span-2 pt-3 border-t border-gray-200">
+                        <div className="text-xl flex-shrink-0">⏱️</div>
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Actualizada</div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Creada</div>
                             <div className="text-sm text-gray-700">
-                              {new Date(transaction.updated_at).toLocaleDateString('es-MX', {
+                              {new Date(transaction.created_at).toLocaleDateString('es-MX', {
                                 day: 'numeric',
                                 month: 'short',
                                 year: 'numeric',
@@ -378,16 +366,30 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                               })}
                             </div>
                           </div>
-                        )}
+                          {transaction.updated_at && (
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Actualizada</div>
+                              <div className="text-sm text-gray-700">
+                                {new Date(transaction.updated_at).toLocaleDateString('es-MX', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };
