@@ -108,6 +108,7 @@ class CardUpdate(BaseModel):
     credit_limit: Optional[float] = Field(None, ge=0, description="Credit limit for credit cards")
     minimum_payment: Optional[float] = Field(None, ge=0, description="Minimum monthly payment")
     payment_due_date: Optional[int] = Field(None, ge=1, le=31, description="Day of month payment is due")
+    cut_off_date: Optional[int] = Field(None, ge=1, le=31, description="Day of month for statement cut-off")
     apr: Optional[float] = Field(None, ge=0, le=100, description="Annual Percentage Rate")
     annual_fee: Optional[float] = Field(None, ge=0, description="Annual fee amount")
     rewards_program: Optional[str] = Field(None, max_length=100, description="Rewards program name")

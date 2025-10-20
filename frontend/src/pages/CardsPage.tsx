@@ -327,6 +327,7 @@ const CardsPage: React.FC = () => {
     bank_name: '',
     credit_limit: 0,
     payment_due_date: 15,
+    cut_off_date: 1,
     status: 'active',
   });
 
@@ -357,6 +358,7 @@ const CardsPage: React.FC = () => {
       credit_limit: card.credit_limit,
       minimum_payment: card.minimum_payment,
       payment_due_date: card.payment_due_date,
+      cut_off_date: card.cut_off_date,
       apr: card.apr,
       annual_fee: card.annual_fee,
       rewards_program: card.rewards_program,
@@ -845,22 +847,41 @@ const CardsPage: React.FC = () => {
                     helperText="Límite total de la tarjeta"
                   />
 
-                  <TextField
-                    label="Día de pago"
-                    type="number"
-                    value={editForm.payment_due_date || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setEditForm({ 
-                        ...editForm, 
-                        payment_due_date: val ? parseInt(val) : undefined 
-                      });
-                    }}
-                    fullWidth
-                    inputProps={{ min: 1, max: 31 }}
-                    helperText="Día del mes para realizar el pago (1-31)"
-                    placeholder="Ej: 15"
-                  />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    <TextField
+                      label="Día de corte"
+                      type="number"
+                      value={editForm.cut_off_date || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditForm({ 
+                          ...editForm, 
+                          cut_off_date: val ? parseInt(val) : undefined 
+                        });
+                      }}
+                      fullWidth
+                      inputProps={{ min: 1, max: 31 }}
+                      helperText="Día que se genera el estado de cuenta"
+                      placeholder="Ej: 1"
+                    />
+
+                    <TextField
+                      label="Día de pago"
+                      type="number"
+                      value={editForm.payment_due_date || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditForm({ 
+                          ...editForm, 
+                          payment_due_date: val ? parseInt(val) : undefined 
+                        });
+                      }}
+                      fullWidth
+                      inputProps={{ min: 1, max: 31 }}
+                      helperText="Día límite para realizar el pago"
+                      placeholder="Ej: 15"
+                    />
+                  </Box>
                 </>
               )}
 

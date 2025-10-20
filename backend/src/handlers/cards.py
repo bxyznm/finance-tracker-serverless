@@ -367,6 +367,8 @@ def update_card_handler(event: Dict[str, Any], context: Any, user_data: TokenPay
             update_fields['minimum_payment'] = Decimal(str(update_data.minimum_payment))
         if update_data.payment_due_date is not None:
             update_fields['payment_due_date'] = update_data.payment_due_date
+        if update_data.cut_off_date is not None:
+            update_fields['cut_off_date'] = update_data.cut_off_date
         if update_data.apr is not None:
             update_fields['apr'] = Decimal(str(update_data.apr))
         if update_data.annual_fee is not None:

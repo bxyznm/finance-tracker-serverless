@@ -98,6 +98,7 @@ export interface UpdateCardRequest {
   credit_limit?: number;
   minimum_payment?: number;
   payment_due_date?: number;
+  cut_off_date?: number;
   apr?: number;
   annual_fee?: number;
   rewards_program?: string;
