@@ -1,29 +1,28 @@
 # API de Tarjetas - Finance Tracker
 
+**Última actualización**: 19 de Octubre, 2025  
+**Estado**: ✅ Completamente funcional con 31 tests pasando
+
 ## Descripción
-Endpoints para la gestión completa de tarjetas de crédito y débito en el sistema Finance Tracker. Incluye operaciones CRUD, transacciones, pagos y generación de estados de cuenta.
+Endpoints para la gestión completa de tarjetas de crédito y débito en el sistema Finance Tracker. Incluye operaciones CRUD completas con soporte para fechas de pago y corte.
 
 ## 💳 Arquitectura de Tarjetas
 
 ### Tipos de Tarjetas Soportados
-- **Crédito**: Tarjetas de crédito con límite y pagos mensuales
-- **Débito**: Tarjetas de débito vinculadas a cuentas bancarias
-- **Prepagada**: Tarjetas con saldo prepagado
-- **Empresarial**: Tarjetas corporativas y de negocios
-- **Recompensas**: Tarjetas con programas de puntos/cashback
-- **Tienda**: Tarjetas de tiendas departamentales
-- **Otra**: Otros tipos de tarjetas
+- **credit**: Tarjetas de crédito con límite y pagos mensuales
+- **debit**: Tarjetas de débito vinculadas a cuentas bancarias
+- **prepaid**: Tarjetas con saldo prepagado
 
 ### Redes de Tarjetas
-- **Visa**, **Mastercard**, **American Express**
-- **Discover**, **JCB**, **UnionPay**, **Diners Club**
+- **visa**, **mastercard**, **amex** (American Express)
 
 ### Estados de Tarjetas
-- **Activa**: Tarjeta en uso normal
-- **Bloqueada**: Temporalmente suspendida
-- **Vencida**: Ha pasado su fecha de expiración
-- **Cancelada**: Permanentemente cerrada
-- **Pendiente**: En proceso de activación
+- **active**: Tarjeta en uso normal (único estado editable, otros son automáticos)
+- **inactive**: Tarjeta desactivada (soft delete)
+
+### Campos Importantes de Fechas
+- **payment_due_date**: Día del mes para pago (1-31)
+- **cut_off_date**: Día de corte del estado de cuenta (1-31)
 
 ## 📍 Endpoints de Tarjetas
 
@@ -51,46 +50,37 @@ Content-Type: application/json
   "name": "Tarjeta Principal BBVA",
   "card_type": "credit",
   "card_network": "visa",
-  "bank_name": "BBVA Bancomer",
+  "bank_name": "BBVA",
   "credit_limit": 50000.00,
   "current_balance": 12500.50,
-  "minimum_payment": 625.00,
   "payment_due_date": 15,
-  "cut_off_date": 28,
-  "apr": 24.99,
-  "annual_fee": 550.00,
-  "rewards_program": "Puntos BBVA",
+  "cut_off_date": 1,
   "currency": "MXN",
-  "color": "#004481",
-  "description": "Mi tarjeta de crédito principal para compras grandes",
-  "status": "active"
+  "notes": "Mi tarjeta principal para compras"
 }
 ```
 
 ### Campos Obligatorios
-- **name**: Nombre descriptivo de la tarjeta
-- **card_type**: Tipo de tarjeta (credit, debit, prepaid, etc.)
-- **card_network**: Red de la tarjeta (visa, mastercard, etc.)
-- **bank_name**: Nombre del banco emisor
+- **name**: Nombre descriptivo de la tarjeta (string, 1-100 caracteres)
+- **card_type**: Tipo de tarjeta: `credit`, `debit`, `prepaid`
+- **card_network**: Red de la tarjeta: `visa`, `mastercard`, `amex`
+- **bank_name**: Nombre del banco emisor (string, 1-50 caracteres)
 
-### Campos Opcionales para Tarjetas de Crédito
-- **credit_limit**: Límite de crédito disponible
-- **minimum_payment**: Pago mínimo mensual
-- **payment_due_date**: Día del mes para fecha de pago (1-31)
-- **cut_off_date**: Día del mes para fecha de corte (1-31)
-- **apr**: Tasa de interés anual (APR)
-- **annual_fee**: Cuota anual de la tarjeta
+### Campos Opcionales
+- **credit_limit**: Límite de crédito (float, >= 0, default: 0.0)
+- **current_balance**: Saldo actual (float, default: 0.0)
+- **payment_due_date**: Día de pago mensual (int, 1-31)
+- **cut_off_date**: Día de corte de estado de cuenta (int, 1-31)
+- **currency**: Moneda (string, default: "MXN")
+- **notes**: Notas adicionales (string opcional)
 
-### Validaciones
-- **name**: 1-100 caracteres, no puede estar vacío
-- **bank_name**: 1-50 caracteres
-- **credit_limit**: >= 0, máximo 999,999,999.99
-- **current_balance**: -999,999,999.99 a 999,999,999.99
-- **payment_due_date**: 1-31 (día válido del mes)
-- **cut_off_date**: 1-31 (día válido del mes)
-- **apr**: 0-100 (porcentaje anual)
-- **currency**: MXN, USD, EUR, CAD, GBP, JPY
-- **color**: Formato hexadecimal válido (#FF0000 o #F00)
+### Validaciones Importantes
+- **name**: No puede estar vacío ni solo espacios
+- **credit_limit**: Debe ser >= 0
+- **payment_due_date**: Debe estar entre 1 y 31
+- **cut_off_date**: Debe estar entre 1 y 31
+- **currency**: Valores soportados: MXN, USD, EUR
+- **status**: Siempre se crea como "active" (no se puede especificar en creación)
 
 ### Response (201)
 ```json
@@ -189,24 +179,11 @@ GET /cards?status=active&type=credit
       "updated_at": "2024-12-07T10:30:00Z"
     }
   ],
-  "total_count": 3,
-  "active_count": 2,
-  "total_debt_by_currency": {
-    "MXN": 15750.25,
-    "USD": 850.00
-  },
-  "total_available_credit": {
-    "MXN": 84249.75,
-    "USD": 4150.00
-  }
 }
 ```
 
-### Campos Calculados
-- **available_credit**: credit_limit - current_balance
-- **days_until_due**: Días hasta la próxima fecha de pago
-- **total_debt_by_currency**: Deuda total agrupada por moneda
-- **total_available_credit**: Crédito disponible total por moneda
+### Nota Importante
+La respuesta es una **lista simple de tarjetas**. No incluye campos calculados de agregación. Para obtener estadísticas, use endpoints específicos de análisis.
 
 ---
 
@@ -282,26 +259,32 @@ Content-Type: application/json
 ### Path Parameters
 - **card_id**: ID único de la tarjeta
 
-### Request Body
+### Request Body (Todos los campos son opcionales)
 ```json
 {
-  "name": "Tarjeta BBVA Platinum",
-  "bank_name": "BBVA México",
-  "credit_limit": 75000.00,
-  "minimum_payment": 750.00,
+  "name": "Tarjeta BBVA Oro",
+  "bank_name": "BBVA",
+  "credit_limit": 60000.00,
   "payment_due_date": 20,
-  "apr": 22.50,
-  "annual_fee": 0.00,
-  "rewards_program": "Puntos Premier",
-  "color": "#003366",
-  "description": "Tarjeta actualizada con mejores beneficios",
-  "status": "active"
+  "cut_off_date": 5,
+  "status": "active",
+  "notes": "Tarjeta actualizada"
 }
 ```
 
 ### Campos Actualizables
-- Todos los campos excepto: `card_type`, `card_network`, `current_balance`, `user_id`, `card_id`
-- El `current_balance` se actualiza mediante transacciones y pagos
+- **name**: Nombre de la tarjeta
+- **bank_name**: Banco emisor
+- **credit_limit**: Límite de crédito
+- **payment_due_date**: Día de pago (1-31)
+- **cut_off_date**: Día de corte (1-31)
+- **status**: Estado (active/inactive)
+- **notes**: Notas adicionales
+
+### Campos NO Actualizables
+- `card_type`, `card_network`: Definidos en creación
+- `current_balance`: Se actualiza mediante transacciones (próxima feature)
+- `user_id`, `card_id`: Inmutables
 
 ### Response (200)
 ```json
@@ -335,10 +318,10 @@ Content-Type: application/json
 
 ---
 
-## 5. Eliminar Tarjeta
+## 5. Eliminar Tarjeta (Soft Delete)
 **DELETE** `/cards/{card_id}`
 
-Eliminar permanentemente una tarjeta del sistema.
+Desactivar una tarjeta del sistema (soft delete). La tarjeta no se elimina permanentemente, solo cambia su status a "inactive".
 
 ### Request Headers
 ```http
@@ -357,17 +340,43 @@ Authorization: Bearer <access_token>
 ```
 
 ### Notas Importantes
-⚠️ **Esta operación es irreversible**
-- Se elimina la tarjeta y todos sus registros asociados
-- Las transacciones históricas pueden mantenerse para reportes
-- Se recomienda cambiar el status a "cancelled" en lugar de eliminar
+✅ **Soft Delete**: La tarjeta se marca como `inactive` en lugar de eliminarse
+- Los datos permanecen en la base de datos
+- La tarjeta no aparecerá en listados por defecto
+- Se puede reactivar cambiando el status a "active"
+- Las transacciones asociadas se mantienen intactas
 
 ---
 
-## 6. Agregar Transacción
-**POST** `/cards/{card_id}/transactions`
+## 🎯 Características Principales
 
-Registrar una nueva transacción en la tarjeta (compra, pago, comisión, etc.).
+### ✅ Funcionalidades Implementadas
+1. **CRUD Completo de Tarjetas**
+   - Crear tarjetas con validación completa
+   - Listar tarjetas activas/inactivas
+   - Obtener detalles de tarjeta específica
+   - Actualizar información de tarjetas
+   - Soft delete (desactivación)
+
+2. **Gestión de Fechas**
+   - Día de pago mensual (`payment_due_date`)
+   - Día de corte de estado de cuenta (`cut_off_date`)
+
+3. **Soporte Multi-banco**
+   - Bancos mexicanos principales
+   - Múltiples tipos de tarjetas
+   - Diferentes redes (Visa, Mastercard, Amex)
+
+### 🔜 Próximas Funcionalidades
+- Transacciones de tarjetas
+- Pagos a tarjetas
+- Estados de cuenta
+- Análisis de uso
+- Alertas de pagos
+
+---
+
+## 🚨 Códigos de Error
 
 ### Request Headers
 ```http
@@ -515,70 +524,45 @@ Content-Type: application/json
 
 ## 🎯 Casos de Uso Comunes
 
-### 1. Configuración Inicial de Tarjeta de Crédito
+### 1. Crear Tarjeta de Crédito
 ```bash
-# Crear tarjeta principal
 curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Tarjeta Principal",
+    "name": "Tarjeta BBVA Azul",
     "card_type": "credit",
     "card_network": "visa",
     "bank_name": "BBVA",
     "credit_limit": 50000,
     "payment_due_date": 15,
-    "cut_off_date": 28
+    "cut_off_date": 1,
+    "currency": "MXN"
   }'
 ```
 
-### 2. Registro de Compra
+### 2. Listar Todas las Tarjetas Activas
 ```bash
-# Agregar transacción de compra
-curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards/card_123/transactions \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 2500.50,
-    "description": "Supermercado Soriana",
-    "transaction_type": "purchase"
-  }'
-```
-
-### 3. Pago Mensual
-```bash
-# Realizar pago a la tarjeta
-curl -X POST https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards/card_123/payment \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 5000.00,
-    "description": "Pago mensual"
-  }'
-```
-
-### 4. Monitoreo de Deudas
-```bash
-# Obtener resumen de todas las tarjetas
-curl -X GET https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards \
+curl -X GET "https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards?include_inactive=false" \
   -H "Authorization: Bearer <token>"
 ```
 
----
+### 3. Actualizar Límite de Crédito y Día de Pago
+```bash
+curl -X PUT https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards/card_123 \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "credit_limit": 60000,
+    "payment_due_date": 20
+  }'
+```
 
-## 📊 Métricas y Monitoreo
-
-### Campos Calculados Automáticamente
-- **available_credit**: Crédito disponible actual
-- **days_until_due**: Días hasta vencimiento del pago
-- **total_debt_by_currency**: Deuda total por moneda
-- **utilization_rate**: Porcentaje de utilización del crédito
-
-### Alertas Recomendadas
-- 🔴 **Alto riesgo**: Utilización > 90%
-- 🟡 **Precaución**: Utilización > 70%
-- 🔵 **Pago próximo**: < 7 días hasta fecha de pago
-- ⚪ **Pago vencido**: Días pasada la fecha de pago
+### 4. Desactivar Tarjeta (Soft Delete)
+```bash
+curl -X DELETE https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev/cards/card_123 \
+  -H "Authorization: Bearer <token>"
+```
 
 ---
 

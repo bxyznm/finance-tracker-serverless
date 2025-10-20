@@ -651,6 +651,9 @@ class DynamoDBClient:
             # Remove trailing comma and space
             update_expression = update_expression.rstrip(', ')
             
+            # Add entity_type to condition
+            expression_values[':entity_type'] = 'card'
+            
             response = self.table.update_item(
                 Key={
                     'pk': f'USER#{user_id}',
@@ -688,7 +691,8 @@ class DynamoDBClient:
                 ExpressionAttributeNames={'#status': 'status'},
                 ExpressionAttributeValues={
                     ':status': 'inactive',
-                    ':updated_at': updated_at
+                    ':updated_at': updated_at,
+                    ':entity_type': 'card'
                 },
                 ConditionExpression='attribute_exists(pk) AND entity_type = :entity_type',
                 ReturnValues='ALL_NEW'

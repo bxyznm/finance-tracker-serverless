@@ -1,8 +1,10 @@
 # Finance Tracker Serverless ✅
 
-> **Status**: ✅ **PRODUCCIÓN COMPLETA** | **Frontend**: ✅ https://finance-tracker.brxvn.xyz | **Backend**: ✅ API Gateway + Lambda | **DB**: ✅ DynamoDB | **Observabilidad**: ✅ Datadog APM | **CI/CD**: ✅ GitHub Actions
+> **Status**: ✅ **PRODUCCIÓN COMPLETA** | **Tests**: ✅ 231/231 pasando | **Frontend**: ✅ https://finance-tracker.brxvn.xyz | **Backend**: ✅ API Gateway + Lambda | **DB**: ✅ DynamoDB | **CI/CD**: ✅ GitHub Actions
 
-Aplicación serverless completa para gestión de finanzas personales construida con **React.js**, **Python**, **AWS Lambda**, **DynamoDB** y **Terraform**. Diseñada para el mercado mexicano con soporte nativo para pesos mexicanos (MXN) y múltiples bancos mexicanos. Incluye **monitoreo completo con Datadog APM** para observabilidad en tiempo real y **CI/CD automatizado** con GitHub Actions.
+**Última actualización**: 19 de Octubre, 2025
+
+Aplicación serverless completa para gestión de finanzas personales construida con **React.js**, **Python**, **AWS Lambda**, **DynamoDB** y **Terraform**. Diseñada para el mercado mexicano con soporte nativo para pesos mexicanos (MXN) y bancos mexicanos. Sistema de tarjetas completamente funcional con soft delete y gestión de fechas de pago.
 
 ## 🌐 Aplicación en Vivo
 
@@ -26,20 +28,25 @@ Aplicación serverless completa para gestión de finanzas personales construida 
 ## ✅ **Estado Actual del Proyecto (100% Completo)**
 
 ### 🎯 **Funcionalidades Implementadas y Funcionando**
-- ✅ **Frontend React**: SPA completa con Material-UI y React Router
-- ✅ **Backend Serverless**: 6 Lambda functions con 25+ endpoints REST
-- ✅ **Autenticación JWT**: Sistema completo con refresh tokens y validación
-- ✅ **CRUD Usuarios**: Registro, login, perfil, actualización, eliminación
+- ✅ **Frontend React**: SPA completa con Material-UI v7 y React Router v6
+- ✅ **Backend Serverless**: 6 Lambda functions con 30+ endpoints REST
+- ✅ **Autenticación JWT**: Sistema completo con refresh tokens (30min/7días)
+- ✅ **CRUD Usuarios**: Registro, login, perfil, actualización, eliminación soft
 - ✅ **CRUD Cuentas**: Gestión completa de cuentas bancarias mexicanas
-- ✅ **CRUD Tarjetas**: Gestión completa de tarjetas de crédito y débito
-- ✅ **CRUD Transacciones**: **NUEVO** - Registro y tracking completo con analytics
-- ✅ **Base de Datos**: DynamoDB con Single Table Design optimizado  
-- ✅ **Infraestructura como Código**: Terraform completo con módulos
+- ✅ **CRUD Tarjetas**: ⭐ **Completamente funcional** con soft delete y fechas
+  - Creación con validación completa de campos
+  - Edición simplificada (5 campos esenciales)
+  - Soft delete (status=inactive en lugar de eliminación)
+  - payment_due_date y cut_off_date editables
+  - 31 tests pasando (100% cobertura)
+- ✅ **CRUD Transacciones**: Registro y analytics con filtros avanzados
+- ✅ **Base de Datos**: DynamoDB Single Table Design optimizado
+- ✅ **Testing**: 231 tests unitarios pasando (100% backend)
+- ✅ **Infraestructura como Código**: Terraform con módulos reutilizables
 - ✅ **SSL + CDN**: Cloudflare con certificados automáticos
-- ✅ **Diseño Responsive**: Mobile-first, soporte completo para dispositivos
-- ✅ **Observabilidad**: Datadog APM integrado con métricas y trazas
-- ✅ **CI/CD**: GitHub Actions para frontend y backend automatizado
-- ✅ **Seguridad**: Validación completa, sanitización, headers de seguridad
+- ✅ **Diseño Responsive**: Mobile-first, Material-UI completo
+- ✅ **CI/CD**: GitHub Actions automatizado para frontend
+- ✅ **Seguridad**: Validación Pydantic v2, sanitización, JWT
 
 ### 🔄 **Deployment y DevOps**
 - ✅ **Frontend Deploy**: Automático en cada push a `main` (GitHub Actions)
