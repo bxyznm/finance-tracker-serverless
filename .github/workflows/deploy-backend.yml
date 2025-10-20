@@ -112,7 +112,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Ensure S3 bucket exists for terraform state
-        if: inputs.operation == 'deploy'
+        if: inputs.operation == 'deploy' || github.event_name == 'workflow_run'
         run: |
           BUCKET_NAME="finance-tracker-serverless-tfstates"
           
@@ -144,7 +144,7 @@ jobs:
         run: terraform init -upgrade
 
       - name: Destroy existing infrastructure (if requested)
-        if: inputs.operation == 'deploy' && inputs.destroy_first == true
+        if: (inputs.operation == 'deploy' || github.event_name == 'workflow_run') && inputs.destroy_first == true
         working-directory: terraform/environments/dev
         env:
           TF_VAR_github_owner: ${{ github.repository_owner }}
@@ -159,7 +159,7 @@ jobs:
           terraform destroy -auto-approve
 
       - name: Terraform Plan
-        if: inputs.operation == 'deploy'
+        if: inputs.operation == 'deploy' || github.event_name == 'workflow_run'
         working-directory: terraform/environments/dev
         env:
           TF_VAR_github_owner: ${{ github.repository_owner }}
@@ -172,7 +172,7 @@ jobs:
         run: terraform plan -out=tfplan
 
       - name: Terraform Deploy
-        if: inputs.operation == 'deploy'
+        if: inputs.operation == 'deploy' || github.event_name == 'workflow_run'
         working-directory: terraform/environments/dev
         env:
           TF_VAR_github_owner: ${{ github.repository_owner }}
