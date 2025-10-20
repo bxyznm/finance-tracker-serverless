@@ -165,7 +165,8 @@ def get_cards_handler(event: Dict[str, Any], context: Any, user_data: TokenPaylo
         query_params = event.get('queryStringParameters', {}) or {}
         status_filter = query_params.get('status')
         card_type_filter = query_params.get('type')
-        include_inactive = status_filter == 'inactive' or status_filter is None
+        # Default behavior: do NOT include inactive cards unless explicitly requested
+        include_inactive = status_filter == 'inactive'
         
         # Get cards from database
         db_client = DynamoDBClient()
@@ -184,62 +185,70 @@ def get_cards_handler(event: Dict[str, Any], context: Any, user_data: TokenPaylo
         active_count = 0
         
         for card in cards:
-            # Calculate additional fields
-            credit_limit = float(card.get('credit_limit', 0)) if card.get('credit_limit') else None
-            current_balance = float(card.get('current_balance', 0))
-            available_credit = calculate_available_credit(credit_limit or 0, current_balance) if credit_limit else None
-            
-            # Convert payment_due_date from Decimal to int if it exists
-            payment_due_date = card.get('payment_due_date')
-            payment_due_date_int = int(payment_due_date) if payment_due_date is not None else None
-            days_due = days_until_payment_due(payment_due_date_int)
-            
-            # Convert cut_off_date from Decimal to int if it exists
-            cut_off_date = card.get('cut_off_date')
-            cut_off_date_int = int(cut_off_date) if cut_off_date is not None else None
-            
-            card_response = CardResponse(
-                card_id=card['card_id'],
-                user_id=card['user_id'],
-                name=card['name'],
-                card_type=card['card_type'],
-                card_network=card['card_network'],
-                bank_name=card['bank_name'],
-                credit_limit=credit_limit,
-                current_balance=current_balance,
-                available_credit=available_credit,
-                minimum_payment=float(card.get('minimum_payment')) if card.get('minimum_payment') else None,
-                payment_due_date=payment_due_date_int,
-                cut_off_date=cut_off_date_int,
-                apr=float(card.get('apr')) if card.get('apr') else None,
-                annual_fee=float(card.get('annual_fee')) if card.get('annual_fee') else None,
-                rewards_program=card.get('rewards_program'),
-                currency=card['currency'],
-                color=card.get('color'),
-                description=card.get('description'),
-                status=card['status'],
-                days_until_due=days_due,
-                created_at=card['created_at'],
-                updated_at=card['updated_at']
-            )
-            
-            card_responses.append(card_response)
-            
-            # Calculate totals
-            currency = card['currency']
-            if card['status'] == 'active':
-                active_count += 1
-                
-                # Total debt (current balance)
-                if currency not in total_debt_by_currency:
-                    total_debt_by_currency[currency] = 0.0
-                total_debt_by_currency[currency] += current_balance
-                
-                # Available credit
-                if available_credit and available_credit > 0:
-                    if currency not in total_available_credit:
-                        total_available_credit[currency] = 0.0
-                    total_available_credit[currency] += available_credit
+            # Defensive: skip malformed or incomplete items but keep processing others
+            try:
+                # Calculate additional fields
+                credit_limit = float(card.get('credit_limit', 0)) if card.get('credit_limit') else None
+                current_balance = float(card.get('current_balance', 0))
+                available_credit = calculate_available_credit(credit_limit or 0, current_balance) if credit_limit else None
+
+                # Convert payment_due_date from Decimal to int if it exists
+                payment_due_date = card.get('payment_due_date')
+                payment_due_date_int = int(payment_due_date) if payment_due_date is not None else None
+                days_due = days_until_payment_due(payment_due_date_int)
+
+                # Convert cut_off_date from Decimal to int if it exists
+                cut_off_date = card.get('cut_off_date')
+                cut_off_date_int = int(cut_off_date) if cut_off_date is not None else None
+
+                # Build response, using .get with fallbacks to avoid KeyError
+                card_response = CardResponse(
+                    card_id=card.get('card_id', ''),
+                    user_id=card.get('user_id', ''),
+                    name=card.get('name', ''),
+                    card_type=card.get('card_type', ''),
+                    card_network=card.get('card_network', ''),
+                    bank_name=card.get('bank_name', ''),
+                    credit_limit=credit_limit,
+                    current_balance=current_balance,
+                    available_credit=available_credit,
+                    minimum_payment=float(card.get('minimum_payment')) if card.get('minimum_payment') else None,
+                    payment_due_date=payment_due_date_int,
+                    cut_off_date=cut_off_date_int,
+                    apr=float(card.get('apr')) if card.get('apr') else None,
+                    annual_fee=float(card.get('annual_fee')) if card.get('annual_fee') else None,
+                    rewards_program=card.get('rewards_program'),
+                    currency=card.get('currency', 'MXN'),
+                    color=card.get('color'),
+                    description=card.get('description'),
+                    status=card.get('status', 'inactive'),
+                    days_until_due=days_due,
+                    created_at=card.get('created_at', ''),
+                    updated_at=card.get('updated_at', '')
+                )
+
+                card_responses.append(card_response)
+
+                # Calculate totals
+                currency = card.get('currency', 'MXN')
+                if card.get('status') == 'active':
+                    active_count += 1
+
+                    # Total debt (current balance)
+                    if currency not in total_debt_by_currency:
+                        total_debt_by_currency[currency] = 0.0
+                    total_debt_by_currency[currency] += current_balance
+
+                    # Available credit
+                    if available_credit and available_credit > 0:
+                        if currency not in total_available_credit:
+                            total_available_credit[currency] = 0.0
+                        total_available_credit[currency] += available_credit
+
+            except Exception as e:
+                logger.error(f"Skipping malformed card item during list: {e} - item: {card}")
+                # Skip this item and continue with others
+                continue
         
         # Sort cards by created_at (newest first)
         card_responses.sort(key=lambda x: x.created_at, reverse=True)

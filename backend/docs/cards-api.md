@@ -1,10 +1,10 @@
 # API de Tarjetas - Finance Tracker
 
 **Última actualización**: 19 de Octubre, 2025  
-**Estado**: ✅ Completamente funcional con 31 tests pasando
+**Estado**: ✅ Completamente funcional con 32 tests pasando (incluye test de items malformados)
 
 ## Descripción
-Endpoints para la gestión completa de tarjetas de crédito y débito en el sistema Finance Tracker. Incluye operaciones CRUD completas con soporte para fechas de pago y corte.
+Endpoints para la gestión completa de tarjetas de crédito y débito en el sistema Finance Tracker. Incluye operaciones CRUD completas con soporte para fechas de pago y corte, validación defensiva de datos y soft-delete para preservar historial.
 
 ## 💳 Arquitectura de Tarjetas
 
@@ -135,7 +135,7 @@ Content-Type: application/json
 ## 2. Listar Tarjetas
 **GET** `/cards`
 
-Obtener todas las tarjetas del usuario autenticado con resumen financiero.
+Obtener todas las tarjetas del usuario autenticado.
 
 ### Request Headers
 ```http
@@ -147,8 +147,20 @@ Authorization: Bearer <access_token>
 GET /cards?status=active&type=credit
 ```
 
-- **status** (opcional): `active`, `blocked`, `expired`, `cancelled`, `pending`
-- **type** (opcional): `credit`, `debit`, `prepaid`, `business`, `rewards`, `store`, `other`
+- **status** (opcional): Filtrar por estado específico
+  - `active` (default cuando no se especifica): Solo tarjetas activas
+  - `inactive`: Solo tarjetas desactivadas/eliminadas
+  - Si no se especifica el parámetro, **solo muestra activas** (comportamiento por defecto)
+- **type** (opcional): `credit`, `debit`, `prepaid`
+
+### Comportamiento de Filtrado por Status
+```http
+GET /cards              # Solo tarjetas activas (default)
+GET /cards?status=active    # Explícitamente solo activas
+GET /cards?status=inactive  # Solo tarjetas eliminadas/inactivas
+```
+
+**Importante**: Por defecto, las tarjetas con `status=inactive` NO se muestran. Esto previene que tarjetas eliminadas aparezcan en la UI principal.
 
 ### Response (200)
 ```json
@@ -178,12 +190,15 @@ GET /cards?status=active&type=credit
       "created_at": "2024-12-07T10:30:00Z",
       "updated_at": "2024-12-07T10:30:00Z"
     }
-  ],
+  ]
 }
 ```
 
 ### Nota Importante
-La respuesta es una **lista simple de tarjetas**. No incluye campos calculados de agregación. Para obtener estadísticas, use endpoints específicos de análisis.
+- La respuesta es una **lista simple de tarjetas**
+- Items malformados se filtran automáticamente (ver sección de Seguridad)
+- No incluye campos calculados de agregación globales
+- Cada tarjeta incluye `available_credit` y `days_until_due` calculados
 
 ---
 
@@ -334,17 +349,53 @@ Authorization: Bearer <access_token>
 ### Response (200)
 ```json
 {
-  "message": "Card deleted successfully",
-  "card_id": "card_a1b2c3d4e5f6"
+  "message": "Card deleted successfully"
 }
 ```
 
 ### Notas Importantes
 ✅ **Soft Delete**: La tarjeta se marca como `inactive` en lugar de eliminarse
 - Los datos permanecen en la base de datos
-- La tarjeta no aparecerá en listados por defecto
-- Se puede reactivar cambiando el status a "active"
+- La tarjeta **NO aparecerá en listados por defecto** (solo si `?status=inactive`)
+- Se puede reactivar cambiando el status a "active" mediante el endpoint PUT
 - Las transacciones asociadas se mantienen intactas
+- El historial de la tarjeta se preserva para auditoría
+
+### Comportamiento del Listado POST-Delete
+Después de eliminar una tarjeta:
+- `GET /cards` → No incluye tarjetas inactivas (por defecto)
+- `GET /cards?status=inactive` → Incluye tarjetas eliminadas
+- `GET /cards/{card_id}` → Retorna 404 si la tarjeta está inactiva
+
+---
+
+## 🛡️ Seguridad y Validación de Datos
+
+### Manejo de Items Malformados
+El sistema implementa **validación defensiva** al listar tarjetas:
+
+#### Filtrado Automático
+Cuando se lista tarjetas, el sistema valida que cada item tenga los siguientes campos obligatorios:
+- `card_id`, `user_id`, `name`, `card_type`, `card_network`
+- `bank_name`, `currency`, `status`, `created_at`, `updated_at`
+
+#### Comportamiento ante Items Incompletos
+Si un item en la base de datos está malformado o le faltan campos:
+- ✅ El sistema **continúa procesando** otros items válidos
+- ✅ El item malformado se **registra en logs** para investigación
+- ✅ La API responde **200 OK** con los items válidos disponibles
+- ✅ **No se genera error 500** que afecte la experiencia del usuario
+
+#### Ejemplo de Log
+```
+WARNING: Skipping malformed card for user user_123: 
+         card_id=card_abc123, missing fields: ['currency', 'status']
+```
+
+Este enfoque asegura que:
+1. Un item corrupto no afecta el acceso a tarjetas válidas
+2. Los administradores pueden detectar y corregir datos inconsistentes
+3. La experiencia del usuario permanece fluida incluso con datos parcialmente dañados
 
 ---
 

@@ -249,6 +249,71 @@ class TestDynamoDBCardOperations:
         assert len(result) == 0
     
     @patch('boto3.resource')
+    def test_list_user_cards_filters_malformed_items(self, mock_boto3_resource):
+        """Test that list_user_cards filters out malformed items"""
+        # Setup mocks with mix of valid and malformed items
+        valid_item = self.sample_db_item.copy()
+        
+        # Malformed item 1: missing card_id
+        malformed_item_1 = {
+            'pk': f'USER#{self.test_user_id}',
+            'sk': 'CARD#card_missing_id',
+            'entity_type': 'card',
+            'user_id': self.test_user_id,
+            'name': 'Incomplete Card',
+            # missing card_id, card_type, card_network, bank_name, etc.
+        }
+        
+        # Malformed item 2: missing required fields
+        malformed_item_2 = {
+            'pk': f'USER#{self.test_user_id}',
+            'sk': 'CARD#card_incomplete',
+            'entity_type': 'card',
+            'card_id': 'card_incomplete',
+            'user_id': self.test_user_id,
+            # missing name, card_type, card_network, bank_name, currency, status, timestamps
+        }
+        
+        # Malformed item 3: empty required fields
+        malformed_item_3 = {
+            'pk': f'USER#{self.test_user_id}',
+            'sk': 'CARD#card_empty',
+            'entity_type': 'card',
+            'card_id': '',  # empty
+            'user_id': self.test_user_id,
+            'name': '',  # empty
+            'card_type': 'credit',
+            'card_network': 'visa',
+            'bank_name': '',  # empty
+            'currency': 'MXN',
+            'status': 'active',
+            'created_at': '2025-09-06T10:00:00Z',
+            'updated_at': '2025-09-06T10:00:00Z'
+        }
+        
+        mock_table = MagicMock()
+        mock_table.query.return_value = {
+            'Items': [valid_item, malformed_item_1, malformed_item_2, malformed_item_3],
+            'Count': 4
+        }
+        mock_dynamodb = MagicMock()
+        mock_dynamodb.Table.return_value = mock_table
+        mock_boto3_resource.return_value = mock_dynamodb
+        
+        # Create client
+        client = DynamoDBClient()
+        
+        # Execute
+        result = client.list_user_cards(self.test_user_id, include_inactive=False)
+        
+        # Assertions - should only return the valid item
+        assert result is not None
+        assert isinstance(result, list)
+        assert len(result) == 1, "Should filter out malformed items and return only valid ones"
+        assert result[0]['card_id'] == self.test_card_id
+        assert result[0]['name'] == 'Tarjeta Principal'
+    
+    @patch('boto3.resource')
     def test_update_card_success(self, mock_boto3_resource):
         """Test successful card update"""
         # Setup mocks

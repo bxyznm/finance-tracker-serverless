@@ -605,6 +605,7 @@ class DynamoDBClient:
     def list_user_cards(self, user_id: str, include_inactive: bool = False) -> List[Dict[str, Any]]:
         """
         List all cards for a user
+        Filters out malformed items that are missing required fields
         """
         try:
             query_params = {
@@ -621,10 +622,31 @@ class DynamoDBClient:
                 query_params['ExpressionAttributeValues'][':status'] = 'active'
             
             response = self.table.query(**query_params)
-            cards = [item for item in response['Items'] if item.get('entity_type') == 'card']
             
-            logger.info(f"Found {len(cards)} cards for user {user_id}")
-            return cards
+            # Filter by entity_type first
+            raw_cards = [item for item in response['Items'] if item.get('entity_type') == 'card']
+            
+            # Validate each item has required fields (defensive filtering)
+            required_fields = [
+                'card_id', 'user_id', 'name', 'card_type', 'card_network',
+                'bank_name', 'currency', 'status', 'created_at', 'updated_at'
+            ]
+            
+            valid_cards = []
+            for item in raw_cards:
+                # Check if all required fields are present and non-empty
+                if all(item.get(field) for field in required_fields):
+                    valid_cards.append(item)
+                else:
+                    missing = [f for f in required_fields if not item.get(f)]
+                    logger.warning(
+                        f"Skipping malformed card for user {user_id}: "
+                        f"card_id={item.get('card_id', 'UNKNOWN')}, "
+                        f"missing fields: {missing}"
+                    )
+            
+            logger.info(f"Found {len(valid_cards)} valid cards (out of {len(raw_cards)} total) for user {user_id}")
+            return valid_cards
             
         except ClientError as e:
             logger.error(f"Error listing cards for user {user_id}: {e}")
