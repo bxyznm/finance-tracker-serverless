@@ -276,7 +276,7 @@ const TransactionsPage: React.FC = () => {
                     gap: 2
                   }}>
                     <Typography variant="body2" color="text.secondary">
-                      Mostrando {transactions.length} de {totalCount} transacciones (Página {currentPage} de {totalPages})
+                      Página {currentPage} de {totalPages} • {totalCount} transacciones totales
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       <Button
