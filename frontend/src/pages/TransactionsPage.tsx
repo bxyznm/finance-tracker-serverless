@@ -27,7 +27,8 @@ import { motion } from 'framer-motion';
 import { 
   TransactionList, 
   TransactionFilters, 
-  TransactionForm 
+  TransactionForm,
+  TransactionEditModal 
 } from '../components/transactions';
 import { AppLayout } from '../components/layout';
 import { useTransactions, useAccounts } from '../hooks';
@@ -36,6 +37,7 @@ import type { Transaction, TransactionCreateRequest, TransactionUpdateRequest } 
 const TransactionsPage: React.FC = () => {
   // Estados locales
   const [showForm, setShowForm] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   // Hook de transacciones
@@ -62,24 +64,28 @@ const TransactionsPage: React.FC = () => {
 
   // Handlers
   const handleFormSubmit = async (data: TransactionCreateRequest | TransactionUpdateRequest) => {
-    if (editingTransaction) {
-      // Es una actualización
-      await updateTransaction(editingTransaction.transaction_id, data as TransactionUpdateRequest);
-      setEditingTransaction(null);
-    } else {
-      // Es una creación
-      await createTransaction(data as TransactionCreateRequest);
-    }
+    // Solo para crear nuevas transacciones
+    await createTransaction(data as TransactionCreateRequest);
     setShowForm(false);
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
     setEditingTransaction(transaction);
-    setShowForm(true);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (transactionId: string, updateData: Partial<Transaction>) => {
+    await updateTransaction(transactionId, updateData);
+    setShowEditModal(false);
+    setEditingTransaction(null);
   };
 
   const handleCancelForm = () => {
     setShowForm(false);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
     setEditingTransaction(null);
   };
 
@@ -328,6 +334,14 @@ const TransactionsPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Modal de edición de transacción */}
+        <TransactionEditModal
+          open={showEditModal}
+          transaction={editingTransaction}
+          onClose={handleCloseEditModal}
+          onSave={handleSaveEdit}
+        />
       </motion.div>
     </AppLayout>
   );
