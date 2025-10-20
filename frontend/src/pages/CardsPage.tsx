@@ -590,35 +590,55 @@ const CardsPage: React.FC = () => {
         </Fab>
 
         {/* Delete Confirmation Dialog */}
-        {/* Delete Confirmation Dialog */}
         <Dialog
           open={dialogState.type === 'delete'}
           onClose={closeDialog}
-          maxWidth="sm"
+          maxWidth="xs"
           fullWidth
         >
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              ¿Eliminar tarjeta?
-            </Typography>
-            <Typography variant="body1" color="text.secondary" mb={3}>
-              Esta acción no se puede deshacer. Se eliminará la tarjeta{' '}
-              <strong>{dialogState.type === 'delete' ? dialogState.card.name : ''}</strong> permanentemente.
-            </Typography>
-            <Box display="flex" gap={2} justifyContent="flex-end">
-              <Button onClick={closeDialog}>
-                Cancelar
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={handleDeleteConfirm}
-                disabled={deleteCardMutation.isPending}
-              >
-                {deleteCardMutation.isPending ? 'Eliminando...' : 'Eliminar'}
-              </Button>
+          <DialogTitle>
+            <Box display="flex" alignItems="center" gap={1}>
+              <DeleteIcon color="error" />
+              <Typography variant="h6" fontWeight="bold">
+                ¿Eliminar tarjeta?
+              </Typography>
             </Box>
-          </CardContent>
+          </DialogTitle>
+          <DialogContent>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Esta acción no se puede deshacer
+            </Alert>
+            <Typography variant="body1" color="text.secondary">
+              Estás a punto de eliminar la tarjeta:{' '}
+              <strong>{dialogState.type === 'delete' ? dialogState.card.name : ''}</strong>
+              {dialogState.type === 'delete' && dialogState.card.bank_name && (
+                <> de <strong>{dialogState.card.bank_name}</strong></>
+              )}
+            </Typography>
+            {dialogState.type === 'delete' && dialogState.card.current_balance > 0 && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Saldo actual: ${dialogState.card.current_balance.toFixed(2)} {dialogState.card.currency}
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 2.5, gap: 1 }}>
+            <Button 
+              onClick={closeDialog}
+              variant="outlined"
+              disabled={deleteCardMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleDeleteConfirm}
+              disabled={deleteCardMutation.isPending}
+              startIcon={deleteCardMutation.isPending ? <CircularProgress size={16} /> : <DeleteIcon />}
+            >
+              {deleteCardMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
+            </Button>
+          </DialogActions>
         </Dialog>
 
         {/* Create Card Dialog */}
@@ -772,75 +792,47 @@ const CardsPage: React.FC = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Edit Card Dialog */}
+        {/* Edit Card Dialog - Simplified */}
         <Dialog
           open={dialogState.type === 'edit'}
           onClose={closeDialog}
-          maxWidth="md"
+          maxWidth="sm"
           fullWidth
         >
           <DialogTitle>
-            Editar Tarjeta
-            <IconButton
-              onClick={closeDialog}
-              sx={{
-                position: 'absolute',
-                right: 8,
-                top: 8,
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Typography variant="h6" fontWeight="bold">
+                Editar Tarjeta
+              </Typography>
+              <IconButton onClick={closeDialog} size="small">
+                <CloseIcon />
+              </IconButton>
+            </Box>
           </DialogTitle>
           <DialogContent>
-            <Stack spacing={3} sx={{ mt: 1 }}>
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <TextField
-                  label="Nombre de la tarjeta"
-                  value={editForm.name || ''}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  fullWidth
-                  required
-                  placeholder="Ej: Tarjeta Principal"
-                />
-                <TextField
-                  label="Banco"
-                  value={editForm.bank_name || ''}
-                  onChange={(e) => setEditForm({ ...editForm, bank_name: e.target.value })}
-                  fullWidth
-                  required
-                  placeholder="Ej: BBVA"
-                />
-              </Stack>
+            <Stack spacing={2.5} sx={{ mt: 2 }}>
+              {/* Nombre y Banco */}
+              <TextField
+                label="Nombre de la tarjeta"
+                value={editForm.name || ''}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                fullWidth
+                required
+                placeholder="Ej: Tarjeta Principal"
+              />
+
+              <TextField
+                label="Banco"
+                value={editForm.bank_name || ''}
+                onChange={(e) => setEditForm({ ...editForm, bank_name: e.target.value })}
+                fullWidth
+                required
+                placeholder="Ej: BBVA"
+              />
               
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <TextField
-                  label="Fecha de pago (día del mes)"
-                  type="number"
-                  value={editForm.payment_due_date || 15}
-                  onChange={(e) => setEditForm({ ...editForm, payment_due_date: parseInt(e.target.value) || 15 })}
-                  fullWidth
-                  inputProps={{ min: 1, max: 31 }}
-                  helperText="Día límite para realizar el pago"
-                />
-                <FormControl fullWidth>
-                  <InputLabel>Estado</InputLabel>
-                  <Select
-                    value={editForm.status || 'active'}
-                    label="Estado"
-                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as CardStatus })}
-                  >
-                    <SelectItem value="active">Activa</SelectItem>
-                    <SelectItem value="blocked">Bloqueada</SelectItem>
-                    <SelectItem value="expired">Vencida</SelectItem>
-                    <SelectItem value="cancelled">Cancelada</SelectItem>
-                    <SelectItem value="pending">Pendiente</SelectItem>
-                  </Select>
-                </FormControl>
-              </Stack>
-              
+              {/* Solo para tarjetas de crédito */}
               {dialogState.type === 'edit' && dialogState.card.card_type === 'credit' && (
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <>
                   <TextField
                     label="Límite de crédito"
                     type="number"
@@ -850,90 +842,69 @@ const CardsPage: React.FC = () => {
                     InputProps={{
                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
                     }}
+                    helperText="Límite total de la tarjeta"
                   />
+
                   <TextField
-                    label="Pago mínimo"
+                    label="Día de pago"
                     type="number"
-                    value={editForm.minimum_payment || 0}
-                    onChange={(e) => setEditForm({ ...editForm, minimum_payment: parseFloat(e.target.value) || 0 })}
-                    fullWidth
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    value={editForm.payment_due_date || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditForm({ 
+                        ...editForm, 
+                        payment_due_date: val ? parseInt(val) : undefined 
+                      });
                     }}
-                    helperText="Pago mínimo mensual"
+                    fullWidth
+                    inputProps={{ min: 1, max: 31 }}
+                    helperText="Día del mes para realizar el pago (1-31)"
+                    placeholder="Ej: 15"
                   />
-                </Stack>
+                </>
               )}
 
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <TextField
-                  label="Tasa de interés anual (APR %)"
-                  type="number"
-                  value={editForm.apr || 0}
-                  onChange={(e) => setEditForm({ ...editForm, apr: parseFloat(e.target.value) || 0 })}
-                  fullWidth
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
-                />
-                <TextField
-                  label="Anualidad"
-                  type="number"
-                  value={editForm.annual_fee || 0}
-                  onChange={(e) => setEditForm({ ...editForm, annual_fee: parseFloat(e.target.value) || 0 })}
-                  fullWidth
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                  }}
-                />
-              </Stack>
+              {/* Estado de la tarjeta */}
+              <FormControl fullWidth>
+                <InputLabel>Estado</InputLabel>
+                <Select
+                  value={editForm.status || 'active'}
+                  label="Estado"
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value as CardStatus })}
+                >
+                  <SelectItem value="active">✅ Activa</SelectItem>
+                  <SelectItem value="blocked">🔒 Bloqueada</SelectItem>
+                  <SelectItem value="expired">⏰ Vencida</SelectItem>
+                  <SelectItem value="cancelled">❌ Cancelada</SelectItem>
+                </Select>
+              </FormControl>
 
+              {/* Descripción opcional */}
               <TextField
-                label="Programa de recompensas"
-                value={editForm.rewards_program || ''}
-                onChange={(e) => setEditForm({ ...editForm, rewards_program: e.target.value })}
-                fullWidth
-                placeholder="Ej: Puntos Premia, Cashback"
-              />
-
-              <TextField
-                label="Color (código hexadecimal)"
-                value={editForm.color || ''}
-                onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
-                fullWidth
-                placeholder="#1A1F71"
-                helperText="Color personalizado para la tarjeta"
-              />
-              
-              <TextField
-                label="Descripción (opcional)"
+                label="Notas (opcional)"
                 value={editForm.description || ''}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 fullWidth
                 multiline
                 rows={2}
-                placeholder="Información adicional sobre la tarjeta"
+                placeholder="Notas adicionales sobre la tarjeta..."
               />
             </Stack>
           </DialogContent>
-          <DialogActions sx={{ p: 3 }}>
-            <Button onClick={closeDialog}>
+          <DialogActions sx={{ p: 2.5, gap: 1 }}>
+            <Button 
+              onClick={closeDialog}
+              variant="outlined"
+            >
               Cancelar
             </Button>
             <Button
               variant="contained"
               onClick={handleEditSubmit}
-              disabled={updateCardMutation.isPending}
-              startIcon={<SaveIcon />}
+              disabled={updateCardMutation.isPending || !editForm.name?.trim() || !editForm.bank_name?.trim()}
+              startIcon={updateCardMutation.isPending ? <CircularProgress size={16} /> : <SaveIcon />}
             >
-              {updateCardMutation.isPending ? (
-                <Box display="flex" alignItems="center" gap={1}>
-                  <CircularProgress size={16} />
-                  Actualizando...
-                </Box>
-              ) : (
-                'Guardar Cambios'
-              )}
+              {updateCardMutation.isPending ? 'Guardando...' : 'Guardar'}
             </Button>
           </DialogActions>
         </Dialog>
