@@ -15,6 +15,7 @@ on:
         description: 'Tag del release/pre-release a usar (opcional, usa el último pre-release si está vacío)'
         required: false
         type: string
+        default: ''
       operation:
         description: 'Operación a realizar'
         required: true

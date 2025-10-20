@@ -707,3 +707,354 @@ class TestLambdaHandler:
             
             mock_list.assert_called_once()
             assert result['statusCode'] == 200
+
+
+class TestTransactionAmountSignsAndBalances:
+    """
+    Test suite for verifying transaction amounts are stored with correct signs
+    and account balances are updated correctly
+    """
+    
+    def setup_method(self):
+        """Set up test data"""
+        self.mock_context = Mock()
+        self.test_user_id = "user_balance_test"
+        self.test_account_id = "acc_balance_test"
+        
+        self.mock_user_data = TokenPayload(
+            user_id=self.test_user_id,
+            email='balance@test.com',
+            exp=1234567890,
+            iat=1234567800
+        )
+        
+        self.sample_account = {
+            'account_id': self.test_account_id,
+            'user_id': self.test_user_id,
+            'name': 'Balance Test Account',
+            'account_type': 'checking',
+            'bank_name': 'BBVA México',
+            'currency': 'MXN',
+            'current_balance': Decimal('1000.00'),
+            'is_active': True,
+            'created_at': '2024-01-01T00:00:00',
+            'updated_at': '2024-01-01T00:00:00'
+        }
+    
+    def _create_event_with_auth(self, base_event):
+        """Helper to create event with proper authentication headers"""
+        event = base_event.copy()
+        event['headers'] = {
+            'Authorization': 'Bearer valid_token',
+            'Content-Type': 'application/json'
+        }
+        return event
+    
+    @patch('utils.jwt_auth.validate_token_from_event')
+    @patch('handlers.transactions.DynamoDBClient')
+    def test_expense_stored_with_negative_amount(self, mock_db_class, mock_validate_token):
+        """Test that expense transactions are stored with negative amounts"""
+        mock_validate_token.return_value = self.mock_user_data
+        mock_db = mock_db_class.return_value
+        mock_db.get_account_by_id.return_value = self.sample_account
+        
+        # Capture the transaction data passed to create_transaction
+        created_transaction_data = None
+        def capture_create_transaction(data):
+            nonlocal created_transaction_data
+            created_transaction_data = data
+            return {**data, 'created_at': '2024-01-15T10:00:00', 'updated_at': '2024-01-15T10:00:00'}
+        
+        mock_db.create_transaction.side_effect = capture_create_transaction
+        mock_db.update_account.return_value = None
+        
+        base_event = {
+            'body': json.dumps({
+                'account_id': self.test_account_id,
+                'amount': 100.00,  # User provides positive amount
+                'description': 'Expense test',
+                'transaction_type': 'expense',
+                'category': 'groceries'
+            })
+        }
+        event = self._create_event_with_auth(base_event)
+        
+        result = create_transaction_handler(event, self.mock_context)
+        
+        # Verify the amount was stored as negative
+        assert created_transaction_data is not None
+        assert created_transaction_data['amount'] == Decimal('-100.00'), \
+            f"Expected -100.00 but got {created_transaction_data['amount']}"
+        assert result['statusCode'] == 201
+    
+    @patch('utils.jwt_auth.validate_token_from_event')
+    @patch('handlers.transactions.DynamoDBClient')
+    def test_income_stored_with_positive_amount(self, mock_db_class, mock_validate_token):
+        """Test that income transactions are stored with positive amounts"""
+        mock_validate_token.return_value = self.mock_user_data
+        mock_db = mock_db_class.return_value
+        mock_db.get_account_by_id.return_value = self.sample_account
+        
+        created_transaction_data = None
+        def capture_create_transaction(data):
+            nonlocal created_transaction_data
+            created_transaction_data = data
+            return {**data, 'created_at': '2024-01-15T10:00:00', 'updated_at': '2024-01-15T10:00:00'}
+        
+        mock_db.create_transaction.side_effect = capture_create_transaction
+        mock_db.update_account.return_value = None
+        
+        base_event = {
+            'body': json.dumps({
+                'account_id': self.test_account_id,
+                'amount': 500.00,
+                'description': 'Salary',
+                'transaction_type': 'income',
+                'category': 'salary'
+            })
+        }
+        event = self._create_event_with_auth(base_event)
+        
+        result = create_transaction_handler(event, self.mock_context)
+        
+        # Verify the amount was stored as positive
+        assert created_transaction_data is not None
+        assert created_transaction_data['amount'] == Decimal('500.00'), \
+            f"Expected 500.00 but got {created_transaction_data['amount']}"
+        assert result['statusCode'] == 201
+    
+    @patch('utils.jwt_auth.validate_token_from_event')
+    @patch('handlers.transactions.DynamoDBClient')
+    def test_expense_decreases_account_balance(self, mock_db_class, mock_validate_token):
+        """Test that expense transactions decrease the account balance"""
+        mock_validate_token.return_value = self.mock_user_data
+        mock_db = mock_db_class.return_value
+        mock_db.get_account_by_id.return_value = self.sample_account
+        mock_db.create_transaction.return_value = {'transaction_id': 'txn_test'}
+        
+        updated_balance = None
+        def capture_update_account(user_id, account_id, fields):
+            nonlocal updated_balance
+            updated_balance = fields['current_balance']
+        
+        mock_db.update_account.side_effect = capture_update_account
+        
+        base_event = {
+            'body': json.dumps({
+                'account_id': self.test_account_id,
+                'amount': 100.00,
+                'description': 'Expense',
+                'transaction_type': 'expense',
+                'category': 'groceries'
+            })
+        }
+        event = self._create_event_with_auth(base_event)
+        
+        create_transaction_handler(event, self.mock_context)
+        
+        # Starting balance: 1000, expense: -100, expected: 900
+        assert updated_balance == Decimal('900.00'), \
+            f"Expected balance 900.00 but got {updated_balance}"
+    
+    @patch('utils.jwt_auth.validate_token_from_event')
+    @patch('handlers.transactions.DynamoDBClient')
+    def test_income_increases_account_balance(self, mock_db_class, mock_validate_token):
+        """Test that income transactions increase the account balance"""
+        mock_validate_token.return_value = self.mock_user_data
+        mock_db = mock_db_class.return_value
+        mock_db.get_account_by_id.return_value = self.sample_account
+        mock_db.create_transaction.return_value = {'transaction_id': 'txn_test'}
+        
+        updated_balance = None
+        def capture_update_account(user_id, account_id, fields):
+            nonlocal updated_balance
+            updated_balance = fields['current_balance']
+        
+        mock_db.update_account.side_effect = capture_update_account
+        
+        base_event = {
+            'body': json.dumps({
+                'account_id': self.test_account_id,
+                'amount': 500.00,
+                'description': 'Salary',
+                'transaction_type': 'income',
+                'category': 'salary'
+            })
+        }
+        event = self._create_event_with_auth(base_event)
+        
+        create_transaction_handler(event, self.mock_context)
+        
+        # Starting balance: 1000, income: +500, expected: 1500
+        assert updated_balance == Decimal('1500.00'), \
+            f"Expected balance 1500.00 but got {updated_balance}"
+    
+    @patch('utils.jwt_auth.validate_token_from_event')
+    @patch('handlers.transactions.DynamoDBClient')
+    def test_delete_expense_restores_balance(self, mock_db_class, mock_validate_token):
+        """Test that deleting an expense transaction restores the account balance"""
+        mock_validate_token.return_value = self.mock_user_data
+        mock_db = mock_db_class.return_value
+        
+        # Transaction was an expense of -100, so current balance is 900
+        expense_transaction = {
+            'transaction_id': 'txn_delete_test',
+            'user_id': self.test_user_id,
+            'account_id': self.test_account_id,
+            'amount': Decimal('-100.00'),  # Stored as negative
+            'transaction_type': 'expense',
+            'category': 'groceries'
+        }
+        
+        account_after_expense = {
+            **self.sample_account,
+            'current_balance': Decimal('900.00')  # After -100 expense
+        }
+        
+        mock_db.get_transaction_by_id.return_value = expense_transaction
+        mock_db.get_account_by_id.return_value = account_after_expense
+        mock_db.delete_transaction.return_value = True
+        
+        updated_balance = None
+        def capture_update_account(user_id, account_id, fields):
+            nonlocal updated_balance
+            updated_balance = fields['current_balance']
+        
+        mock_db.update_account.side_effect = capture_update_account
+        
+        base_event = {
+            'pathParameters': {'transaction_id': 'txn_delete_test'}
+        }
+        event = self._create_event_with_auth(base_event)
+        
+        result = delete_transaction_handler(event, self.mock_context)
+        
+        # Balance was 900, removing -100 expense should restore to 1000
+        assert updated_balance == Decimal('1000.00'), \
+            f"Expected restored balance 1000.00 but got {updated_balance}"
+        assert result['statusCode'] == 200
+    
+    @patch('utils.jwt_auth.validate_token_from_event')
+    @patch('handlers.transactions.DynamoDBClient')
+    def test_delete_income_removes_from_balance(self, mock_db_class, mock_validate_token):
+        """Test that deleting an income transaction removes it from the account balance"""
+        mock_validate_token.return_value = self.mock_user_data
+        mock_db = mock_db_class.return_value
+        
+        income_transaction = {
+            'transaction_id': 'txn_income_delete',
+            'user_id': self.test_user_id,
+            'account_id': self.test_account_id,
+            'amount': Decimal('500.00'),  # Stored as positive
+            'transaction_type': 'income',
+            'category': 'salary'
+        }
+        
+        account_after_income = {
+            **self.sample_account,
+            'current_balance': Decimal('1500.00')  # After +500 income
+        }
+        
+        mock_db.get_transaction_by_id.return_value = income_transaction
+        mock_db.get_account_by_id.return_value = account_after_income
+        mock_db.delete_transaction.return_value = True
+        
+        updated_balance = None
+        def capture_update_account(user_id, account_id, fields):
+            nonlocal updated_balance
+            updated_balance = fields['current_balance']
+        
+        mock_db.update_account.side_effect = capture_update_account
+        
+        base_event = {
+            'pathParameters': {'transaction_id': 'txn_income_delete'}
+        }
+        event = self._create_event_with_auth(base_event)
+        
+        result = delete_transaction_handler(event, self.mock_context)
+        
+        # Balance was 1500, removing +500 income should reduce to 1000
+        assert updated_balance == Decimal('1000.00'), \
+            f"Expected balance 1000.00 but got {updated_balance}"
+        assert result['statusCode'] == 200
+    
+    @patch('utils.jwt_auth.validate_token_from_event')
+    @patch('handlers.transactions.DynamoDBClient')
+    def test_totals_calculated_correctly_by_transaction_type(self, mock_db_class, mock_validate_token):
+        """Test that totals are calculated based on transaction type, not amount sign"""
+        mock_validate_token.return_value = self.mock_user_data
+        mock_db = mock_db_class.return_value
+        
+        # Mock transactions with correct signed amounts
+        transactions = [
+            {
+                'transaction_id': 'txn_1',
+                'user_id': self.test_user_id,
+                'account_id': self.test_account_id,
+                'account_name': 'Test Account',
+                'amount': Decimal('-100.00'),  # Expense
+                'description': 'Groceries',
+                'transaction_type': 'expense',
+                'category': 'groceries',
+                'status': 'completed',
+                'transaction_date': '2024-01-15T10:00:00',
+                'account_balance_after': Decimal('900.00'),
+                'created_at': '2024-01-15T10:00:00',
+                'updated_at': '2024-01-15T10:00:00',
+                'tags': []
+            },
+            {
+                'transaction_id': 'txn_2',
+                'user_id': self.test_user_id,
+                'account_id': self.test_account_id,
+                'account_name': 'Test Account',
+                'amount': Decimal('-50.00'),  # Expense
+                'description': 'Gas',
+                'transaction_type': 'expense',
+                'category': 'gas_fuel',
+                'status': 'completed',
+                'transaction_date': '2024-01-16T10:00:00',
+                'account_balance_after': Decimal('850.00'),
+                'created_at': '2024-01-16T10:00:00',
+                'updated_at': '2024-01-16T10:00:00',
+                'tags': []
+            },
+            {
+                'transaction_id': 'txn_3',
+                'user_id': self.test_user_id,
+                'account_id': self.test_account_id,
+                'account_name': 'Test Account',
+                'amount': Decimal('500.00'),  # Income
+                'description': 'Salary',
+                'transaction_type': 'income',
+                'category': 'salary',
+                'status': 'completed',
+                'transaction_date': '2024-01-17T10:00:00',
+                'account_balance_after': Decimal('1350.00'),
+                'created_at': '2024-01-17T10:00:00',
+                'updated_at': '2024-01-17T10:00:00',
+                'tags': []
+            }
+        ]
+        
+        mock_db.list_user_transactions.return_value = transactions
+        
+        base_event = {
+            'queryStringParameters': {}
+        }
+        event = self._create_event_with_auth(base_event)
+        
+        result = list_transactions_handler(event, self.mock_context)
+        
+        assert result['statusCode'] == 200
+        response_data = json.loads(result['body'])
+        
+        # Verify totals are calculated correctly
+        # Income: 500.00, Expenses: 150.00, Net: 350.00
+        assert response_data['total_income'] == 500.00, \
+            f"Expected total_income 500.00 but got {response_data['total_income']}"
+        assert response_data['total_expenses'] == 150.00, \
+            f"Expected total_expenses 150.00 but got {response_data['total_expenses']}"
+        assert response_data['net_amount'] == 350.00, \
+            f"Expected net_amount 350.00 but got {response_data['net_amount']}"
+

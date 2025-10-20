@@ -76,21 +76,26 @@ def create_transaction_handler(event: Dict[str, Any], context: Any, user_data: T
         now = datetime.now().isoformat()
         transaction_date = transaction_data.transaction_date or now
         
-        # Calculate new account balance
+        # Calculate new account balance and determine signed amount
         current_balance = Decimal(str(account['current_balance']))
         transaction_amount = transaction_data.amount
         
-        # For expense transactions, make amount negative to subtract from balance
+        # Determine the signed amount to store and balance change
+        # For expense transactions, store negative amount and subtract from balance
         if transaction_data.transaction_type in ['expense', 'fee']:
-            balance_change = -abs(transaction_amount)
-        # For income, investment gains, refunds, add to balance  
+            signed_amount = -abs(transaction_amount)
+            balance_change = signed_amount
+        # For income, investment gains, refunds, store positive amount and add to balance  
         elif transaction_data.transaction_type in ['income', 'refund', 'dividend', 'bonus', 'salary', 'interest']:
-            balance_change = abs(transaction_amount)
-        # For transfers out, subtract from source account
+            signed_amount = abs(transaction_amount)
+            balance_change = signed_amount
+        # For transfers out, store negative amount and subtract from source account
         elif transaction_data.transaction_type == 'transfer':
-            balance_change = -abs(transaction_amount)
+            signed_amount = -abs(transaction_amount)
+            balance_change = signed_amount
         # For other types, use the sign as provided
         else:
+            signed_amount = transaction_amount
             balance_change = transaction_amount
         
         new_balance = current_balance + balance_change
@@ -101,7 +106,7 @@ def create_transaction_handler(event: Dict[str, Any], context: Any, user_data: T
             'user_id': user_id,
             'account_id': transaction_data.account_id,
             'account_name': account['name'],
-            'amount': transaction_data.amount,  # Store original amount
+            'amount': signed_amount,  # Store amount with correct sign
             'description': transaction_data.description,
             'transaction_type': transaction_data.transaction_type,
             'category': transaction_data.category,
@@ -278,9 +283,20 @@ def list_transactions_handler(event: Dict[str, Any], context: Any, user_data: To
                 reverse=(filter_data.sort_order == 'desc')
             )
         
-        # Calculate totals
-        total_income = sum(t['amount'] for t in transactions if t['amount'] > 0)
-        total_expenses = sum(abs(t['amount']) for t in transactions if t['amount'] < 0)
+        # Calculate totals based on transaction type
+        # Income types: income, refund, dividend, bonus, salary, interest
+        income_types = {'income', 'refund', 'dividend', 'bonus', 'salary', 'interest'}
+        # Expense types: expense, fee, transfer (transfer out is an expense from source account perspective)
+        expense_types = {'expense', 'fee', 'transfer'}
+        
+        total_income = sum(
+            abs(t['amount']) for t in transactions 
+            if t['transaction_type'] in income_types
+        )
+        total_expenses = sum(
+            abs(t['amount']) for t in transactions 
+            if t['transaction_type'] in expense_types
+        )
         net_amount = total_income - total_expenses
         
         # Apply pagination
@@ -501,24 +517,13 @@ def delete_transaction_handler(event: Dict[str, Any], context: Any, user_data: T
             return create_response(400, {"error": "Associated account not found"})
         
         # Calculate balance reversion
-        transaction_amount = Decimal(str(transaction['amount']))
+        transaction_amount = Decimal(str(transaction['amount']))  # Already signed
         current_balance = Decimal(str(account['current_balance']))
         
-        # Reverse the transaction effect
-        if transaction['transaction_type'] in ['expense', 'fee']:
-            # Transaction reduced balance, so add it back
-            balance_change = abs(transaction_amount)
-        elif transaction['transaction_type'] in ['income', 'refund', 'dividend', 'bonus', 'salary', 'interest']:
-            # Transaction increased balance, so subtract it
-            balance_change = -abs(transaction_amount)
-        elif transaction['transaction_type'] == 'transfer':
-            # Transfer reduced source balance, so add it back
-            balance_change = abs(transaction_amount)
-        else:
-            # Use opposite of original effect
-            balance_change = -transaction_amount
-        
-        new_balance = current_balance + balance_change
+        # Reverse the transaction effect by subtracting the signed amount
+        # If amount was -100 (expense), subtracting it adds 100 back to balance
+        # If amount was +100 (income), subtracting it removes 100 from balance
+        new_balance = current_balance - transaction_amount
         
         # Update account balance
         update_fields = {

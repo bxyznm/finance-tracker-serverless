@@ -2,13 +2,14 @@
 
 ## Overview
 
-The Transactions API provides comprehensive functionality for managing financial transactions within the finance tracker system. It supports income tracking, expense management, account transfers, and detailed financial analytics.
+The Transactions API provides comprehensive functionality for managing financial transactions within the finance tracker system. It supports income tracking, expense management, account transfers, and detailed financial analytics with **automatic account balance updates**.
 
 ## Features
 
 - ✅ **Complete CRUD operations** for transactions
-- ✅ **Account balance management** - automatic updates
-- ✅ **Transfer transactions** - between user accounts
+- ✅ **Automatic balance management** - balances update automatically on create/delete
+- ✅ **Signed amount storage** - expenses stored as negative, income as positive
+- ✅ **Transfer transactions** - between user accounts with dual-entry bookkeeping
 - ✅ **Advanced filtering and search** - by date, amount, category, tags
 - ✅ **Transaction analytics** - summaries and insights
 - ✅ **Mexican localization** - categories and transaction types
@@ -16,20 +17,50 @@ The Transactions API provides comprehensive functionality for managing financial
 - ✅ **JWT authentication** - secure access control
 - ✅ **Comprehensive validation** - using Pydantic models
 
+## Amount Storage Convention
+
+The API automatically manages amount signs based on transaction type:
+
+- **Expenses** (`expense`, `fee`): Stored as **negative** values (e.g., -100.00)
+- **Income** (`income`, `salary`, `bonus`, `dividend`, `interest`, `refund`): Stored as **positive** values (e.g., +500.00)
+- **Transfers**: Source account stores **negative** value (outflow), destination stores **positive** value (inflow)
+
+**Important**: Users provide amounts as positive numbers. The API automatically applies the correct sign based on `transaction_type`.
+
+## Automatic Balance Updates
+
+### On Transaction Create
+- **Expense**: `new_balance = current_balance - amount`
+- **Income**: `new_balance = current_balance + amount`
+- **Transfer**: Updates both source (subtract) and destination (add) accounts
+
+### On Transaction Delete
+The API automatically reverts the transaction's effect:
+- **Deleting an expense**: Adds amount back to balance
+- **Deleting an income**: Subtracts amount from balance
+- **Deleting a transfer**: Reverts both account balances
+
+**Example Flow**:
+```
+Initial balance: $1,000.00
+Create expense of $100.00 → New balance: $900.00
+Delete that expense → Restored balance: $1,000.00
+```
+
 ## API Endpoints
 
 ### 1. Create Transaction
 **POST** `/transactions`
 
-Creates a new transaction and automatically updates account balance.
+Creates a new transaction and **automatically updates account balance**.
 
 #### Request Body
 ```json
 {
   "account_id": "acc_test123",
-  "amount": 250.75,
+  "amount": 250.75,  // Always provide positive number
   "description": "Grocery shopping at Soriana",
-  "transaction_type": "expense",
+  "transaction_type": "expense",  // API will store as -250.75
   "category": "groceries",
   "transaction_date": "2024-01-15T10:30:00",
   "reference_number": "REF-2024-001",
@@ -46,9 +77,9 @@ For transfers between accounts, include `destination_account_id`:
 {
   "account_id": "acc_checking123",
   "destination_account_id": "acc_savings456", 
-  "amount": 1000.0,
+  "amount": 1000.0,  // Positive amount
   "description": "Transfer to savings",
-  "transaction_type": "transfer",
+  "transaction_type": "transfer",  // Deducted from source, added to destination
   "category": "account_transfer"
 }
 ```
@@ -62,7 +93,7 @@ For transfers between accounts, include `destination_account_id`:
     "user_id": "user_123",
     "account_id": "acc_test123",
     "account_name": "BBVA Cuenta de Cheques",
-    "amount": 250.75,
+    "amount": -250.75,  // Stored as negative for expense
     "description": "Grocery shopping at Soriana",
     "transaction_type": "expense",
     "category": "groceries",
@@ -74,7 +105,7 @@ For transfers between accounts, include `destination_account_id`:
     "location": "Soriana Hiper Centro",
     "destination_account_id": null,
     "destination_account_name": null,
-    "account_balance_after": 2749.25,
+    "account_balance_after": 2749.25,  // Automatically updated
     "created_at": "2024-01-15T10:30:00",
     "updated_at": "2024-01-15T10:30:00"
   }
@@ -84,7 +115,7 @@ For transfers between accounts, include `destination_account_id`:
 ### 2. List Transactions
 **GET** `/transactions`
 
-Retrieves transactions with advanced filtering, search, and pagination.
+Retrieves transactions with advanced filtering, search, and pagination. Returns totals calculated by transaction type.
 
 #### Query Parameters
 - `account_id` (string): Filter by specific account
@@ -110,16 +141,37 @@ GET /transactions?account_id=acc_test123&transaction_type=expense&category=groce
 #### Response (200 OK)
 ```json
 {
-  "transactions": [...], // Array of transaction objects
+  "transactions": [
+    {
+      "transaction_id": "txn_001",
+      "amount": -250.75,  // Negative for expenses
+      "description": "Groceries",
+      "transaction_type": "expense",
+      "category": "groceries",
+      "transaction_date": "2024-01-15T10:00:00",
+      ...
+    },
+    {
+      "transaction_id": "txn_002",
+      "amount": 5000.00,  // Positive for income
+      "description": "Salary",
+      "transaction_type": "income",
+      "category": "salary",
+      "transaction_date": "2024-01-01T00:00:00",
+      ...
+    }
+  ],
   "total_count": 125,
   "page": 1,
   "per_page": 25,
   "total_pages": 5,
-  "total_income": 15000.00,
-  "total_expenses": 8750.50,
-  "net_amount": 6249.50
+  "total_income": 15000.00,   // Sum of income-type transactions (by type, not sign)
+  "total_expenses": 8750.50,  // Sum of expense-type transactions (by type, not sign)
+  "net_amount": 6249.50       // total_income - total_expenses
 }
 ```
+
+**Note**: Totals are calculated based on `transaction_type`, not amount sign. This ensures accuracy even if amounts are stored with different conventions.
 
 ### 3. Get Transaction
 **GET** `/transactions/{transaction_id}`
@@ -181,15 +233,27 @@ Updates transaction details (limited fields for data integrity).
 ### 5. Delete Transaction
 **DELETE** `/transactions/{transaction_id}`
 
-Deletes a transaction and reverts the account balance.
+Deletes a transaction and **automatically reverts the account balance** to its state before the transaction.
 
-⚠️ **Warning**: This operation automatically reverts the account balance. Use with caution.
+⚠️ **Warning**: This operation has financial impact on account balances. Use with caution.
+
+#### Balance Reversion Logic
+- **Deleting an expense** (-100): Adds 100 back to account balance
+- **Deleting an income** (+500): Subtracts 500 from account balance
+- **Deleting a transfer**: Reverts both source and destination account balances
+
+#### Example
+```
+Before expense: $1,000.00
+Created expense: -$250.00 → Balance: $750.00
+Delete expense → Restored balance: $1,000.00
+```
 
 #### Response (200 OK)
 ```json
 {
   "message": "Transaction deleted successfully",
-  "account_balance_after_deletion": 3000.00
+  "account_balance_after_deletion": 3000.00  // Restored balance
 }
 ```
 
