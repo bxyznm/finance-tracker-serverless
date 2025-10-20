@@ -4,8 +4,8 @@
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Production API URL
-const PRODUCTION_API_URL = 'https://sjlc3gosfe.execute-api.mx-central-1.amazonaws.com/dev';
+// Production API URL - Updated to correct endpoint
+const PRODUCTION_API_URL = 'https://aadzwc24la.execute-api.mx-central-1.amazonaws.com/dev';
 
 // Development API URL - uses proxy to avoid CORS issues
 const DEVELOPMENT_API_URL = '/dev';
