@@ -16,7 +16,6 @@ import {
   Typography,
   Chip,
   InputAdornment,
-  Stack,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,

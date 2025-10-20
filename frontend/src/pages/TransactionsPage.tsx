@@ -58,7 +58,7 @@ const TransactionsPage: React.FC = () => {
   } = useTransactions();
 
   // Hook de cuentas - obtener las cuentas del usuario logueado
-  const { accounts, isLoading: accountsLoading, error: accountsError } = useAccounts();
+  const { accounts, error: accountsError } = useAccounts();
 
   // Handlers
   const handleFormSubmit = async (data: TransactionCreateRequest | TransactionUpdateRequest) => {
