@@ -30,7 +30,7 @@ import {
   TransactionForm 
 } from '../components/transactions';
 import { AppLayout } from '../components/layout';
-import { useTransactions } from '../hooks';
+import { useTransactions, useAccounts } from '../hooks';
 import type { Transaction, TransactionCreateRequest, TransactionUpdateRequest } from '../types';
 
 const TransactionsPage: React.FC = () => {
@@ -57,12 +57,8 @@ const TransactionsPage: React.FC = () => {
     goToPage
   } = useTransactions();
 
-  // Cuentas disponibles - temporal hasta implementar el hook de cuentas
-  const accounts = [
-    { account_id: 'acc_1', name: 'Cuenta Principal', account_type: 'checking', bank_name: 'BBVA México' },
-    { account_id: 'acc_2', name: 'Cuenta de Ahorros', account_type: 'savings', bank_name: 'Citibanamex' },
-    { account_id: 'acc_3', name: 'Cuenta de Inversión', account_type: 'investment', bank_name: 'Banco Santander' }
-  ];
+  // Hook de cuentas - obtener las cuentas del usuario logueado
+  const { accounts, isLoading: accountsLoading, error: accountsError } = useAccounts();
 
   // Handlers
   const handleFormSubmit = async (data: TransactionCreateRequest | TransactionUpdateRequest) => {
@@ -126,6 +122,13 @@ const TransactionsPage: React.FC = () => {
         {error && (
           <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
             {error}
+          </Alert>
+        )}
+
+        {/* Error de cuentas Alert */}
+        {accountsError && (
+          <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+            Error al cargar cuentas: {accountsError}. Puedes seguir usando transacciones, pero no podrás filtrar por cuenta.
           </Alert>
         )}
 
