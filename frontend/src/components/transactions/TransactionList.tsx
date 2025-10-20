@@ -2,7 +2,7 @@
  * Componente para mostrar una lista de transacciones con diseño mejorado y user-friendly
  */
 
-import React, { useState, Fragment } from 'react';
+import React, { useState } from 'react';
 import type { Transaction } from '../../types';
 import { TRANSACTION_TYPE_LABELS, TRANSACTION_CATEGORY_LABELS } from '../../types/transaction';
 
@@ -149,263 +149,220 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      {/* Tabla Header */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Descripción
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Categoría
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Fecha
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Cuenta
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Monto
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {transactions.map((transaction) => {
-              const colors = getTransactionColor(transaction.transaction_type);
-              const isExpanded = expandedTransaction === transaction.transaction_id;
-              const icon = getTransactionIcon(transaction.transaction_type, transaction.category);
-              const isNegative = transaction.amount < 0;
+    <div className="space-y-3">
+      {transactions.map((transaction) => {
+        const colors = getTransactionColor(transaction.transaction_type);
+        const isExpanded = expandedTransaction === transaction.transaction_id;
+        const icon = getTransactionIcon(transaction.transaction_type, transaction.category);
+        const isNegative = transaction.amount < 0;
 
-              return (
-                <Fragment key={transaction.transaction_id}>
-                  {/* Fila principal */}
-                  <tr 
-                    className={`hover:bg-gray-50 transition-colors border-l-4 ${colors.border} cursor-pointer`}
-                    onClick={() => {
-                      setExpandedTransaction(isExpanded ? null : transaction.transaction_id);
-                      onTransactionClick?.(transaction);
-                    }}
-                  >
-                    {/* Descripción con ícono */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center text-xl flex-shrink-0`}>
-                          {icon}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
-                            {transaction.description}
-                          </div>
-                          {transaction.reference_number && (
-                            <div className="text-xs text-gray-400">
-                              #{transaction.reference_number}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
+        return (
+          <div
+            key={transaction.transaction_id}
+            className={`bg-white rounded-xl shadow-sm border-l-4 ${colors.border} hover:shadow-md transition-all duration-200`}
+          >
+            {/* Contenido principal - Layout horizontal */}
+            <div className="p-4">
+              <div className="flex items-center gap-4">
+                {/* Ícono de categoría */}
+                <div className={`w-14 h-14 rounded-xl ${colors.bg} flex items-center justify-center text-2xl flex-shrink-0 shadow-sm`}>
+                  {icon}
+                </div>
 
-                    {/* Categoría */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text} w-fit`}>
-                          {TRANSACTION_CATEGORY_LABELS[transaction.category]}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {TRANSACTION_TYPE_LABELS[transaction.transaction_type]}
-                        </span>
-                      </div>
-                    </td>
+                {/* Información principal - Grid para mejor alineación */}
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-3 items-center min-w-0">
+                  {/* Columna 1: Descripción */}
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-gray-900 text-base truncate">
+                      {transaction.description}
+                    </h3>
+                    {transaction.reference_number && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        #{transaction.reference_number}
+                      </p>
+                    )}
+                  </div>
 
-                    {/* Fecha */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(transaction.transaction_date)}
-                      </div>
-                    </td>
+                  {/* Columna 2: Categoría */}
+                  <div>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
+                      {TRANSACTION_CATEGORY_LABELS[transaction.category]}
+                    </span>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {TRANSACTION_TYPE_LABELS[transaction.transaction_type]}
+                    </p>
+                  </div>
 
-                    {/* Cuenta */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500 font-mono text-xs">
-                        {transaction.account_id.substring(0, 16)}...
-                      </div>
-                      {transaction.tags && transaction.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {transaction.tags.slice(0, 2).map((tag, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                          {transaction.tags.length > 2 && (
-                            <span className="text-xs text-gray-400">
-                              +{transaction.tags.length - 2}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
+                  {/* Columna 3: Fecha y Cuenta */}
+                  <div>
+                    <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-medium">{formatDate(transaction.transaction_date)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      <span className="truncate font-mono">{transaction.account_id.substring(0, 12)}...</span>
+                    </div>
+                  </div>
 
-                    {/* Monto */}
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className={`text-sm font-bold ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-                        {isNegative ? '-' : '+'} {formatCurrency(transaction.amount)}
-                      </div>
-                    </td>
-
-                    {/* Acciones */}
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {onEditTransaction && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditTransaction(transaction);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                            title="Editar"
+                  {/* Columna 4: Monto */}
+                  <div className="text-right">
+                    <div className={`text-2xl font-bold ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+                      {isNegative ? '-' : '+'} {formatCurrency(transaction.amount)}
+                    </div>
+                    {transaction.tags && transaction.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 justify-end mt-1">
+                        {transaction.tags.slice(0, 2).map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedTransaction(isExpanded ? null : transaction.transaction_id);
-                          }}
-                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                          title={isExpanded ? "Ocultar detalles" : "Ver detalles"}
-                        >
-                          <svg 
-                            className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-
-                        {onDeleteTransaction && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm('¿Estás seguro de eliminar esta transacción?')) {
-                                onDeleteTransaction(transaction.transaction_id);
-                              }
-                            }}
-                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                            title="Eliminar"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                            #{tag}
+                          </span>
+                        ))}
+                        {transaction.tags.length > 2 && (
+                          <span className="text-xs text-gray-400">+{transaction.tags.length - 2}</span>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    )}
+                  </div>
+                </div>
 
-                  {/* Fila expandible con detalles */}
-                  {isExpanded && (
-                    <tr>
-                      <td colSpan={6} className={`px-6 py-4 ${colors.bg} border-l-4 ${colors.border}`}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Notas */}
-                          {transaction.notes && (
-                            <div>
-                              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                <span>📝</span>
-                                <span>Notas</span>
-                              </div>
-                              <p className="text-sm text-gray-600 italic pl-6">
-                                {transaction.notes}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Ubicación */}
-                          {transaction.location && (
-                            <div>
-                              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                <span>📍</span>
-                                <span>Ubicación</span>
-                              </div>
-                              <p className="text-sm text-gray-600 pl-6">
-                                {transaction.location}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Transferencia */}
-                          {transaction.transaction_type === 'transfer' && transaction.destination_account_id && (
-                            <div>
-                              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                <span>🔄</span>
-                                <span>Transferencia</span>
-                              </div>
-                              <p className="text-sm text-gray-600 pl-6 font-mono text-xs">
-                                Destino: {transaction.destination_account_id}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Timestamps */}
-                          <div className="col-span-1 md:col-span-2">
-                            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-200">
-                              <div>
-                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                                  <span>✨</span> Creada
-                                </div>
-                                <div className="text-sm text-gray-700">
-                                  {new Date(transaction.created_at).toLocaleDateString('es-MX', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </div>
-                              </div>
-                              {transaction.updated_at && (
-                                <div>
-                                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                                    <span>🔄</span> Actualizada
-                                  </div>
-                                  <div className="text-sm text-gray-700">
-                                    {new Date(transaction.updated_at).toLocaleDateString('es-MX', {
-                                      day: 'numeric',
-                                      month: 'short',
-                                      year: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
+                {/* Botones de acción - Vertical */}
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  {onEditTransaction && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditTransaction(transaction);
+                      }}
+                      className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      title="Editar"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
                   )}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedTransaction(isExpanded ? null : transaction.transaction_id);
+                    }}
+                    className={`p-2.5 ${isExpanded ? 'text-gray-700 bg-gray-100' : 'text-gray-500 bg-gray-50'} hover:bg-gray-100 rounded-lg transition-all`}
+                    title={isExpanded ? "Ocultar" : "Ver más"}
+                  >
+                    <svg 
+                      className={`w-5 h-5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {onDeleteTransaction && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm('¿Estás seguro de eliminar esta transacción?')) {
+                          onDeleteTransaction(transaction.transaction_id);
+                        }
+                      }}
+                      className="p-2.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                      title="Eliminar"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+
+              {/* Detalles expandibles */}
+              {isExpanded && (
+                <div className={`mt-3 pt-3 border-t ${colors.border} ${colors.bg} p-4 rounded-lg`}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Notas */}
+                    {transaction.notes && (
+                      <div className="flex gap-3">
+                        <div className="text-xl flex-shrink-0">📝</div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-700 mb-1">Notas</div>
+                          <p className="text-sm text-gray-600 italic">{transaction.notes}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ubicación */}
+                    {transaction.location && (
+                      <div className="flex gap-3">
+                        <div className="text-xl flex-shrink-0">📍</div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-700 mb-1">Ubicación</div>
+                          <p className="text-sm text-gray-600">{transaction.location}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Transferencia */}
+                    {transaction.transaction_type === 'transfer' && transaction.destination_account_id && (
+                      <div className="flex gap-3">
+                        <div className="text-xl flex-shrink-0">🔄</div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-700 mb-1">Cuenta destino</div>
+                          <p className="text-sm text-gray-600 font-mono">{transaction.destination_account_id}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Timestamps */}
+                    <div className="flex gap-3 col-span-1 md:col-span-2 pt-3 border-t border-gray-200">
+                      <div className="text-xl flex-shrink-0">⏱️</div>
+                      <div className="flex-1 grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Creada</div>
+                          <div className="text-sm text-gray-700 font-medium">
+                            {new Date(transaction.created_at).toLocaleDateString('es-MX', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                        {transaction.updated_at && (
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Actualizada</div>
+                            <div className="text-sm text-gray-700 font-medium">
+                              {new Date(transaction.updated_at).toLocaleDateString('es-MX', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
