@@ -17,8 +17,12 @@ Endpoints para la gestión completa de tarjetas de crédito y débito en el sist
 - **visa**, **mastercard**, **amex** (American Express)
 
 ### Estados de Tarjetas
-- **active**: Tarjeta en uso normal (único estado editable, otros son automáticos)
-- **inactive**: Tarjeta desactivada (soft delete)
+- **active**: Tarjeta en uso normal
+- **inactive**: Tarjeta desactivada (soft delete) - no aparece en listados por defecto
+- **blocked**: Tarjeta bloqueada temporalmente
+- **expired**: Tarjeta vencida
+- **cancelled**: Tarjeta cancelada permanentemente
+- **pending**: Pendiente de activación
 
 ### Campos Importantes de Fechas
 - **payment_due_date**: Día del mes para pago (1-31)

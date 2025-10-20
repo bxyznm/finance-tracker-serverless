@@ -34,6 +34,7 @@ CardNetwork = Literal[
 # Card status
 CardStatus = Literal[
     "active",        # Activa
+    "inactive",      # Inactiva (soft-deleted)
     "blocked",       # Bloqueada
     "expired",       # Vencida
     "cancelled",     # Cancelada

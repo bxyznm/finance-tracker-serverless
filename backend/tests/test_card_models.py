@@ -391,6 +391,31 @@ class TestCardResponse:
         # (credit_limit - current_balance = 100000 - 25000 = 75000)
         if card_response.available_credit is not None:
             assert card_response.available_credit == 75000.0
+    
+    def test_inactive_status_allowed(self):
+        """Test CardResponse accepts 'inactive' status for soft-deleted cards"""
+        now = datetime.now(timezone.utc).isoformat()
+        
+        response_data = {
+            'card_id': 'card_deleted',
+            'user_id': 'user_123',
+            'name': 'Tarjeta Eliminada',
+            'card_type': 'credit',
+            'card_network': 'visa',
+            'bank_name': 'BBVA',
+            'credit_limit': 30000.0,
+            'current_balance': 5000.0,
+            'currency': 'MXN',
+            'status': 'inactive',  # Testing inactive status
+            'created_at': now,
+            'updated_at': now
+        }
+        
+        # Should not raise ValidationError
+        card_response = CardResponse(**response_data)
+        assert card_response.status == 'inactive'
+        assert card_response.card_id == 'card_deleted'
+        assert card_response.name == 'Tarjeta Eliminada'
 
 
 class TestCardBill:
