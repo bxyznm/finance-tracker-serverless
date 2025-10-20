@@ -40,8 +40,8 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppLayout } from '../components/layout';
-import { useCards, useDeleteCard, useCreateCard } from '../hooks/useCards';
-import { Card as CardType, CardNetwork, CardType as CardTypeEnum, CreateCardRequest } from '../types/card';
+import { useCards, useDeleteCard, useCreateCard, useUpdateCard } from '../hooks/useCards';
+import { Card as CardType, CardNetwork, CardType as CardTypeEnum, CardStatus, CreateCardRequest, UpdateCardRequest } from '../types/card';
 
 // Card network icons/colors
 const CARD_NETWORK_CONFIG: Record<CardNetwork, { color: string; icon: string }> = {
@@ -303,6 +303,7 @@ const CardsPage: React.FC = () => {
   const { data: cardsData, isLoading, error } = useCards();
   const deleteCardMutation = useDeleteCard();
   const createCardMutation = useCreateCard();
+  const updateCardMutation = useUpdateCard();
 
   // Dialog states
   const [dialogState, setDialogState] = useState<DialogState>({ type: null });
@@ -317,6 +318,15 @@ const CardsPage: React.FC = () => {
     current_balance: 0,
     payment_due_date: 15, // Día 15 por defecto
     cut_off_date: 1,      // Día 1 por defecto
+    status: 'active',
+  });
+
+  // Form states for edit card
+  const [editForm, setEditForm] = useState<UpdateCardRequest>({
+    name: '',
+    bank_name: '',
+    credit_limit: 0,
+    payment_due_date: 15,
     status: 'active',
   });
 
@@ -341,6 +351,19 @@ const CardsPage: React.FC = () => {
   };
 
   const openEditDialog = (card: CardType) => {
+    setEditForm({
+      name: card.name,
+      bank_name: card.bank_name,
+      credit_limit: card.credit_limit,
+      minimum_payment: card.minimum_payment,
+      payment_due_date: card.payment_due_date,
+      apr: card.apr,
+      annual_fee: card.annual_fee,
+      rewards_program: card.rewards_program,
+      color: card.color,
+      description: card.description,
+      status: card.status,
+    });
     setDialogState({ type: 'edit', card });
   };
 
@@ -372,6 +395,23 @@ const CardsPage: React.FC = () => {
         resetCreateForm();
       }
     });
+  };
+
+  const handleEditSubmit = () => {
+    if (dialogState.type !== 'edit') return;
+    
+    if (!editForm.name?.trim() || !editForm.bank_name?.trim()) {
+      return;
+    }
+    
+    updateCardMutation.mutate(
+      { cardId: dialogState.card.card_id, cardData: editForm },
+      {
+        onSuccess: () => {
+          closeDialog();
+        }
+      }
+    );
   };
 
   const handleDeleteConfirm = () => {
@@ -727,6 +767,172 @@ const CardsPage: React.FC = () => {
                 </Box>
               ) : (
                 'Crear Tarjeta'
+              )}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Edit Card Dialog */}
+        <Dialog
+          open={dialogState.type === 'edit'}
+          onClose={closeDialog}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            Editar Tarjeta
+            <IconButton
+              onClick={closeDialog}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={3} sx={{ mt: 1 }}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField
+                  label="Nombre de la tarjeta"
+                  value={editForm.name || ''}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  fullWidth
+                  required
+                  placeholder="Ej: Tarjeta Principal"
+                />
+                <TextField
+                  label="Banco"
+                  value={editForm.bank_name || ''}
+                  onChange={(e) => setEditForm({ ...editForm, bank_name: e.target.value })}
+                  fullWidth
+                  required
+                  placeholder="Ej: BBVA"
+                />
+              </Stack>
+              
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField
+                  label="Fecha de pago (día del mes)"
+                  type="number"
+                  value={editForm.payment_due_date || 15}
+                  onChange={(e) => setEditForm({ ...editForm, payment_due_date: parseInt(e.target.value) || 15 })}
+                  fullWidth
+                  inputProps={{ min: 1, max: 31 }}
+                  helperText="Día límite para realizar el pago"
+                />
+                <FormControl fullWidth>
+                  <InputLabel>Estado</InputLabel>
+                  <Select
+                    value={editForm.status || 'active'}
+                    label="Estado"
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as CardStatus })}
+                  >
+                    <SelectItem value="active">Activa</SelectItem>
+                    <SelectItem value="blocked">Bloqueada</SelectItem>
+                    <SelectItem value="expired">Vencida</SelectItem>
+                    <SelectItem value="cancelled">Cancelada</SelectItem>
+                    <SelectItem value="pending">Pendiente</SelectItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+              
+              {dialogState.type === 'edit' && dialogState.card.card_type === 'credit' && (
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                  <TextField
+                    label="Límite de crédito"
+                    type="number"
+                    value={editForm.credit_limit || 0}
+                    onChange={(e) => setEditForm({ ...editForm, credit_limit: parseFloat(e.target.value) || 0 })}
+                    fullWidth
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    }}
+                  />
+                  <TextField
+                    label="Pago mínimo"
+                    type="number"
+                    value={editForm.minimum_payment || 0}
+                    onChange={(e) => setEditForm({ ...editForm, minimum_payment: parseFloat(e.target.value) || 0 })}
+                    fullWidth
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    }}
+                    helperText="Pago mínimo mensual"
+                  />
+                </Stack>
+              )}
+
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField
+                  label="Tasa de interés anual (APR %)"
+                  type="number"
+                  value={editForm.apr || 0}
+                  onChange={(e) => setEditForm({ ...editForm, apr: parseFloat(e.target.value) || 0 })}
+                  fullWidth
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
+                />
+                <TextField
+                  label="Anualidad"
+                  type="number"
+                  value={editForm.annual_fee || 0}
+                  onChange={(e) => setEditForm({ ...editForm, annual_fee: parseFloat(e.target.value) || 0 })}
+                  fullWidth
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
+                />
+              </Stack>
+
+              <TextField
+                label="Programa de recompensas"
+                value={editForm.rewards_program || ''}
+                onChange={(e) => setEditForm({ ...editForm, rewards_program: e.target.value })}
+                fullWidth
+                placeholder="Ej: Puntos Premia, Cashback"
+              />
+
+              <TextField
+                label="Color (código hexadecimal)"
+                value={editForm.color || ''}
+                onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                fullWidth
+                placeholder="#1A1F71"
+                helperText="Color personalizado para la tarjeta"
+              />
+              
+              <TextField
+                label="Descripción (opcional)"
+                value={editForm.description || ''}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                fullWidth
+                multiline
+                rows={2}
+                placeholder="Información adicional sobre la tarjeta"
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 3 }}>
+            <Button onClick={closeDialog}>
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleEditSubmit}
+              disabled={updateCardMutation.isPending}
+              startIcon={<SaveIcon />}
+            >
+              {updateCardMutation.isPending ? (
+                <Box display="flex" alignItems="center" gap={1}>
+                  <CircularProgress size={16} />
+                  Actualizando...
+                </Box>
+              ) : (
+                'Guardar Cambios'
               )}
             </Button>
           </DialogActions>
