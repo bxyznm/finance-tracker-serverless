@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build:
     runs-on:
-      - codebuild-test-${{ github.run_id }}-${{ github.run_attempt }}
+      - codebuild-github_runer-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: 📥 Checkout código
