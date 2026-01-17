@@ -1,0 +1,62 @@
+name: CodeBuild - Build with GitHub Actions Runner
+
+on: [push]
+
+jobs:
+  build:
+    runs-on:
+      - codebuild-test-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: https://registry.npmjs.org/
+
+      - name: 🔧 Configurar caché npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            frontend/node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+            ${{ runner.os }}-node-
+
+      - name: 📋 Mostrar información del ambiente
+        run: |
+          echo "🔧 Información del Build:"
+          echo "Node.js: $(node --version)"
+          echo "npm: $(npm --version)"
+          echo "Directorio: $(pwd)"
+
+      - name: 📦 Instalar dependencias
+        working-directory: ./frontend
+        run: |
+          npm cache clean --force || true
+          if [[ -f "package-lock.json" ]]; then
+            npm ci --prefer-offline --no-audit
+          else
+            npm install --prefer-offline --no-audit
+          fi
+
+      - name: 🧪 Ejecutar tests
+        working-directory: ./frontend
+        run: |
+          npm test -- --coverage --watchAll=false --passWithNoTests
+
+      - name: 🔍 Lint y verificaciones
+        working-directory: ./frontend
+        run: |
+          if npm list eslint &>/dev/null; then
+            npm run lint --if-present
+          fi
+
+          if [ -f "tsconfig.json" ]; then
+            npx tsc --noEmit
+          fi
