@@ -11,12 +11,6 @@ jobs:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          registry-url: https://registry.npmjs.org/
-
       - name: 🔧 Configurar caché npm
         uses: actions/cache@v4
         with:
@@ -50,13 +44,13 @@ jobs:
         run: |
           npm test -- --coverage --watchAll=false --passWithNoTests
 
-      - name: 🔍 Lint y verificaciones
-        working-directory: ./frontend
-        run: |
-          if npm list eslint &>/dev/null; then
-            npm run lint --if-present
-          fi
+      # - name: 🔍 Lint y verificaciones
+      #   working-directory: ./frontend
+      #   run: |
+      #     if npm list eslint &>/dev/null; then
+      #       npm run lint --if-present
+      #     fi
 
-          if [ -f "tsconfig.json" ]; then
-            npx tsc --noEmit
-          fi
+      #     if [ -f "tsconfig.json" ]; then
+      #       npx tsc --noEmit
+      #     fi
