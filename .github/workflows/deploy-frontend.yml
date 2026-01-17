@@ -259,7 +259,7 @@ jobs:
       - name: 🏗️ Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: latest
+          terraform_version: 1.12.2
           terraform_wrapper: false
       
       - name: 🏗️ Inicializar Terraform
