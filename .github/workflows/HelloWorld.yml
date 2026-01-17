@@ -1,4 +1,4 @@
-name: Hello World
+name: CodeBuild - Build with GitHub Actions Runner
 
 on: [push]
 
