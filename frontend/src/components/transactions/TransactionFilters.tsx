@@ -16,6 +16,7 @@ import {
   Typography,
   Chip,
   InputAdornment,
+  Stack,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -31,6 +32,7 @@ import {
   EXPENSE_CATEGORIES,
   TRANSFER_CATEGORIES
 } from '../../types/transaction';
+import { useDebounce } from '../../hooks';
 
 interface TransactionFiltersProps {
   filters: TransactionFilter;
@@ -47,12 +49,27 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
 }) => {
   // Estado local para los filtros
   const [localFilters, setLocalFilters] = useState<TransactionFilter>(filters);
+  const [searchTerm, setSearchTerm] = useState(filters.search_term || '');
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Debounce del término de búsqueda
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   // Sincronizar con filtros externos
   useEffect(() => {
     setLocalFilters(filters);
+    setSearchTerm(filters.search_term || '');
   }, [filters]);
+
+  // Aplicar filtros automáticamente cuando cambie el término de búsqueda debounced
+  useEffect(() => {
+    if (debouncedSearchTerm !== filters.search_term) {
+      const newFilters = { ...localFilters, search_term: debouncedSearchTerm || undefined, page: 1 };
+      setLocalFilters(newFilters);
+      onFiltersChange(newFilters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchTerm]);
 
   const handleFilterChange = (key: keyof TransactionFilter, value: any) => {
     const newFilters = { ...localFilters, [key]: value, page: 1 };
@@ -65,7 +82,93 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
 
   const handleClearFilters = () => {
     setLocalFilters({ page: 1, per_page: 50 });
+    setSearchTerm('');
     onClearFilters();
+  };
+
+  const getActiveFiltersCount = (): number => {
+    let count = 0;
+    if (localFilters.transaction_type) count++;
+    if (localFilters.category) count++;
+    if (localFilters.date_from || localFilters.date_to) count++;
+    if (localFilters.amount_min !== undefined) count++;
+    if (localFilters.amount_max !== undefined) count++;
+    if (debouncedSearchTerm) count++;
+    return count;
+  };
+
+  const getActiveFilterChips = () => {
+    const chips: { key: string; label: string; onDelete: () => void }[] = [];
+
+    if (debouncedSearchTerm) {
+      chips.push({
+        key: 'search',
+        label: `Búsqueda: "${debouncedSearchTerm}"`,
+        onDelete: () => {
+          setSearchTerm('');
+          handleFilterChange('search_term', undefined);
+        }
+      });
+    }
+
+    if (localFilters.transaction_type) {
+      chips.push({
+        key: 'type',
+        label: `Tipo: ${TRANSACTION_TYPE_LABELS[localFilters.transaction_type]}`,
+        onDelete: () => handleFilterChange('transaction_type', undefined)
+      });
+    }
+
+    if (localFilters.category) {
+      chips.push({
+        key: 'category',
+        label: `Categoría: ${TRANSACTION_CATEGORY_LABELS[localFilters.category]}`,
+        onDelete: () => handleFilterChange('category', undefined)
+      });
+    }
+
+    if (localFilters.date_from && localFilters.date_to) {
+      const from = new Date(localFilters.date_from).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+      const to = new Date(localFilters.date_to).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+      chips.push({
+        key: 'dates',
+        label: `Período: ${from} - ${to}`,
+        onDelete: () => {
+          handleFilterChange('date_from', undefined);
+          handleFilterChange('date_to', undefined);
+        }
+      });
+    } else if (localFilters.date_from) {
+      chips.push({
+        key: 'date_from',
+        label: `Desde: ${new Date(localFilters.date_from).toLocaleDateString('es-MX')}`,
+        onDelete: () => handleFilterChange('date_from', undefined)
+      });
+    } else if (localFilters.date_to) {
+      chips.push({
+        key: 'date_to',
+        label: `Hasta: ${new Date(localFilters.date_to).toLocaleDateString('es-MX')}`,
+        onDelete: () => handleFilterChange('date_to', undefined)
+      });
+    }
+
+    if (localFilters.amount_min !== undefined) {
+      chips.push({
+        key: 'amount_min',
+        label: `Mínimo: $${localFilters.amount_min}`,
+        onDelete: () => handleFilterChange('amount_min', undefined)
+      });
+    }
+
+    if (localFilters.amount_max !== undefined) {
+      chips.push({
+        key: 'amount_max',
+        label: `Máximo: $${localFilters.amount_max}`,
+        onDelete: () => handleFilterChange('amount_max', undefined)
+      });
+    }
+
+    return chips;
   };
 
   const getAvailableCategories = (): TransactionCategory[] => {
@@ -92,31 +195,21 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
     }
   };
 
-  const hasActiveFilters = () => {
-    return Object.keys(localFilters).some(key => {
-      if (key === 'page' || key === 'per_page' || key === 'sort_by' || key === 'sort_order') {
-        return false;
-      }
-      const value = localFilters[key as keyof TransactionFilter];
-      return value !== undefined && value !== null && value !== '';
-    });
-  };
-
   return (
     <Box>
       {/* Header con indicador de filtros activos */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FilterListIcon sx={{ color: 'text.secondary' }} />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Filtros
           </Typography>
-          {hasActiveFilters() && (
+          {getActiveFiltersCount() > 0 && (
             <Chip 
-              label="Activos" 
+              label={getActiveFiltersCount()} 
               size="small" 
               color="primary" 
-              sx={{ ml: 1 }}
+              sx={{ ml: 1, fontWeight: 600 }}
             />
           )}
         </Box>
@@ -130,6 +223,27 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
           <ExpandMoreIcon />
         </IconButton>
       </Box>
+
+      {/* Chips de filtros activos */}
+      {getActiveFilterChips().length > 0 && (
+        <Stack 
+          direction="row" 
+          spacing={1} 
+          sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}
+        >
+          {getActiveFilterChips().map((chip) => (
+            <Chip
+              key={chip.key}
+              label={chip.label}
+              onDelete={chip.onDelete}
+              color="primary"
+              variant="outlined"
+              size="small"
+              sx={{ mb: 0.5 }}
+            />
+          ))}
+        </Stack>
+      )}
 
       {/* Filtros rápidos - siempre visibles */}
       <Box 
@@ -145,8 +259,8 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
           fullWidth
           size="small"
           placeholder="Buscar transacciones..."
-          value={localFilters.search_term || ''}
-          onChange={(e) => handleFilterChange('search_term', e.target.value)}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -155,6 +269,7 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
             ),
           }}
           sx={{ bgcolor: 'background.paper' }}
+          helperText={searchTerm !== debouncedSearchTerm ? 'Buscando...' : ''}
         />
 
         {/* Tipo de transacción */}
@@ -362,7 +477,7 @@ export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
           {loading ? 'Aplicando...' : 'Aplicar Filtros'}
         </Button>
         
-        {hasActiveFilters() && (
+        {getActiveFiltersCount() > 0 && (
           <Button
             variant="outlined"
             onClick={handleClearFilters}

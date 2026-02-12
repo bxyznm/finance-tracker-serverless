@@ -271,12 +271,14 @@ const TransactionsPage: React.FC = () => {
                     borderColor: 'divider',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 2
                   }}>
                     <Typography variant="body2" color="text.secondary">
-                      Página {currentPage} de {totalPages}
+                      Página {currentPage} de {totalPages} • {totalCount} transacciones totales
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       <Button
                         onClick={prevPage}
                         disabled={currentPage <= 1}
